@@ -22,6 +22,12 @@ operations:
 - **Get Incidents** / **Get Incident by ID** / **Get Incident Events** -- the
   console-tier incident objects (what the FortiEDR UI groups events by; an
   incident keeps absorbing the re-detections of its process).
+- **Delete Exception** (`delete_exception`) -- the API's
+  `exceptions/delete` endpoint, which the shipped connector never exposed:
+  an exception created for an event was permanent for playbook purposes.
+  Exception IDs are required unless **Delete All** is explicitly True
+  (mass delete by filters). The connector's live suite now creates AND
+  removes its test exception through this op.
 
 Behavior kept from the shipped 2.1.0 connector on purpose: the 400 retry
 loop, `message`/`errorMessage` surfacing, `YYYY-MM-DD HH:MM:SS` datetime
@@ -33,7 +39,31 @@ Deliberate fixes over 2.1.0, all marked with comments where they deviate:
 
 - Update Exception now updates the exception whose ID was requested; the
   shipped connector always posted the first exported exception and
-  re-created it untouched when the requested ID did not match.
+  re-created it untouched when the requested ID did not match. Live testing
+  added a second layer: the update scans EVERY raw item of the event for the
+  requested ID -- and on FortiEDR 7.x it still reports a plain failure naming
+  the id, because exceptions created through Create Exception are stored
+  server-side and appear in no raw-item export at all (live-observed on
+  7.2.3: the event's sole raw item exports with Exceptions=None while
+  get-event-exceptions returns the rule). The shipped connector answered a
+  false `success: Exceptions list not found` here; the raw-export edit path
+  keeps working for FortiEDR versions that do embed exceptions.
+- Update Collector Installer parses a pre-encoded JSON string passed as
+  Update Versions -- the body must carry CollectorInstallerRequest objects
+  (`osFamily`, `version`, `allowDowngrade`), which the live API enforces
+  with a 400 naming the deserializer.
+- Update Event now sends its boolean flags (`read`, `handle`, `archive`,
+  `mute`, `forceUnmute`) as JSON `true`/`false`. The form selects deliver
+  the strings `'True'`/`'False'` and the API answers 200 to a string body
+  while ignoring it -- the shipped read/handle/archive toggles were silent
+  no-ops (live-observed on 7.2.3). Note for 7.x operators: the API accepts
+  the flag updates but does not reflect them back in the event row
+  (`seen`/`handled` stay unchanged), and `handle: false` additionally
+  triggers a FortiEDR server-side 400 (`batchSize is null`) -- a server
+  bug the connector surfaces unchanged, as its own error message.
+- Event, incident and IP-set models read a JSON null list field as an
+  empty list; the live tenant answers `"loggedUsers": null` for
+  unattended-service events, which broke the first live pull that met one.
 - Search IOC keeps a `devices` value that already arrived as a list; the
   shipped connector turned it into an empty list.
 - Set Collector State stops waiting for the async job after 10 minutes
@@ -44,6 +74,17 @@ Deliberate fixes over 2.1.0, all marked with comments where they deviate:
   landing as `memdump_None.zip`.
 - Event responses gain parsed `firstSeenEpoch` / `lastSeenEpoch` twins (UTC)
   so ingestion field mapping never re-parses timestamps.
+- Ingest Events re-requests an empty FIRST page (twice, 2s apart) before
+  believing an empty window: list-events was observed (live) answering a
+  good paged query once with `200 + []`, then answering the identical query
+  with the rows. A scheduled pull that trusted the empty page would skip
+  real events AND advance its watermark over them. Later pages are believed
+  immediately (a short page already ends the loop).
+- Ingested alerts carry a rich-text description card (bold process/device
+  headline, severity/classification/action chips, a hairline detail table
+  with the rule, users, IP paths and timestamps, all inline styles) --
+  rendered by the alert description pane the way the FortiSIEM v2
+  ingestion card renders.
 
 Sample playbooks: a Data Ingestion Wizard chain (Init Macros / Fetch /
 Ingest) keyed on the activity window, upserting one alert per event on

@@ -30,8 +30,16 @@ want it.
   `time_field` selects the Last Seen / First Seen window axis.
 - `get_incidents`, `get_incident_by_id`, `get_incident_events` -- the
   console-tier incidents (the objects the FortiEDR UI groups events by).
+- `delete_exception` -- the API's `exceptions/delete` endpoint, which the
+  shipped connector never exposed; without it an exception created for an
+  event was permanent for playbook purposes. Exception IDs are required
+  unless `Delete All` is explicitly True (mass delete by filters).
 - Event reads return parsed `firstSeenEpoch` / `lastSeenEpoch` twins (UTC)
   alongside the raw timestamps.
+
+Events map to alert payloads whose `description` is a rich-text card (bold
+headline, severity/classification/action chips, a hairline detail table --
+inline styles only, matching the FortiSOAR alert description sanitizer).
 
 Deviations from 2.1.0 are deliberate fixes and each is commented in the
 source; the release notes list them.
@@ -41,7 +49,7 @@ source; the release notes list them.
 ```
 connector.py        FortiSOAR entry point
 client.py           HTTP client (the only module that touches requests)
-operations.py       operation handlers (35 operations)
+operations.py       operation handlers (36 operations)
 models.py           pydantic models for events / incidents / collectors ...
 field_mapping.py    event -> alert payload mapping (picklist-safe)
 ingestion.py        the windowed fetch behind ingest_events
@@ -67,8 +75,21 @@ Last-Seen-first ingestion window, the playbook/wizard contract, the
 client-method boundary (an AST test, because offline mocks hide a renamed
 method until a live box fails mid-run), and latin-1 encoding safety.
 
-The live suite is read-only: it never creates, updates, deletes, isolates,
-or remediates anything on the tenant.
+There are two live suites, both opt-in with `--live`:
+
+- `tests/test_live.py` is read-only: it never creates, updates, deletes,
+  isolates, or remediates anything on the tenant.
+- `tests/test_live_ops.py` exercises **every** operation, including narrow,
+  state-restoring round trips (read toggle, isolate/unisolate, collector
+  group, enable state, IP set create/update/delete) on an approved
+  sacrificial collector and event. Its last test gates that the session
+  really executed all 36 operations.
+
+Run both together:
+
+```bash
+.venv/bin/pytest tests/test_live.py tests/test_live_ops.py --live
+```
 
 ## Packaging
 

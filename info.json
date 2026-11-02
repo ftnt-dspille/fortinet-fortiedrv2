@@ -6240,6 +6240,122 @@
           "eventCount": 0
         }
       ]
+    },
+    {
+      "operation": "delete_exception",
+      "title": "Delete Exception",
+      "description": "Deletes exception rules the shipped connector could never remove (the API has had /exceptions/delete all along). Exception IDs is the narrow path and is required unless Delete All is True, which widens the delete to the given filters.",
+      "category": "containment",
+      "annotation": "delete_exception",
+      "handler_method": true,
+      "enabled": true,
+      "parameters": [
+        {
+          "title": "Exception IDs",
+          "name": "exceptionIds",
+          "type": "text",
+          "required": true,
+          "editable": true,
+          "visible": true,
+          "value": "",
+          "description": "Comma-separated exception IDs (from Get Event Exceptions or Get Exception List).",
+          "tooltip": "Comma-separated exception IDs (from Get Event Exceptions or Get Exception List)."
+        },
+        {
+          "title": "Delete All",
+          "name": "deleteAll",
+          "type": "select",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "description": "True: delete every exception matching the filters below (mass delete). False (default): only the IDs listed above.",
+          "tooltip": "True: delete every exception matching the filters below (mass delete). False (default): only the IDs listed above."
+        },
+        {
+          "title": "Comment",
+          "name": "comment",
+          "type": "text",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": "",
+          "description": "Filter (Delete All only): the rule comment.",
+          "tooltip": "Filter (Delete All only): the rule comment."
+        },
+        {
+          "title": "Process",
+          "name": "process",
+          "type": "text",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": "",
+          "description": "Filter (Delete All only): the process name.",
+          "tooltip": "Filter (Delete All only): the process name."
+        },
+        {
+          "title": "Rules",
+          "name": "rules",
+          "type": "text",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": "",
+          "description": "Filter (Delete All only): the rule name.",
+          "tooltip": "Filter (Delete All only): the rule name."
+        },
+        {
+          "title": "Path",
+          "name": "path",
+          "type": "text",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": "",
+          "description": "Filter (Delete All only): the process path.",
+          "tooltip": "Filter (Delete All only): the process path."
+        },
+        {
+          "title": "Organization",
+          "name": "organization",
+          "type": "select",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": "",
+          "options": [
+            "Exact Organization Name",
+            "All organizations"
+          ],
+          "description": "Which organization the rules belong to.",
+          "tooltip": "Which organization the rules belong to.",
+          "onchange": {
+            "Exact Organization Name": [
+              {
+                "title": "Organization Name",
+                "name": "org_name",
+                "type": "text",
+                "required": true,
+                "editable": true,
+                "visible": true,
+                "value": "",
+                "description": "The exact organization name (must match the FortiEDR organization name exactly).",
+                "tooltip": "The exact organization name (must match the FortiEDR organization name exactly)."
+              }
+            ]
+          }
+        }
+      ],
+      "output_schema": [
+        {
+          "result": ""
+        }
+      ]
     }
   ],
   "ingestion_preferences": {

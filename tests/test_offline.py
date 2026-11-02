@@ -15,10 +15,11 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 import responses
 from connectors.core.connector import ConnectorError
+from fortiedrv2 import ingestion
 from fortiedrv2.client import FortiEDRClient
 from fortiedrv2.connector import FortiEDR
 from fortiedrv2.field_mapping import map_event_to_alert, resolve_alert_type, resolve_severity
-from fortiedrv2.models import ConsoleIncident, Event
+from fortiedrv2.models import ConsoleIncident, Event, IPSet
 from fortiedrv2.operations import OPERATIONS
 
 REPO = Path(__file__).resolve().parent.parent
@@ -135,7 +136,8 @@ def test_no_duplicate_parameter_names_per_branch():
 def test_v2_operations_are_dispatched_not_generic():
     """The v2 additions have no endpoint metadata: everything about them runs through
     the connector's own handler, so they must be declared as handler ops."""
-    for name in ('ingest_events', 'get_incidents', 'get_incident_by_id', 'get_incident_events'):
+    for name in ('ingest_events', 'get_incidents', 'get_incident_by_id',
+                 'get_incident_events', 'delete_exception'):
         op = next(o for o in INFO['operations'] if o['operation'] == name)
         assert op['handler_method'] is True, name
         assert op['annotation'] == name
@@ -363,6 +365,21 @@ def test_update_event_splits_body_and_query(edr):
     assert body(call) == {'handle': True, 'classification': 'Malicious'}
 
 
+def test_update_event_string_flags_become_real_booleans(edr):
+    """The form selects deliver 'True'/'False' strings; the API accepts the
+    string body with a 200 but silently ignores it (live-observed on 7.2.3, so
+    the stock read/handle/archive toggles were no-ops). v2 posts JSON true /
+    false. Non-flag strings (classification, muteDuration, comment) pass
+    through untouched."""
+    edr.put(MGMT + '/events', json={'result': True})
+    run('update_event', {'eventIds': '1493703', 'read': 'True', 'archive': 'False',
+                         'forceUnmute': 'true', 'muteDuration': 'Week',
+                         'comment': 'mark handled'})
+    data = body(calls('PUT', '/management-rest/events?')[0])
+    assert data == {'read': True, 'archive': False, 'forceUnmute': True,
+                    'muteDuration': 'Week', 'comment': 'mark handled'}
+
+
 def test_search_rows_carry_filehash(edr):
     edr.get(MGMT + '/hash/search', json={'abc123': {'found': True}})
     assert run('search', {'fileHash': 'abc123'}) == [{'filehash': 'abc123', 'found': True}]
@@ -416,6 +433,61 @@ def test_update_exception_refuses_an_unknown_exception_id(edr):
     result = run('update_exception', {'eventId': 1493703, 'exceptionId': 4242,
                                        'ip_set_name': 'blocklist'})
     assert result['status'] == 'failure'
+    assert not calls('POST', 'create-or-edit-exception')
+
+
+def test_update_exception_finds_the_exception_on_a_later_raw_item(edr):
+    """Live-observed on 7.2.3 (event 1503820, exception 1507477): an event
+    correlates one raw item per detection batch and the exception is embedded
+    in the export of ITS origin raw item -- which is not necessarily the
+    first. Every raw item is exported until the requested id shows up."""
+    items = [fixture('raw_data_items')[0],
+             {'rawEventId': 885244, 'device': 'lab-endpoint-01',
+              'collectorGroup': 'Workstations', 'organizationId': 1101}]
+    edr.get(MGMT + '/events/list-raw-data-items', json=items)
+
+    exports = {'771733': {'Exceptions': [{'ExceptionId': 9001}]},
+               '885244': {'Exceptions': [{'ExceptionId': 9002, 'Comment': '',
+                                          'IpGroups': [], 'AllDestinations': True,
+                                          'AgentGroups': [], 'AllAgentGroups': False,
+                                          'AllAccountsAgentGroups': False}]}}
+    # a stale exception 9001 IS visible on the first raw item: the requested
+    # 9002 must still be found on the second, and 9001 must not be posted.
+
+    def export_handler(request):
+        raw_id = parse_qs(urlparse(request.url).query)['rawItemIds'][0]
+        return 200, {}, json.dumps(exports.get(raw_id, {}))
+
+    edr.add_callback(responses.GET, MGMT + '/events/export-raw-data-items-json',
+                     callback=export_handler, content_type='application/json')
+    edr.post(MGMT + '/exceptions/create-or-edit-exception', json={'result': 'ok'})
+
+    result = run('update_exception', {'eventId': 1493703, 'exceptionId': 9002,
+                                       'ip_set_name': 'blocklist', 'comment': 'approved'})
+
+    call = calls('POST', 'create-or-edit-exception')[0]
+    assert result == {'result': 'ok'}
+    assert str(body(call)['ExceptionId']) == '9002'
+    assert body(call)['Comment'] == 'approved'
+    assert 'rawItemIds' not in query(call)
+    assert query(call)['confirmEdit'] == ['True']
+
+
+def test_update_exception_fails_when_no_raw_item_carries_the_id(edr):
+    """The pre-fix op returned 'success: Exceptions list not found' here --
+    a live run proved that shape is a silent lie (exception 1507477 existed
+    on a later raw item). With no raw item carrying the id at all, the only
+    honest answer is failure."""
+    items = [fixture('raw_data_items')[0],
+             {'rawEventId': 885244, 'device': 'lab-endpoint-01',
+              'collectorGroup': 'Workstations', 'organizationId': 1101}]
+    edr.get(MGMT + '/events/list-raw-data-items', json=items)
+    edr.get(MGMT + '/events/export-raw-data-items-json', json={'EventCoreOnly': {}})
+
+    result = run('update_exception', {'eventId': 1493703, 'exceptionId': 9002,
+                                       'ip_set_name': 'blocklist'})
+    assert result['status'] == 'failure'
+    assert '9002' in result['message']
     assert not calls('POST', 'create-or-edit-exception')
 
 
@@ -519,6 +591,61 @@ def test_set_collector_state_waits_for_the_job(edr, monkeypatch):
     assert result == {'percentage': 100}
 
 
+def test_update_collector_installer_posts_version_objects(edr):
+    """updateVersions travels as CollectorInstallerRequest OBJECTS -- the
+    live 7.2.3 API rejects a bare version string (or a pre-encoded JSON string
+    pasted as-is) with a 400 naming CollectorInstallerRequest."""
+    edr.post(MGMT + '/admin/update-collector-installer', json={})
+    result = run('update_collector_installer',
+                 {'collectorGroups': 'Default Collector Group',
+                  'organization': 'Palm Labs',
+                  'updateVersions': [{'osFamily': 'Linux', 'version': '6.2.0.1350',
+                                      'allowDowngrade': False}]})
+    call = calls('POST', 'update-collector-installer')[0]
+    assert query(call)['collectorGroups'] == ['Default Collector Group']
+    assert query(call)['organization'] == ['Palm Labs']
+    assert body(call) == {'updateVersions': [{'osFamily': 'Linux', 'version': '6.2.0.1350',
+                                               'allowDowngrade': False}]}
+    assert result == {'message': 'Update collector installer process started successfully',
+                      'status': 'success'}
+
+
+def test_update_collector_installer_parses_a_pre_encoded_json_string(edr):
+    edr.post(MGMT + '/admin/update-collector-installer', json={})
+    run('update_collector_installer',
+        {'collectorGroups': 'Default Collector Group',
+         'updateVersions': '[{"osFamily": "Linux", "version": "6.2.0.1350"}]'})
+    assert body(calls('POST', 'update-collector-installer')[0])['updateVersions'] == [
+        {'osFamily': 'Linux', 'version': '6.2.0.1350'}]
+
+
+def test_delete_exception_sends_the_ids(edr):
+    edr.delete(MGMT + '/exceptions/delete', json={'result': 'gone'})
+    result = run('delete_exception', {'exceptionIds': '1507477',
+                                      'organization': 'Exact Organization Name',
+                                      'org_name': 'Palm Labs'})
+    call = calls('DELETE', 'exceptions/delete')[0]
+    assert query(call)['exceptionIds'] == ['1507477']
+    assert query(call)['deleteAll'] == ['False']
+    assert query(call)['organization'] == ['Palm Labs']
+    assert not body(call)
+    assert result == {'result': 'gone'}
+
+
+def test_delete_exception_requires_ids_or_delete_all(edr):
+    with pytest.raises(ConnectorError, match='needs Exception IDs'):
+        run('delete_exception', {'organization': 'All organizations'})
+
+
+def test_delete_exception_delete_all_is_opt_in(edr):
+    edr.delete(MGMT + '/exceptions/delete', json={})
+    run('delete_exception', {'deleteAll': 'True', 'process': 'cloud.exe',
+                             'organization': 'All organizations'})
+    call = calls('DELETE', 'exceptions/delete')[0]
+    assert query(call)['deleteAll'] == ['True']
+    assert query(call)['process'] == ['cloud.exe']
+
+
 # --------------------------------------------------------------------------- console incidents
 
 def test_get_incidents_reads_result_items(edr):
@@ -609,10 +736,56 @@ def test_ingest_respects_max_events(edr):
     assert len(calls('GET', 'list-events')) == 2
 
 
-def test_ingest_stops_on_an_empty_window(edr):
+def test_ingest_stops_on_an_empty_window(edr, monkeypatch):
+    # A genuinely empty window costs the empty-first-page retries: the SAME
+    # page-1 request is answered empty 1 + EMPTY_PAGE_RETRIES times before
+    # the window is believed empty and the run returns [].
+    monkeypatch.setattr(ingestion, 'EMPTY_PAGE_RETRY_WAIT', 0)
     _mock_events(edr, {1: []})
     assert run('ingest_events', {'from': '2026-10-29 13:00:00'}) == []
-    assert len(calls('GET', 'list-events')) == 1
+    page_one = calls('GET', 'list-events')
+    assert len(page_one) == 1 + ingestion.EMPTY_PAGE_RETRIES
+    assert [query(c)['pageNumber'][0] for c in page_one] == ['1'] * (1 + ingestion.EMPTY_PAGE_RETRIES)
+
+
+def _mock_events_sequence(edr, answers):
+    """Answer list-events from a fixed per-call sequence (not per page)."""
+    remaining = list(answers)
+
+    def handler(request):
+        rows = remaining.pop(0) if remaining else []
+        return 200, {}, json.dumps(rows)
+
+    edr.add_callback(responses.GET, LIST_EVENTS, callback=handler, content_type='application/json')
+
+
+def test_ingest_recovers_a_transient_empty_first_page(edr, monkeypatch):
+    """The live-observed failure mode: the first page answers 200 + [] once,
+    while count-events reports rows for the same window; the next identical
+    request returns the rows. The fetch re-requests the first page instead of
+    advancing the watermark over a window it never received."""
+    monkeypatch.setattr(ingestion, 'EMPTY_PAGE_RETRY_WAIT', 0)
+    _mock_events_sequence(edr, [[], fixture('events_full_page')])
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00', 'itemsPerPage': '2',
+                                   'max_events': '50'})
+    # page 1 empty -> re-request page 1 -> recovered (2 rows = a full page,
+    # so the scroll advances: the third call is PAGE 2, answered [] by the
+    # exhausted sequence and believed as a short-scroll end).
+    pages = [query(c)['pageNumber'][0] for c in calls('GET', 'list-events')]
+    assert pages == ['1', '1', '2']
+    assert len(alerts) == 2
+
+
+def test_ingest_believes_an_empty_page_after_the_first(edr):
+    """Only the FIRST page is retried: a full page already ends the loop when
+    followed by an empty one, so a mid-scroll transient costs at most the
+    window's tail, and the pull never dead-loops on later pages."""
+    _mock_events(edr, {1: fixture('events_full_page'), 2: []})
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00', 'itemsPerPage': '2',
+                                   'max_events': '50'})
+    pages = [query(c)['pageNumber'][0] for c in calls('GET', 'list-events')]
+    assert pages == ['1', '2']
+    assert len(alerts) == 2
 
 
 def test_ingest_bad_time_field_is_named(edr):
@@ -641,12 +814,83 @@ def test_ingest_maps_rows_to_alert_payloads(edr):
     assert upstream['process_name'] == 'cloud.exe'
     assert upstream['alert_generation_epoch'] == 1792065558
     assert upstream['last_observed_epoch'] == 1793280778
-    assert 'Event ID: 1493703' in upstream['description']
-    assert 'Last Seen: 2026-10-29 13:32:58' in upstream['description']
+    assert '<table' in upstream['description']
+    assert '1493703' in upstream['description']
+    assert 'cloud.exe on lab-endpoint-01' in upstream['description']
+    assert '2026-10-29 13:32:58' in upstream['description']
     assert upstream['source_payload']['eventId'] == 1493703
 
     plain = by_id['1492374']
     assert plain['alert_type'] == 'Other / Unknown'
+
+
+# --------------------------------------------------------------------------- description card
+
+def test_the_description_is_the_house_rich_text_card():
+    row = next(r for r in fixture('events_full_page') if r['eventId'] == 1493703)
+    card = map_event_to_alert(Event(**row))['description']
+    # the card recipe: bold headline, chip row, hairline table (see
+    # field_mapping.build_description), all styles inline.
+    assert card.startswith('<p style="margin:0 0 8px 0;font-size:16px;font-weight:700"')
+    assert 'cloud.exe on lab-endpoint-01</p>' in card
+    assert '<span style="display:inline-block' in card          # chip row
+    assert '>Critical</span>' in card                            # severity
+    assert '>Malicious</span>' in card                           # classification
+    assert '>SimulationBlock</span>' in card                     # action
+    assert '<table style="width:100%;max-width:760px;' in card
+    assert '>Event ID</td>' in card and '>1493703</td>' in card
+    assert '>Last seen</td>' in card and '2026-10-29 13:32:58' in card
+    # the tooltip line about the preserved raw payload closes the card
+    assert card.endswith('</i></p>')
+    # ascii-only: FortiSOAR rich text and the repo's latin-1 gate both hold
+    card.encode('latin-1')
+
+
+def test_the_description_escapes_markup_and_braces_in_values():
+    """A hostile or merely ugly EVENT VALUE must not break out of the card:
+    tags are entity-escaped and `{...}` runs neutralised (FortiSOAR templating
+    treats a `{...}` run in a rendered value as a literal to evaluate)."""
+    event = Event(eventId=7, process='<script>alert(1)</script>',
+                  rules=['{ bogus_collect }'], severity='High',
+                  collectors=[{'device': 'lab-endpoint-01', 'ip': '203.0.113.5'}])
+    card = map_event_to_alert(event)['description']
+    assert '<script' not in card
+    assert '&lt;script&gt;' in card
+    assert '{ bogus_collect }' not in card
+    assert '&#123; bogus_collect &#125;' in card
+
+
+def test_a_bare_event_still_renders_a_card():
+    event = Event(eventId=1)
+    card = map_event_to_alert(event)['description']
+    assert 'FortiEDR event on unknown device' in card
+    assert '<table' in card                       # the Event ID row alone
+    assert '>Event ID</td>' in card and '>1</td>' in card
+    # empty labels never render rows
+    assert '>Logged users</td>' not in card
+
+
+def test_null_list_fields_read_as_empty_lists():
+    """Live-observed on 7.2.3: a Linux service event carries
+    "loggedUsers": null (oldest rows can null rules/destinations too), and
+    the first live pull that met one raised a pydantic list_type error. Every
+    list-typed field accepts null as []."""
+    event = Event(eventId=9, loggedUsers=None, rules=None, destinations=None,
+                  collectors=None, severity='Medium')
+    assert event.loggedUsers == [] and event.rules == [] and event.destinations == []
+    assert event.collectors == []
+    alert = map_event_to_alert(event)
+    assert alert['user_names'] == '' and alert['rule'] == '' and alert['dest_ips'] == ''
+    assert alert['source_hostname'] == ''          # no collectors, no crash
+
+    incident = ConsoleIncident(devices=None, tags=None)
+    assert incident.devices == [] and incident.tags == []
+    ipset = IPSet(name='x', include=None, exclude=None)
+    assert ipset.include == [] and ipset.exclude == []
+
+    # a null macAddresses on a collector entry reads the same way
+    col = Event(eventId=9, collectors=[{'device': 'localhost', 'macAddresses': None}])
+    assert col.collectors[0].macAddresses == []
 
 
 # --------------------------------------------------------------------------- models / mapping

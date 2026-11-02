@@ -13,7 +13,6 @@ the alert POST fail with a picklist 400 (the FortiSIEM v2 connector's
 ingestion playbook failed exactly that way before these clamps existed).
 """
 
-import json
 from typing import Any, Dict, List, Optional
 
 from .models import Event
@@ -89,22 +88,141 @@ def _rule_string(event: Event) -> str:
     return ', '.join(str(r) for r in event.rules if r not in (None, ''))
 
 
-def _description(event: Event) -> str:
+# ---------------------------------------------------------------------------
+# Rich-text description
+#
+# The alert description is sanitised rich text, so every style is inline and
+# no <style> blocks or classes exist. The recipe is the house one (the
+# FortiSIEM v2 connector's alert card): translucent tints over `inherit` let
+# the card read on both the dark and light FortiSOAR themes, and values are
+# escaped including braces -- FortiSOAR templating treats a `{...}` run in a
+# rendered value as a literal to evaluate, and `&#123;` survives that pass.
+# ---------------------------------------------------------------------------
+_MUTED = 'opacity:.62'
+_HAIRLINE = '1px solid rgba(128,128,128,.22)'
+_MONO = 'font-family:SFMono-Regular,Menlo,Consolas,monospace;font-size:12px'
+
+_SEVERITY_COLOR = {
+    'critical': '#e5484d', 'high': '#f76b15', 'medium': '#e2a400',
+    'low': '#30a46c', 'minimal': '#8b8d98',
+}
+_CLASSIFICATION_COLOR = {
+    'malicious': '#e5484d', 'suspicious': '#f76b15', 'inconclusive': '#8b8d98',
+    'pup': '#e2a400', 'likely safe': '#3e63dd', 'safe': '#30a46c',
+}
+_ACTION_COLOR = {'block': '#e5484d', 'simulationblock': '#f76b15', 'log': '#8b8d98'}
+
+
+def _esc(value) -> str:
+    if value is None:
+        return ''
+    text = (str(value).replace('&', '&amp;').replace('<', '&lt;')
+            .replace('>', '&gt;').replace('"', '&quot;'))
+    return text.replace('{', '&#123;').replace('}', '&#125;')
+
+
+def _chip(text, color, mono=False):
+    """A small rounded tag tinted with `color`."""
+    style = ('display:inline-block;margin:0 6px 4px 0;padding:2px 10px;'
+             'border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.4px;'
+             'border:1px solid {c};background:{c}26;color:{c};{m}'
+             ).format(c=color, m=_MONO if mono else '')
+    return '<span style="{0}">{1}</span>'.format(style, _esc(text))
+
+
+def _heading(text):
+    """Small section heading with an accent bar."""
+    return ('<p style="margin:14px 0 6px 0;padding-left:8px;border-left:3px solid #3e63dd;'
+            'font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;'
+            'opacity:.8">{0}</p>'.format(_esc(text)))
+
+
+def _table(rows):
+    return ('<table style="width:100%;max-width:760px;border-collapse:collapse;border:0;'
+            'margin:0">{0}</table>'.format(''.join(rows)))
+
+
+def _rows(pairs, mono=()):
+    """Render label/value pairs as table rows, dropping the empty ones.
+
+    Labels in `mono` get a monospace value (paths, IPs, rule names).
+    """
+    out = []
+    for label, value in pairs:
+        if value in (None, '', [], {}):
+            continue
+        value_style = ('padding:6px 0;border:0;border-bottom:{0};vertical-align:top;'
+                       'word-break:break-word'.format(_HAIRLINE))
+        if label in mono:
+            value_style += ';' + _MONO
+        out.append(
+            '<tr>'
+            '<td style="width:150px;padding:6px 16px 6px 0;border:0;border-bottom:{0};'
+            'vertical-align:top;white-space:nowrap;font-size:11px;font-weight:600;'
+            'letter-spacing:.5px;text-transform:uppercase;{1}">{2}</td>'
+            '<td style="{3}">{4}</td>'
+            '</tr>'.format(_HAIRLINE, _MUTED, _esc(label), value_style, _esc(value)))
+    return out
+
+
+def build_description(event: Event, alert: Dict[str, Any]) -> str:
+    """Build the rich-text alert description from one FortiEDR event.
+
+    ``event`` is the modelled event; ``alert`` is the already-normalised alert
+    dict, so the clamped severity and the joined strings are reused instead of
+    re-derived. The layout shows what an analyst triages first: what ran, on
+    which device, how FortiEDR classified and acted on it, then the process,
+    rule and time detail.
+    """
     collector = _first_collector(event)
-    lines = [
-        'Event ID: {0}'.format(event.eventId),
-        'Classification: {0}'.format(event.classification or 'Unknown'),
-        'Organization: {0}'.format(event.organization or ''),
-        'Device: {0}'.format(collector.get('device') or ''),
-        'Device IP: {0}'.format(collector.get('ip') or ''),
-        'Process: {0}'.format(event.process or ''),
-        'Process Path: {0}'.format(event.processPath or ''),
-        'Action: {0}'.format(event.action or ''),
-        'Rules: {0}'.format(_rule_string(event)),
-        'First Seen: {0}'.format(event.firstSeen or ''),
-        'Last Seen: {0}'.format(event.lastSeen or ''),
-    ]
-    return '\n'.join(lines)
+    device = collector.get('device') or alert.get('source_hostname') or ''
+    headline = '{0} on {1}'.format(event.process or 'FortiEDR event', device or 'unknown device')
+
+    parts = ['<p style="margin:0 0 8px 0;font-size:16px;font-weight:700">{0}</p>'
+             .format(_esc(headline))]
+
+    chips = []
+    severity = alert.get('severity')
+    if severity:
+        chips.append(_chip(severity, _SEVERITY_COLOR.get(str(severity).lower(), '#8b8d98')))
+    if event.classification:
+        chips.append(_chip(event.classification,
+                           _CLASSIFICATION_COLOR.get(str(event.classification).lower(), '#8b8d98')))
+    if event.action:
+        chips.append(_chip(event.action, _ACTION_COLOR.get(str(event.action).lower(), '#8b8d98')))
+    if chips:
+        parts.append('<p style="margin:0 0 10px 0">{0}</p>'.format(''.join(chips)))
+
+    overview = _rows([
+        ('Event ID', alert.get('external_id')),
+        ('Organization', event.organization),
+        ('Device', alert.get('source_hostname')),
+        ('Device IP', alert.get('source_ip')),
+        ('Logged users', alert.get('user_names')),
+        ('Action', event.action),
+        ('Rules', alert.get('rule')),
+        ('Destinations', alert.get('dest_ips')),
+        ('Process', alert.get('process_name')),
+        ('Process path', alert.get('process_path')),
+        ('First seen', event.firstSeen),
+        ('Last seen', event.lastSeen),
+    ], mono=('Event ID', 'Device IP', 'Rules', 'Process path', 'First seen', 'Last seen'))
+    if overview:
+        parts.append(_table(overview))
+
+    threat = event.threatDetails
+    if threat and (threat.threatName or threat.threatFamily or threat.threatType):
+        rows = _rows([
+            ('Threat name', threat.threatName),
+            ('Threat family', threat.threatFamily),
+            ('Threat type', threat.threatType),
+        ])
+        parts.append(_heading('Threat details'))
+        parts.append(_table(rows))
+
+    parts.append('<p style="margin:12px 0 0 0;font-size:12px;{0}"><i>The raw event payload is '
+                 'preserved in this alert\'s source data.</i></p>'.format(_MUTED))
+    return ''.join(parts)
 
 
 def map_event_to_alert(event: Event) -> Dict[str, Any]:
@@ -134,25 +252,14 @@ def map_event_to_alert(event: Event) -> Dict[str, Any]:
         'rule': _rule_string(event),
         'process_name': event.process or '',
         'process_path': event.processPath or '',
-        'description': _description(event),
         'alert_generation_epoch': event.firstSeenEpoch,
         'last_observed_epoch': event.lastSeenEpoch,
         'event_count': 1,
         'source_payload': payload,
     }
+    alert['description'] = build_description(event, alert)
     return alert
 
 
 def map_events(records: List[Event]) -> List[Dict[str, Any]]:
     return [map_event_to_alert(r) for r in records]
-
-
-def dumps_no_html(alert: Dict[str, Any]) -> str:
-    """source_payload minus the rendered description, JSON-encoded.
-
-    Mirrors the FortiSOAR playbook rule: ``| toJSON`` must be applied to
-    already-serialised JSON or the field stores the literal string Array.
-    """
-    trimmed = dict(alert)
-    trimmed.pop('description', None)
-    return json.dumps(trimmed)

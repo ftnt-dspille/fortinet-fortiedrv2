@@ -26,7 +26,8 @@ VERSION = '1.0.0'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,
-           description=None, placeholder=None, minimum=None, maximum=None):
+           description=None, placeholder=None, minimum=None, maximum=None,
+           onchange=None):
     field = {
         'title': title,
         'name': name,
@@ -47,6 +48,8 @@ def _param(title, name, ptype, required=False, value=None, options=None,
         field['minimum'] = minimum
     if maximum is not None:
         field['maximum'] = maximum
+    if onchange is not None:
+        field['onchange'] = onchange
     return field
 
 
@@ -175,6 +178,48 @@ def _new_operations():
         'output_schema': [
             {'id': 0, 'device': '', 'process': '', 'processPath': '',
              'severity': '', 'firstSeen': '', 'lastSeen': '', 'eventCount': 0},
+        ],
+    })
+    ops.append({
+        'operation': 'delete_exception',
+        'title': 'Delete Exception',
+        'description': ('Deletes exception rules the shipped connector could '
+                        'never remove (the API has had /exceptions/delete '
+                        'all along). Exception IDs is the narrow path and is '
+                        'required unless Delete All is True, which widens '
+                        'the delete to the given filters.'),
+        'category': 'containment',
+        'annotation': 'delete_exception',
+        'handler_method': True,
+        'enabled': True,
+        'parameters': [
+            _param('Exception IDs', 'exceptionIds', 'text', required=True,
+                   description='Comma-separated exception IDs (from Get Event '
+                               'Exceptions or Get Exception List).'),
+            _param('Delete All', 'deleteAll', 'select', value='False',
+                   options=['True', 'False'],
+                   description=('True: delete every exception matching the '
+                               'filters below (mass delete). False (default): '
+                               'only the IDs listed above.')),
+            _param('Comment', 'comment', 'text',
+                   description='Filter (Delete All only): the rule comment.'),
+            _param('Process', 'process', 'text',
+                   description='Filter (Delete All only): the process name.'),
+            _param('Rules', 'rules', 'text',
+                   description='Filter (Delete All only): the rule name.'),
+            _param('Path', 'path', 'text',
+                   description='Filter (Delete All only): the process path.'),
+            _param('Organization', 'organization', 'select',
+                   options=['Exact Organization Name', 'All organizations'],
+                   description='Which organization the rules belong to.',
+                   onchange={'Exact Organization Name': [
+                       _param('Organization Name', 'org_name', 'text', required=True,
+                              description='The exact organization name (must match the '
+                                          'FortiEDR organization name exactly).'),
+                   ]}),
+        ],
+        'output_schema': [
+            {'result': ''},
         ],
     })
     return ops

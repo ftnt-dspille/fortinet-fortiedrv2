@@ -23,9 +23,9 @@ field mapping can feed ``/api/3/upsert/alerts`` date fields without re-parsing.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, model_validator
 
 
 def _parse_epoch(value, formats):
@@ -60,6 +60,17 @@ MGMT_TIME_FORMATS = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:
 CONSOLE_TIME_FORMATS = ('%d-%b-%Y, %H:%M:%S',)
 
 
+# The API answers JSON null for a list field it has nothing to say about
+# (live-observed: a Linux service event on 7.2.3 carries "loggedUsers": null,
+# which broke the first live list-events pull that saw one). Every list-typed
+# field therefore accepts null and reads it as the empty list.
+def _none_to_list(value):
+    return [] if value is None else value
+
+
+TolerantList = Annotated[List[Any], BeforeValidator(_none_to_list)]
+
+
 class EDRModel(BaseModel):
     """Base: tolerant of extra fields, keeps them in ``model_dump()`` output."""
 
@@ -86,13 +97,18 @@ class CollectorRef(EDRModel):
     collectorGroup: Optional[str] = None
     operatingSystem: Optional[str] = None
     lastSeen: Optional[str] = None
-    macAddresses: List[Any] = []
+    macAddresses: TolerantList = []
 
 
 class ThreatDetails(EDRModel):
     threatName: Optional[str] = None
     threatFamily: Optional[str] = None
     threatType: Optional[str] = None
+
+
+# Event.collectors keeps its element typing (field_mapping calls
+# .model_dump() on entries); only the null parent is normalized.
+TolerantCollectorList = Annotated[List[CollectorRef], BeforeValidator(_none_to_list)]
 
 
 class Event(EDRModel):
@@ -109,10 +125,10 @@ class Event(EDRModel):
     processPath: Optional[str] = None
     processOwner: Optional[str] = None
     processType: Optional[str] = None
-    rules: List[Any] = []
-    destinations: List[Any] = []
-    loggedUsers: List[Any] = []
-    collectors: List[CollectorRef] = []
+    rules: TolerantList = []
+    destinations: TolerantList = []
+    loggedUsers: TolerantList = []
+    collectors: TolerantCollectorList = []
     threatDetails: Optional[ThreatDetails] = None
     archived: Optional[bool] = None
     handled: Optional[bool] = None
@@ -156,8 +172,8 @@ class Collector(EDRModel):
 
 class IPSet(EDRModel):
     name: str = ''
-    include: List[str] = []
-    exclude: List[str] = []
+    include: TolerantList = []
+    exclude: TolerantList = []
 
 
 class AgentGroup(EDRModel):
@@ -182,8 +198,8 @@ class ConsoleIncident(EDRModel):
     classification: Optional[str] = None
     classificationValue: Optional[str] = None
     organization: Optional[Any] = None
-    devices: List[Any] = []
-    tags: List[Any] = []
+    devices: TolerantList = []
+    tags: TolerantList = []
     action: Optional[Any] = None
     hostState: Optional[Any] = None
     isolated: Optional[bool] = None

@@ -70,7 +70,7 @@ jobs:
       - run: pip install -r tests/requirements.txt -r requirements.txt
       - name: Offline tests
         # A real gate: a failing suite blocks the release.
-        run: pytest tests/test_offline.py -q
+        run: pytest tests/ -q
 
       - name: Build the bundle
         run: ./scripts/package.sh

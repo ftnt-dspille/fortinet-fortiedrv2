@@ -43,7 +43,7 @@
             "overrideIfNoMatch"
           ],
           "synchronous": false,
-          "lastModifyDate": 1793651913,
+          "lastModifyDate": 1793655433,
           "collection": "/api/3/workflow_collections/17ecaf12-971c-51fa-ae91-a6e4ed5ce864",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/4bed2538-301b-5933-a2f5-f3154d2aa731",
@@ -264,7 +264,7 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793651913,
+          "lastModifyDate": 1793655433,
           "collection": "/api/3/workflow_collections/17ecaf12-971c-51fa-ae91-a6e4ed5ce864",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/26c2669b-92db-5771-acba-e830f94b107d",
@@ -588,7 +588,7 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793651913,
+          "lastModifyDate": 1793655433,
           "collection": "/api/3/workflow_collections/17ecaf12-971c-51fa-ae91-a6e4ed5ce864",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/54ca0451-7ac5-53e1-84c9-988f3a6fb0bd",
@@ -685,7 +685,7 @@
               "name": "Return Sample",
               "description": null,
               "arguments": {
-                "sample": "{% if vars.steps.Fetch_Events.data | default([]) | length > 0 %} {{ vars.steps.Fetch_Events.data[0] }} {% else %} {{ { 'name': '1493703 - lab-endpoint-01', 'external_id': '1493703', 'severity': 'Critical', 'alert_state': 'New', 'status': 'Open', 'alert_type': 'Command and Control', 'source': 'Fortinet FortiEDR', 'source_ip': '203.0.113.5', 'source_hostname': 'lab-endpoint-01', 'dest_ips': '198.51.100.7', 'dest_ip': '198.51.100.7', 'user_names': 'labuser', 'rule': 'Exfiltration Detected', 'process_name': 'cloud.exe', 'process_path': 'C:/Users/Public/cloud.exe', 'description': 'Event ID: 1493703 - Classification: Malicious - Organization: Demo Org - Device: lab-endpoint-01 - Device IP: 203.0.113.5 - Process: cloud.exe - Action: SimulationBlock - Rules: Exfiltration Detected', 'alert_generation_epoch': 1789992300, 'last_observed_epoch': 1789992330, 'event_count': 1, 'source_payload': { 'eventId': 1493703, 'process': 'cloud.exe', 'severity': 'Critical' } } }} {% endif %}"
+                "sample": "{% if vars.steps.Fetch_Events.data | default([]) | length > 0 %} {{ vars.steps.Fetch_Events.data[0] }} {% else %} {{ { 'name': '1493703 - lab-endpoint-01', 'external_id': '1493703', 'severity': 'Critical', 'alert_state': 'New', 'status': 'Open', 'alert_type': 'Command and Control', 'source': 'Fortinet FortiEDR', 'source_ip': '203.0.113.5', 'source_hostname': 'lab-endpoint-01', 'dest_ips': '198.51.100.7', 'dest_ip': '198.51.100.7', 'user_names': 'labuser', 'rule': 'Exfiltration Detected', 'process_name': 'cloud.exe', 'process_path': 'C:/Users/Public/cloud.exe', 'description': 'cloud.exe on lab-endpoint-01 - rich-text card rendered from the event payload', 'alert_generation_epoch': 1789992300, 'last_observed_epoch': 1789992330, 'event_count': 1, 'source_payload': { 'eventId': 1493703, 'process': 'cloud.exe', 'severity': 'Critical' } } }} {% endif %}"
               },
               "status": null,
               "top": "510",
@@ -724,7 +724,7 @@
                   "alertDetectionDate": "{{ vars.item.alert_generation_epoch or vars.item.last_observed_epoch }}",
                   "userName": "{{ vars.item.user_names | default(\"\") }}",
                   "processName": "{{ vars.item.process_name | default(\"\") }}",
-                  "description": "{{ vars.item.description | e }}",
+                  "description": "{{ vars.item.description }}",
                   "sourcedata": "{{ vars.item | toJSON }}",
                   "__replace": "true",
                   "__fieldsToUpdate": "{{ ['name', 'source', 'sourceId', 'severity', 'alertType', 'alertDetectionDate', 'userName', 'processName', 'description', 'sourcedata'] }}"
@@ -887,7 +887,7 @@
             {
               "@type": "WorkflowGroup",
               "name": "Note: Create Record",
-              "description": "The step is named \"Create Record\" because the Data Ingestion Wizard's\nData Mapping page is shown only for a create playbook with a step of\nexactly that name, and it reads the target module off this step.\n\n`is_upsert` routes this at /api/3/upsert/alerts, keyed on sourceId (the\neventId). That is the dedup that makes the Last Seen window safe: a\nwindow that is read twice, or an event re-triggered and fetched again,\nupdates its existing alert instead of duplicating it. Without it the\nplain insert path 409s on the sourceId uniqueness constraint.\n\nThe connector already clamps severity and alert_type to picklist\nmembers, so the picklist filters cannot fail with an unmapped value.\nThe date is the event's firstSeen epoch (alertDetectionDate), while\nsourcedata keeps the whole mapped payload including last_observed_epoch\nand the raw event.\n",
+              "description": "The step is named \"Create Record\" because the Data Ingestion Wizard's\nData Mapping page is shown only for a create playbook with a step of\nexactly that name, and it reads the target module off this step.\n\n`is_upsert` routes this at /api/3/upsert/alerts, keyed on sourceId (the\neventId). That is the dedup that makes the Last Seen window safe: a\nwindow that is read twice, or an event re-triggered and fetched again,\nupdates its existing alert instead of duplicating it. Without it the\nplain insert path 409s on the sourceId uniqueness constraint.\n\nThe connector already clamps severity and alert_type to picklist\nmembers, so the picklist filters cannot fail with an unmapped value.\nThe date is the event's firstSeen epoch (alertDetectionDate), while\nsourcedata keeps the whole mapped payload including last_observed_epoch\nand the raw event.\n\n`description` is passed WITHOUT the `| e` escape filter: the connector\nbuilds it as sanitised rich text (inline styles only), and escaping it\nhere would store visible `<table>` markup instead of rendering the\ncard. This matches the FortiSIEM v2 ingestion playbook.\n",
               "type": "note",
               "isCollapsed": false,
               "hasTriggerStep": false,

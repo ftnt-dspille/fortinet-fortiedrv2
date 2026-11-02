@@ -139,17 +139,15 @@ class FortiEDRClient:
 
     # ------------------------------------------------------------- request
     def make_rest_api_call(self, title, method, endpoint, headers=None, payload=None,
-                           stream=False, data=None, retries=None, max_retries=MAX_RETRIES):
+                           stream=False, data=None, max_retries=MAX_RETRIES):
         """One HTTP call with the stock retry/error semantics.
 
         ``endpoint`` is host-absolute: needs ``/management-rest/...`` or
-        ``/api/...``. ``retries`` mirrors the stock 400-retry counter (shared
-        across a logical op); pass the same list to keep counting.
+        ``/api/...``. A 400 for a valid query (a known events-endpoint
+        transient) is retried up to ``max_retries`` times, 10s apart.
         """
         url = '{0}{1}'.format(self.host, endpoint)
         try:
-            if retries is None:
-                retries = [0]
             response = None
             attempts = 0
             while True:

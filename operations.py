@@ -14,7 +14,10 @@ playbook can be repointed one operation at a time, plus the v2 additions:
   the Last Seen / First Seen window choice (see ingestion.py);
 - ``get_incidents`` / ``get_incident_by_id`` / ``get_incident_events`` -- the
   console-tier incident objects (an incident is what the FortiEDR console UI
-  groups events by; it absorbs re-detections of the same process).
+  groups events by; it absorbs re-detections of the same process);
+- ``delete_exception`` -- the API's ``exceptions/delete`` endpoint, which the
+  shipped connector never exposed; without it an exception created for an
+  event was permanent for playbook purposes.
 
 Handlers are behaviour-faithful ports of the shipped 2.1.0 connector except
 where a comment says otherwise.
@@ -101,6 +104,14 @@ def count_events(config, params):
     return {'event_count': response.json()}
 
 
+# Flags the update-event body carries as real JSON booleans. The form's
+# selects deliver the literal strings 'True'/'False'; the API answers 200 to a
+# string body but leaves the flag untouched (live-observed on 7.2.3: a read
+# toggle returned success while the event's seen flag stayed false), so the
+# shipped connector's read/handle/archive toggles were silent no-ops.
+BOOLEAN_EVENT_FLAGS = ('mute', 'handle', 'archive', 'read', 'forceUnmute')
+
+
 def update_event(config, params):
     # Body keys per the shipped 2.1.0 connector: everything else travels as a
     # query-string filter.
@@ -111,7 +122,10 @@ def update_event(config, params):
     body = {}
     for key in body_keys:
         if key in payload:
-            body[key] = payload.pop(key)
+            value = payload.pop(key)
+            if key in BOOLEAN_EVENT_FLAGS and isinstance(value, str):
+                value = value.strip().lower() == 'true'
+            body[key] = value
     payload.pop('update_fields', None)
     headers, stream = client.build_headers('update_event')
     response = client.make_rest_api_call('Update Events', 'PUT', E, headers,
@@ -153,6 +167,28 @@ def get_event_exceptions(config, params):
     return client.json_get('Get Event Exceptions', X + '/get-event-exceptions', params, 'get_event_exceptions')
 
 
+def delete_exception(config, params):
+    """DELETE /management-rest/exceptions/delete -- in the API since before
+    2.1.0 but never shipped in the connector, which left an exception created
+    for an event permanent for playbook purposes.
+
+    The narrow path is Exception IDs; Delete All widens the delete to the
+    same filters list-exceptions accepts (comment, process, rules, path), so
+    it defaults False and IDs are required unless it is explicitly set.
+    """
+    client = FortiEDRClient(config)
+    payload = client.build_payload(params, 'delete_exception')
+    delete_all = payload.get('deleteAll')
+    payload['deleteAll'] = delete_all in ('True', 'true', True)
+    if not payload.get('exceptionIds') and not payload.get('deleteAll'):
+        raise ConnectorError('delete_exception needs Exception IDs, or Delete All '
+                             'True with explicit filters')
+    headers, stream = client.build_headers('delete_exception')
+    response = client.make_rest_api_call('Delete Exception', 'DELETE', X + '/delete',
+                                         headers, payload=payload, stream=stream)
+    return response.json() if response.text else {'result': 'Successfully deleted the exception(s)'}
+
+
 # ---------------------------------------------------------------------------
 # Exceptions
 # ---------------------------------------------------------------------------
@@ -185,31 +221,50 @@ def update_exception(config, params):
     if not raw_rows:
         raise ConnectorError('Raw data Items is not available for provided Event ID: {0}'
                              .format(params.get('eventId')))
-    first_raw = raw_rows[0] if isinstance(raw_rows, list) else {}
 
-    # Export the raw event JSON to read the exception being edited
-    temp_params = {'organization': params.get('organization'),
-                   'rawItemIds': first_raw.get('rawEventId')}
-    export = client.get('Get Raw JSON Event Data', E + '/export-raw-data-items-json',
-                        temp_params, 'get_raw_json_event_data')
-    payload = export.json() if export.text else {}
-    existing = payload.get('Exceptions')
-    if existing is None:
-        return {'status': 'success',
-                'message': 'Exceptions list not found for this Event ID: {0}'.format(params.get('eventId'))}
-
-    # v2 fix (the shipped connector sends the FIRST exception object it
-    # exported, mutated only when it happens to be the requested one): find
-    # the requested ExceptionId, mutate that one, and POST it. A missing id
-    # reports failure instead of silently re-creating the first exception.
-    existing = [dict(item) for item in existing]
+    # v2 fix #1 (the shipped connector posts the FIRST exception object of
+    # the FIRST raw item, mutated only when it happens to be the requested
+    # one): find the requested ExceptionId and mutate that one.
+    #
+    # v2 fix #2, live-observed on 7.2.3: an event correlates one raw item
+    # per detection batch, and an exception embedded in a raw export lives
+    # in the export of the raw item that was its origin. The stock
+    # connector (and fix #1) only ever looked at the FIRST raw item, so an
+    # update that targeted any other raw item reported
+    # "success: Exceptions list not found" while updating nothing. v2
+    # exports each raw item until one carries the requested ExceptionId.
+    #
+    # v2 honesty note, live-observed on 7.2.3: exceptions created through
+    # create-exception are stored server-side and NO raw-item export embeds
+    # them, so against a 7.x tenant this operation reports a plain failure
+    # naming the id that could not be found (the stock connector answered a
+    # false "success" here). The raw-export edit path remains for FortiEDR
+    # versions that do embed exceptions in raw exports.
     input_exception_id = params.get('exceptionId')
     match = None
-    for exception in existing:
-        if str(exception.get('ExceptionId')) == str(input_exception_id):
-            match = exception
-            break
-    if not match:
+    edit_query = None
+    for raw in raw_rows:
+        if not isinstance(raw, dict):
+            continue
+        temp_params = {'organization': params.get('organization'),
+                       'rawItemIds': raw.get('rawEventId')}
+        export = client.get('Get Raw JSON Event Data', E + '/export-raw-data-items-json',
+                            temp_params, 'get_raw_json_event_data')
+        payload = export.json() if export.text else {}
+        existing = payload.get('Exceptions') if isinstance(payload, dict) else None
+        if not isinstance(existing, list):
+            continue
+        for exception in existing:
+            if str((exception or {}).get('ExceptionId')) == str(input_exception_id):
+                match = dict(exception)
+                break
+        if match is None:
+            continue
+        temp_params.pop('rawItemIds', None)
+        temp_params['confirmEdit'] = True
+        edit_query = client.build_payload(temp_params, 'update_exception')
+        break
+    if match is None:
         return {'status': 'failure',
                 'message': 'Exception ID {0} not found on Event ID {1}'.format(
                     input_exception_id, params.get('eventId'))}
@@ -252,12 +307,9 @@ def update_exception(config, params):
         else:
             match['Comment'] = comment
 
-    temp_params.pop('rawItemIds', None)
-    temp_params['confirmEdit'] = True
-    query = client.build_payload(temp_params, 'update_exception')
     headers, stream = client.build_headers('update_exception')
     response = client.make_rest_api_call('Update Exception', 'POST', X + '/create-or-edit-exception',
-                                         headers, payload=query, stream=stream, data=json.dumps(match))
+                                         headers, payload=edit_query, stream=stream, data=json.dumps(match))
     return response.json() if response.text else {'result': 'Successfully updated the exception'}
 
 
@@ -537,6 +589,15 @@ def _wait_for_async_job(client, job_id, poll_seconds=5, max_polls=120):
 
 
 def update_collector_installer(config, params):
+    """Re-pin a collector group's target installer version.
+
+    updateVersions is a JSON list of objects ({'osFamily', 'version',
+    'allowDowngrade'}); the form resolves a [json] parameter to the parsed
+    object, but a playbook step delivering pre-encoded JSON (a string) is
+    parsed here instead of being wrapped into a one-string list, which the
+    server rejects with a 400 naming CollectorInstallerRequest
+    (live-observed on 7.2.3).
+    """
     client = FortiEDRClient(config)
     query = {}
     if params.get('collectorGroups'):
@@ -544,6 +605,11 @@ def update_collector_installer(config, params):
     if params.get('organization'):
         query['organization'] = params.get('organization')
     update_versions = params.get('updateVersions')
+    if isinstance(update_versions, str):
+        try:
+            update_versions = json.loads(update_versions)
+        except ValueError:
+            update_versions = [update_versions]
     if update_versions and not isinstance(update_versions, list):
         update_versions = [update_versions]
     body = {'updateVersions': update_versions}
@@ -609,11 +675,9 @@ def get_incidents(config, params):
     except (TypeError, ValueError):
         page_size = 50
     offset = int(params.get('offset') or 0)
-    retries = [0]
     headers, _ = client.build_headers('get_incidents')
     response = client.make_rest_api_call('Get Incidents', 'GET', CONSOLE_INCIDENTS, headers,
-                                         payload=dict(query, pageSize=page_size, offset=offset),
-                                         retries=retries)
+                                         payload=dict(query, pageSize=page_size, offset=offset))
     payload = response.json() if response.text else {}
     items = payload.get('result') if isinstance(payload, dict) else payload
     items = items.get('items') if isinstance(items, dict) else items
@@ -734,6 +798,7 @@ OPERATIONS = {
     'create_exception': create_exception,
     'list_exception': list_exception,
     'update_exception': update_exception,
+    'delete_exception': delete_exception,
     'create_ipset': create_ipset,
     'get_ipset_list': get_ipset_list,
     'update_ipset': update_ipset,

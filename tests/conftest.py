@@ -167,6 +167,24 @@ def connector():
     return FortiEDR()
 
 
+@pytest.fixture(scope='session')
+def call_op(connector, live_config):
+    """execute() plus a session registry of which operations ran live.
+
+    ``call_op(op, params, config=None)`` executes against ``live_config`` by
+    default and records ``op``; the full-op live suite ends with a gate that
+    asserts the registry equals every operation the connector ships, so an op
+    that only ever ran offline is a test failure, not an oversight.
+    """
+
+    def _call(op, params=None, config=None):
+        _call.covered.add(op)
+        return connector.execute(config or live_config, op, dict(params or {}))
+
+    _call.covered = set()
+    return _call
+
+
 FIXTURES = Path(__file__).resolve().parent / 'fixtures'
 
 

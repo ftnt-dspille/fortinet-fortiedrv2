@@ -26,6 +26,7 @@ events are deduplicated by the ingest playbook's upsert (``sourceId`` =
 old created-only semantics.
 """
 
+import time
 from typing import Any, Dict, List, Optional
 
 from .client import MGMT_PREFIX, ConnectorError, FortiEDRClient, logger
@@ -43,6 +44,23 @@ MAX_PAGE_SIZE = 1000
 # an unbounded result set into memory and stall the playbook (FortiSIEM v2
 # uses the same ceiling rationale).
 MAX_EVENTS_PER_RUN = 5000
+
+# /management-rest/events/list-events has been observed (live tenant) to
+# answer a perfectly good paged query with 200 + an empty JSON body, while
+# /events/count-events for the same window reports rows -- the next identical
+# request returns the events. A scheduled pull that believes the empty page
+# ends its window silently skips real events AND advances its watermark over
+# them, so the first page gets retried before it is believed. Later pages are
+# not retried: a short page already ends the loop, and a full page followed by
+# a transient empty page costs only the tail of one window (the alternative is
+# paying two extra requests on every healthy pull forever).
+EMPTY_PAGE_RETRIES = 2
+
+# Backoff between those re-requests. Short on purpose: the observed transient
+# cleared between two adjacent probe calls, so 2s separates a real empty from
+# a dropped page quickly without letting the window slide under a flapping
+# tenant.
+EMPTY_PAGE_RETRY_WAIT = 2
 
 TIME_FIELD_MAP = {
     'Last Seen (activity)': ('lastSeenFrom', 'lastSeenTo'),
@@ -87,18 +105,31 @@ def fetch_window_events(client: FortiEDRClient, from_value, to_value: Optional[s
 
     collected: List[Event] = []
     page = 1
-    retries = [0]
+    empty_first_page_attempts = 0
     while len(collected) < cap:
         response = client.make_rest_api_call(
             'Ingest Events', 'GET', LIST_EVENTS,
             headers=client.build_headers('get_event_list')[0],
             payload=client.build_payload(dict(query, itemsPerPage=page_size, pageNumber=page),
-                                         'get_event_list'),
-            retries=retries)
+                                         'get_event_list'))
         rows = client.json_or_empty(response)
         if not isinstance(rows, list):
             raise ConnectorError('Unexpected response from list-events: expected a JSON array')
         if not rows:
+            # An empty FIRST page is only believed after EMPTY_PAGE_RETRIES
+            # identical re-requests also came back empty (see the constant's
+            # note: the live tenant has been seen answering a good paged query
+            # with 200 + an empty body once, then answering the same query
+            # with the rows; a scheduled pull must not advance its watermark
+            # over a window it never received). Later pages are believed
+            # immediately: a short page has already ended the loop, so only
+            # the window's tail is ever at stake.
+            if page == 1 and empty_first_page_attempts < EMPTY_PAGE_RETRIES:
+                empty_first_page_attempts += 1
+                logger.info('Ingest Events: empty first page, re-requesting ({0}/{1})'
+                            .format(empty_first_page_attempts, EMPTY_PAGE_RETRIES))
+                time.sleep(EMPTY_PAGE_RETRY_WAIT)
+                continue
             break
         collected.extend(Event(**row) for row in rows)
         if len(rows) < page_size:
