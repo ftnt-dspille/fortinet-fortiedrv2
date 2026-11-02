@@ -1,0 +1,85 @@
+name: release
+
+# Tag `v1.0.0` builds the bundle for info.json version 1.0.0 and attaches it to
+# a GitHub release. The tag is the trigger, but info.json stays the source of
+# truth for the version - the checks below refuse a tag that disagrees with it.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag must match info.json version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          info=$(python3 -c "import json;print(json.load(open('info.json'))['version'])")
+          if [ "$tag" != "$info" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match info.json version $info"
+            exit 1
+          fi
+          echo "version=$info" >> "$GITHUB_ENV"
+
+      - name: Install fsrpb compiler
+        # YAML is the source of truth for humans; JSON is build output. CI
+        # installs the compiler and recompiles here so a contributor only ever
+        # has to edit playbooks.yaml - a missed local rebuild won't ship a
+        # stale collection name or stale step wiring.
+        # Pinned to an immutable commit so a compromised branch of the compiler
+        # can't rewrite playbooks on release. Bump intentionally.
+        run: pip install -e "git+https://github.com/ftnt-dspille/fsr-playbook-framework.git@797c381cf1ebf377d754182b5be9ea84c1ff8824#egg=fsrpb"
+        # Editable on purpose: the fsrpb console shim bootstraps <install-dir>/tooling
+        # onto sys.path, and the wheel does not ship tooling/ -- only a checkout
+        # install has it. A non-editable install dies with "No module named cli".
+
+      - name: Compile playbooks.yaml -> playbooks.json
+        # Until fortinet-fortiedrv2 is merged into the fsrpb reference store,
+        # this compiles under --lax with a warning (build.py falls back
+        # automatically); the offline suite pins the step wiring either way.
+        run: python playbooks/build.py
+
+      - name: Compiled playbooks must match info.json version
+        # Belt-and-braces: build.py stamps the collection name from info.json,
+        # but if that logic ever regresses the release should still refuse.
+        run: |
+          python3 - <<'PY'
+          import json, re, sys
+          version = json.load(open("info.json"))["version"]
+          name = json.load(open("playbooks/playbooks.json"))["data"][0]["name"]
+          if not re.search(rf"{re.escape(version)}$", name):
+              sys.exit(f"::error::playbooks.json collection {name!r} "
+                       f"is not built for {version}")
+          print(f"collection {name!r} matches {version}")
+          PY
+
+      - name: No en/em dashes
+        # FortiSOAR loads connector source as latin-1 at runtime, so one of
+        # these raises UnicodeEncodeError on an operation that is otherwise fine.
+        run: |
+          if git grep -nP '[\x{2013}\x{2014}]' -- . ; then
+            echo "::error::en/em dash found - use a plain hyphen instead"
+            exit 1
+          fi
+
+      - run: pip install -r tests/requirements.txt -r requirements.txt
+      - name: Offline tests
+        # A real gate: a failing suite blocks the release.
+        run: pytest tests/test_offline.py -q
+
+      - name: Build the bundle
+        run: ./scripts/package.sh
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+          "dist/fortinet-fortiedrv2-${version//./_}.tgz" \
+          --title "$GITHUB_REF_NAME" \
+          --notes "Install in FortiSOAR: Content Hub > Connectors > Add, and upload the attached .tgz."

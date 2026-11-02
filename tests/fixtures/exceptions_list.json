@@ -1,0 +1,12 @@
+[
+  {
+    "ExceptionId": 9001,
+    "rules": [
+      "Suspicious Application"
+    ],
+    "path": "",
+    "process": "control.exe",
+    "comment": "",
+    "destination": ""
+  }
+]

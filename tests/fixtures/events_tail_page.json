@@ -1,0 +1,46 @@
+[
+  {
+    "eventId": 1503820,
+    "firstSeen": "2026-10-29 13:36:52",
+    "lastSeen": "2026-10-29 13:39:47",
+    "severity": "High",
+    "classification": "Inconclusive",
+    "action": "SimulationBlock",
+    "archived": false,
+    "handled": false,
+    "seen": false,
+    "muted": false,
+    "organization": "Demo Org",
+    "process": "MicrosoftEdgeUpdate.exe",
+    "processPath": "C:/Users/Public/MicrosoftEdgeUpdate.exe",
+    "processOwner": "labuser",
+    "processType": "Unknown",
+    "rules": [
+      "Application Control"
+    ],
+    "destinations": [
+      "198.51.100.7"
+    ],
+    "loggedUsers": [
+      "labuser"
+    ],
+    "collectors": [
+      {
+        "id": 701,
+        "device": "lab-endpoint-02",
+        "ip": "203.0.113.6",
+        "collectorGroup": "Workstations",
+        "operatingSystem": "Windows 10 Pro",
+        "lastSeen": "2026-10-29 13:39:47",
+        "macAddresses": [
+          "00-11-22-33-44-55"
+        ]
+      }
+    ],
+    "threatDetails": {
+      "threatName": "",
+      "threatFamily": "",
+      "threatType": ""
+    }
+  }
+]

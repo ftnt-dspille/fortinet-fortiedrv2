@@ -1,0 +1,23 @@
+{
+  "id": 1492384,
+  "name": "control.exe",
+  "type": "process",
+  "eventsNum": 13,
+  "classification": "ClassificationMalicious",
+  "classificationValue": "ClassificationMalicious",
+  "organization": "Demo Org",
+  "devices": [
+    {
+      "name": "lab-endpoint-01",
+      "deviceType": "Windows"
+    }
+  ],
+  "tags": [],
+  "action": "Log",
+  "hostState": "Active",
+  "isolated": false,
+  "incidentHandlingState": "Unhandled",
+  "assignedUser": null,
+  "firstSeen": "13-Oct-2026, 12:10:20",
+  "lastSeen": "29-Oct-2026, 13:50:59"
+}

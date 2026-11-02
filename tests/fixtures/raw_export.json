@@ -1,0 +1,14 @@
+{
+  "Exceptions": [
+    {
+      "ExceptionId": 9001,
+      "Name": "R0001",
+      "Comment": "",
+      "AgentGroups": [],
+      "IpGroups": [],
+      "AllDestinations": false,
+      "AllAgentGroups": false,
+      "AllAccountsAgentGroups": false
+    }
+  ]
+}

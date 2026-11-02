@@ -1,0 +1,90 @@
+[
+  {
+    "eventId": 1492374,
+    "firstSeen": "2026-10-13 12:10:20",
+    "lastSeen": "2026-10-15 12:24:52",
+    "severity": "Critical",
+    "classification": "Malicious",
+    "action": "SimulationBlock",
+    "archived": false,
+    "handled": false,
+    "seen": false,
+    "muted": false,
+    "organization": "Demo Org",
+    "process": "control.exe",
+    "processPath": "C:/Users/Public/control.exe",
+    "processOwner": "labuser",
+    "processType": "Unknown",
+    "rules": [
+      "Suspicious Application"
+    ],
+    "destinations": [
+      "198.51.100.7"
+    ],
+    "loggedUsers": [
+      "labuser"
+    ],
+    "collectors": [
+      {
+        "id": 701,
+        "device": "lab-endpoint-01",
+        "ip": "203.0.113.5",
+        "collectorGroup": "Workstations",
+        "operatingSystem": "Windows 10 Pro",
+        "lastSeen": "2026-10-15 12:24:52",
+        "macAddresses": [
+          "00-11-22-33-44-55"
+        ]
+      }
+    ],
+    "threatDetails": {
+      "threatName": "",
+      "threatFamily": "",
+      "threatType": ""
+    }
+  },
+  {
+    "eventId": 1493703,
+    "firstSeen": "2026-10-15 11:59:18",
+    "lastSeen": "2026-10-29 13:32:58",
+    "severity": "Critical",
+    "classification": "Malicious",
+    "action": "SimulationBlock",
+    "archived": false,
+    "handled": false,
+    "seen": false,
+    "muted": false,
+    "organization": "Demo Org",
+    "process": "cloud.exe",
+    "processPath": "C:/Users/Public/cloud.exe",
+    "processOwner": "labuser",
+    "processType": "Unknown",
+    "rules": [
+      "Exfiltration Detected"
+    ],
+    "destinations": [
+      "198.51.100.7"
+    ],
+    "loggedUsers": [
+      "labuser"
+    ],
+    "collectors": [
+      {
+        "id": 701,
+        "device": "lab-endpoint-01",
+        "ip": "203.0.113.5",
+        "collectorGroup": "Workstations",
+        "operatingSystem": "Windows 10 Pro",
+        "lastSeen": "2026-10-29 13:32:58",
+        "macAddresses": [
+          "00-11-22-33-44-55"
+        ]
+      }
+    ],
+    "threatDetails": {
+      "threatName": "",
+      "threatFamily": "",
+      "threatType": ""
+    }
+  }
+]

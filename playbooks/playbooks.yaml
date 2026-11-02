@@ -1,0 +1,395 @@
+# FortiEDR v2 connector sample playbooks.
+#
+# Build with `python playbooks/build.py`, never by hand (the compiled JSON
+# is stamped with the info.json version and frozen timestamps).
+#
+# Requires alongside this connector on the appliance:
+#   - fortinet-fortiedrv2 in its default config
+
+collection: Sample - Fortinet FortiEDR v2 - 1.0.0
+description: >-
+  Sample playbooks for the "Fortinet FortiEDR v2" connector. If you are
+  planning to use the sample playbooks in your environment, ensure that you
+  clone those playbooks and move them to a different collection, since the
+  sample playbook collection gets deleted during connector upgrade and
+  delete.
+visible: true
+tags:
+  - fortinet-fortiedrv2
+  - Fortinet
+  - dataingestion
+exported_tags:
+  - fortinet-fortiedrv2
+  - Fortinet
+  - dataingestion
+  - fetch
+  - create
+  - ingest
+
+playbooks:
+
+  # ---------------------------------------------------------------------------
+  # Data ingestion chain (Init Macros / Fetch / Ingest)
+  #
+  # Modeled on the FortiSIEM v2 / FortiAIGate connector chains, which is the shape
+  # the Data Ingestion Wizard expects:
+  #
+  #   * the wizard discovers these three by their tags: every one carries
+  #     #dataingestion, Fetch carries #fetch, Ingest carries #ingest and #create;
+  #   * Fetch's Start step carries configuration_schema, the form the wizard shows;
+  #   * Fetch ends in a set_variable ("Save Result") publishing `data` plus the
+  #     carry-through vars. Ingest reads them back off the workflow_reference step
+  #     ("Fetch Events") as vars.steps.Fetch_Events.<key>;
+  #   * the pull watermark lives in a per-playbook dynamic variable (macro) that
+  #     Init Macros creates, Fetch reads, and Ingest advances after the alerts
+  #     are written.
+  #
+  # WHY THE WINDOW IS ON LAST SEEN, NOT FIRST SEEN -- the defect this connector
+  # exists to fix. FortiEDR correlates a re-detection of the same process into
+  # the EXISTING event: the event's firstSeen stays pinned at the first
+  # detection and only lastSeen moves (verified live: a control.exe event
+  # created 13-Oct was still absorbing detections on 29-Oct, while the console
+  # incident for it grew to 10+ events). The shipped fortinet-fortiedr playbooks
+  # query firstSeenFrom = last watermark and leave lastSeenFrom blank, so a
+  # scheduled pull after a re-detection finds ZERO new events -- the ingestion
+  # report says "no incidents found" while the console shows a live incident.
+  # This chain windows on the event's activity (lastSeenFrom/lastSeenTo) by
+  # default, so every event created OR re-triggered inside the window is
+  # fetched. Re-seen events are deduplicated by the upsert (sourceId =
+  # eventId). Analysts who want the old created-only behavior switch the
+  # wizard's Time Field form value to "First Seen (creations only)".
+  #
+  # The window ends 60 seconds behind the clock: a re-triggered event's lastSeen
+  # may still be moving when the pull runs, so the last minute is read by the
+  # next run, not this one.
+  # ---------------------------------------------------------------------------
+
+  - name: '>> FortiEDR v2 > Init Macros'
+    description: >-
+      Creates the FortiEDR last-pull-time macro if it does not already exist.
+      Called by Fetch during the wizard's environment-setup pass, and by Fetch
+      whenever the macro is missing.
+    tags:
+    - fortinet-fortiedrv2
+    - dataingestion
+    is_active: true
+    parameters:
+    - FortiEDRMacroName
+    - FortiEDRMacroValue
+    - overrideIfNoMatch
+    steps:
+    - name: Start
+      type: start
+      next: Get FortiEDR Macros
+
+    - name: Get FortiEDR Macros
+      type: connector
+      connector: cyops_utilities
+      operation: make_cyops_request
+      config: ''
+      params:
+        iri: /api/wf/api/dynamic-variable/?format=json&name={{vars.input.params.FortiEDRMacroName}}
+        body: ''
+        method: GET
+      next: FortiEDR Macro Exists
+
+    - name: FortiEDR Macro Exists
+      type: decision
+      conditions:
+      - display: Not Exist
+        when: "{{ vars.steps.Get_FortiEDR_Macros.data['hydra:totalItems'] == 0 }}"
+        next: Create FortiEDR Macro
+      - display: Exist
+        default: true
+        next: Fetch Macro Current Value
+
+    - name: Create FortiEDR Macro
+      type: connector
+      connector: cyops_utilities
+      operation: make_cyops_request
+      config: ''
+      params:
+        iri: /api/wf/api/dynamic-variable/?format=json
+        body: "{ 'name': '{{vars.input.params.FortiEDRMacroName}}', 'value': '{{vars.input.params.FortiEDRMacroValue}}' }"
+        method: POST
+
+    - name: Fetch Macro Current Value
+      type: set_variable
+      vars:
+        macroExistingRecord: "{{vars.steps.Get_FortiEDR_Macros.data['hydra:member'][0]}}"
+      next: Update Macro If Required
+
+    - name: Update Macro If Required
+      type: connector
+      when: "{{ (vars.input.params.overrideIfNoMatch == true) and (vars.macroExistingRecord.value != vars.input.params.FortiEDRMacroValue) }}"
+      connector: cyops_utilities
+      operation: make_cyops_request
+      config: ''
+      params:
+        iri: /api/wf/api/dynamic-variable/{{ vars.macroExistingRecord.id }}/
+        body: "{ 'name': '{{vars.input.params.FortiEDRMacroName}}', 'value': '{{vars.input.params.FortiEDRMacroValue}}' }"
+        method: PUT
+
+  - name: '> FortiEDR v2 > Fetch'
+    description: >-
+      Reads the last-pull-time watermark and reads the FortiEDR events whose
+      activity (Last Seen, by default) falls inside the window since it. The
+      first run, and any run after the macro was lost, reads the Initial
+      Backfill Range instead.
+    tags:
+    - fortinet-fortiedrv2
+    - fetch
+    - dataingestion
+    is_active: true
+    steps:
+    - name: Start
+      type: start
+      configuration_schema:
+      - title: Initial Backfill Range (minutes)
+        required: true
+        editable: true
+        visible: true
+        type: select
+        name: fetch_last_minutes
+        options:
+        - '20'
+        - '60'
+        - '360'
+        - '1440'
+        - '10080'
+        - '43200'
+        value: '60'
+        tooltip: How many minutes back the first run reads, before a last-pull-time watermark exists. Later runs read from the watermark.
+      - title: Time Field
+        required: true
+        editable: true
+        visible: true
+        type: select
+        name: time_field
+        options:
+        - Last Seen (activity)
+        - First Seen (creations only)
+        value: Last Seen (activity)
+        tooltip: Last Seen (activity) fetches every event created or re-triggered in the window. FortiEDR links a re-detection of the same process into the existing event, whose firstSeen never moves -- use First Seen (creations only) only if you want the shipped connector's created-only behavior, which misses re-triggered events.
+      - title: Maximum Events Per Run
+        required: false
+        editable: true
+        visible: true
+        type: text
+        name: max_events
+        value: '2000'
+        tooltip: Most events one run reads. A run that reaches the cap does not read the older events of its window, so raise the cap or shorten the schedule rather than let it bind.
+      next: Configuration
+
+    - name: Configuration
+      type: set_variable
+      comment: |
+        Wizard-editable defaults. `fetch_last_minutes` is the backfill window
+        used while the watermark is missing or '0'. The macro name is scoped to
+        this playbook's UUID, so two ingestion configurations never share a
+        watermark.
+      vars:
+        fetch_last_minutes: '60'
+        time_field: Last Seen (activity)
+        max_events: '2000'
+        FortiEDRMacroName: "FortiEDRLastEventPullTime_{{vars['audit_info']['cyops_playbook_iri'].split('/')[-1].replace('-','_')}}"
+      next: Get Macro Value
+
+    - name: Get Macro Value
+      type: connector
+      connector: cyops_utilities
+      operation: make_cyops_request
+      config: ''
+      params:
+        iri: /api/wf/api/dynamic-variable/?format=json&name={{vars.FortiEDRMacroName}}
+        body: ''
+        method: GET
+      next: Environment Setup
+
+    - name: Environment Setup
+      type: workflow_reference
+      comment: |
+        Runs when the watermark macro does not exist yet, not only on the
+        wizard's `vars.request.env_setup` first pass. It must come AFTER Get
+        Macro Value so its absence can be seen: Update Last Pull Time only
+        updates the macro, it does not create it, so a missing macro would
+        otherwise leave the watermark unwritten and every run would read the
+        backfill window again without any error.
+        The macro is primed to '0', which Set Time Configuration reads as a
+        cold start.
+      when: '{{ vars.request.env_setup or not vars.steps.Get_Macro_Value.data["hydra:member"] }}'
+      target: '>> FortiEDR v2 > Init Macros'
+      FortiEDRMacroName: '{{vars.FortiEDRMacroName}}'
+      FortiEDRMacroValue: '0'
+      overrideIfNoMatch: 'false'
+      apply_async: false
+      pass_parent_env: false
+      pass_input_record: false
+      next: Set Time Configuration
+
+    - name: Set Time Configuration
+      type: set_variable
+      comment: |
+        `curr_timestamp` is the end of this run's window, 60 seconds behind the
+        clock (see the block comment above) and in the management API's native
+        `YYYY-MM-DD HH:MM:SS` (UTC) format. It is written back to the macro only
+        after Ingest succeeds, so a failed run reads its window again.
+        `last_pull_time` is empty on a cold start (macro missing, or '0'); the
+        run then computes `window_from` as now minus `fetch_last_minutes`.
+      vars:
+        curr_timestamp: "{{ arrow.utcnow().shift(seconds=-60).format('YYYY-MM-DD HH:mm:ss') }}"
+        last_pull_time: "{% if vars.request.env_setup or not vars.steps.Get_Macro_Value.data['hydra:member'] or vars.steps.Get_Macro_Value.data['hydra:member'][0].value == '0' %}{% else %}{{ vars.steps.Get_Macro_Value.data['hydra:member'][0].value }}{% endif %}"
+        window_from: "{% if vars.last_pull_time %}{{ vars.last_pull_time }}{% else %}{{ arrow.utcnow().shift(minutes=-(vars.fetch_last_minutes|int)).format('YYYY-MM-DD HH:mm:ss') }}{% endif %}"
+      next: Ingest Events
+
+    - name: Ingest Events
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: ingest_events
+      operationTitle: Ingest Events
+      config: ''
+      comment: |
+        The connector op pages through the events itself (up to Maximum Events
+        Per Run) and returns each one already mapped to an alert payload:
+        external_id = eventId, severity clamped to the Severity picklist,
+        process/device/destinations split into their own keys, and the raw
+        event kept in source_payload.
+      params:
+        from: '{{vars.window_from}}'
+        to: '{{vars.curr_timestamp}}'
+        time_field: '{{vars.time_field}}'
+        max_events: '{{vars.max_events}}'
+      next: Save Result
+
+    - name: Save Result
+      type: set_variable
+      comment: |
+        The Fetch -> Ingest contract. Ingest reads every one of these back off
+        the workflow_reference step ("Fetch Events") as
+        `vars.steps.Fetch_Events.<key>`.
+      vars:
+        data: '{{vars.steps.Ingest_Events.data}}'
+        current_time: '{{vars.curr_timestamp}}'
+        FortiEDRMacroName: '{{vars.FortiEDRMacroName}}'
+
+  - name: FortiEDR v2 > Ingest
+    description: >-
+      Orchestrator: calls Fetch, then either returns a sample record for the
+      wizard's Data Mapping preview (env_setup mode) or creates one alert per
+      FortiEDR event and advances the last-pull-time watermark.
+    tags:
+    - fortinet-fortiedrv2
+    - ingest
+    - dataingestion
+    - create
+    is_active: true
+    steps:
+    - name: Start
+      type: start
+      module: alerts
+      button_label: 'FortiEDR v2 > Ingest'
+      requires_record: false
+      next: Fetch Events
+
+    - name: Fetch Events
+      type: workflow_reference
+      target: '> FortiEDR v2 > Fetch'
+      apply_async: false
+      pass_parent_env: false
+      pass_input_record: false
+      next: Mapping Preview
+
+    - name: Mapping Preview
+      type: decision
+      comment: |
+        The Data Ingestion Wizard runs the Ingest playbook with
+        `vars.request.env_setup == true` while the analyst designs the field
+        mapping in the UI. In that mode the first fetched record is returned so
+        the wizard can render the Data Mapping preview; no alerts are written.
+        `false` (or missing) is the real ingestion path.
+      conditions:
+      - display: Mapping Preview
+        when: '{{ vars.request.env_setup | default(false) | bool }}'
+        next: Return Sample
+      - display: Ingest
+        default: true
+        next: Configuration
+
+    - name: Return Sample
+      type: set_variable
+      comment: |
+        The sample for the wizard's Data Mapping preview: the first mapped
+        event of the window, whose keys are the fields `Create Record` maps.
+        Falls back to a representative record when the window is empty, so the
+        preview still renders.
+      vars:
+        sample: >-
+          {% if vars.steps.Fetch_Events.data | default([]) | length > 0 %}
+          {{ vars.steps.Fetch_Events.data[0] }}
+          {% else %}
+          {{ { 'name': '1493703 - lab-endpoint-01', 'external_id': '1493703', 'severity': 'Critical', 'alert_state': 'New', 'status': 'Open', 'alert_type': 'Command and Control', 'source': 'Fortinet FortiEDR', 'source_ip': '203.0.113.5', 'source_hostname': 'lab-endpoint-01', 'dest_ips': '198.51.100.7', 'dest_ip': '198.51.100.7', 'user_names': 'labuser', 'rule': 'Exfiltration Detected', 'process_name': 'cloud.exe', 'process_path': 'C:/Users/Public/cloud.exe', 'description': 'Event ID: 1493703 - Classification: Malicious - Organization: Demo Org - Device: lab-endpoint-01 - Device IP: 203.0.113.5 - Process: cloud.exe - Action: SimulationBlock - Rules: Exfiltration Detected', 'alert_generation_epoch': 1789992300, 'last_observed_epoch': 1789992330, 'event_count': 1, 'source_payload': { 'eventId': 1493703, 'process': 'cloud.exe', 'severity': 'Critical' } } }}
+          {% endif %}
+
+    - name: Configuration
+      type: set_variable
+      comment: |
+        The values the alerts take from the connector's output: the window's
+        mapped events and the macro holding its watermark.
+      vars:
+        incident_source_data: '{{ vars.steps.Fetch_Events.data }}'
+        FortiEDRMacroName: '{{ vars.steps.Fetch_Events.FortiEDRMacroName }}'
+      next: Create Record
+
+    - name: Create Record
+      type: create_record
+      module: alerts
+      operation: Overwrite
+      is_upsert: true
+      comment: |
+        The step is named "Create Record" because the Data Ingestion Wizard's
+        Data Mapping page is shown only for a create playbook with a step of
+        exactly that name, and it reads the target module off this step.
+
+        `is_upsert` routes this at /api/3/upsert/alerts, keyed on sourceId (the
+        eventId). That is the dedup that makes the Last Seen window safe: a
+        window that is read twice, or an event re-triggered and fetched again,
+        updates its existing alert instead of duplicating it. Without it the
+        plain insert path 409s on the sourceId uniqueness constraint.
+
+        The connector already clamps severity and alert_type to picklist
+        members, so the picklist filters cannot fail with an unmapped value.
+        The date is the event's firstSeen epoch (alertDetectionDate), while
+        sourcedata keeps the whole mapped payload including last_observed_epoch
+        and the raw event.
+      for_each:
+        item: '{{ vars.incident_source_data }}'
+        __bulk: true
+        batch_size: 100
+        condition: ''
+      fields:
+        name: "{{ vars.item.name | truncate(200) }}"
+        source: Fortinet FortiEDR
+        sourceId: '{{ vars.item.external_id }}'
+        severity: '{{ "Severity" | picklist(vars.item.severity | default("Medium")) }}'
+        alertType: '{{ "AlertType" | picklist(vars.item.alert_type | default("Other / Unknown")) }}'
+        alertDetectionDate: '{{ vars.item.alert_generation_epoch or vars.item.last_observed_epoch }}'
+        userName: '{{ vars.item.user_names | default("") }}'
+        processName: '{{ vars.item.process_name | default("") }}'
+        description: '{{ vars.item.description | e }}'
+        sourcedata: '{{ vars.item | toJSON }}'
+        __replace: 'true'
+        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'alertType', 'alertDetectionDate', 'userName', 'processName', 'description', 'sourcedata'] }}"
+      next: Update Last Pull Time
+
+    - name: Update Last Pull Time
+      type: connector
+      comment: |
+        Advances the watermark only after the alerts are written, so a failed
+        Create Record leaves the window to be read again.
+      connector: cyops_utilities
+      operation: updatemacro
+      operationTitle: 'FSR: Update Global Variables'
+      config: ''
+      params:
+        macro: '{{vars.FortiEDRMacroName}}'
+        value: '{{vars.steps.Fetch_Events.current_time}}'

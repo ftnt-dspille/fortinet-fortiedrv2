@@ -1,0 +1,41 @@
+# Test/lint configuration for the FortiEDR v2 connector.
+#
+# This file is config-only -- the connector ships as a tarball to the FortiSOAR
+# appliance runtime, not as a wheel -- so there is intentionally no
+# [build-system] or [project] table. Runtime deps live in requirements.txt.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::urllib3.exceptions.InsecureRequestWarning",
+    "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 130
+# The connector ships to the FortiSOAR appliance runtime, which is Python 3.9
+# on 7.6.x -- so target the lowest runtime, not the dev machine's interpreter.
+target-version = "py39"
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle, isort, pyupgrade, bugbear
+select = ["F", "E", "W", "I", "UP", "B"]
+ignore = [
+    # House style inherited from the shipped fortinet-fortiedr connector:
+    # '{0}'.format(x) interpolation and a bare `raise ConnectorError(err)`
+    # in `except` (the runtime logs the original traceback before re-raising).
+    "UP030", "UP031", "UP032", "B904",
+    # typing.Dict/List annotations instead of dict[...]/list[...]: the
+    # appliance runtime floor is Python 3.9, where PEP 585 generics in
+    # annotations need `from __future__ import annotations` -- pydantic models
+    # evaluate annotations at class creation, so keep the typing forms.
+    "UP006", "UP035",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Long user-facing message strings and structural table row literals.
+"scripts/gen_info.py" = ["E501"]
+"tests/*" = ["E501"]
+# The conftest installs appliance-runtime stubs into sys.modules before the
+# imports that need them -- module-import-not-at-top is the mechanism.
+"tests/conftest.py" = ["E402"]

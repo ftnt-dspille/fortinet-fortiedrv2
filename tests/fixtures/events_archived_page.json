@@ -1,0 +1,46 @@
+[
+  {
+    "eventId": 1440000,
+    "firstSeen": "2026-09-01 09:00:00",
+    "lastSeen": "2026-09-01 09:05:00",
+    "severity": "Medium",
+    "classification": "PUP",
+    "action": "Log",
+    "archived": false,
+    "handled": false,
+    "seen": false,
+    "muted": false,
+    "organization": "Demo Org",
+    "process": "toolsetup.exe",
+    "processPath": "C:/Users/Public/toolsetup.exe",
+    "processOwner": "labuser",
+    "processType": "Unknown",
+    "rules": [
+      "Application Control"
+    ],
+    "destinations": [
+      "198.51.100.7"
+    ],
+    "loggedUsers": [
+      "labuser"
+    ],
+    "collectors": [
+      {
+        "id": 701,
+        "device": "lab-endpoint-01",
+        "ip": "203.0.113.5",
+        "collectorGroup": "Workstations",
+        "operatingSystem": "Windows 10 Pro",
+        "lastSeen": "2026-09-01 09:05:00",
+        "macAddresses": [
+          "00-11-22-33-44-55"
+        ]
+      }
+    ],
+    "threatDetails": {
+      "threatName": "",
+      "threatFamily": "",
+      "threatType": ""
+    }
+  }
+]
