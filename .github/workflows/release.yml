@@ -33,7 +33,13 @@ jobs:
         # stale collection name or stale step wiring.
         # Pinned to an immutable commit so a compromised branch of the compiler
         # can't rewrite playbooks on release. Bump intentionally.
-        run: pip install -e "git+https://github.com/ftnt-dspille/fsr-playbook-framework.git@797c381cf1ebf377d754182b5be9ea84c1ff8824#egg=fsrpb"
+        # Runs from runner.temp, NOT the workspace: pip drops a VCS editable
+        # install into $PWD/src/, and a checkout inside the workspace pollutes
+        # every tree-walking repo test (the first release run failed exactly
+        # that way - the latin-1 gate scanned the foreign files in ./src/).
+        run: |
+          cd "$RUNNER_TEMP"
+          pip install -e "git+https://github.com/ftnt-dspille/fsr-playbook-framework.git@797c381cf1ebf377d754182b5be9ea84c1ff8824#egg=fsrpb"
         # Editable on purpose: the fsrpb console shim bootstraps <install-dir>/tooling
         # onto sys.path, and the wheel does not ship tooling/ -- only a checkout
         # install has it. A non-editable install dies with "No module named cli".

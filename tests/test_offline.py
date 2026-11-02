@@ -8,6 +8,7 @@ import ast
 import base64
 import json
 import re
+import subprocess
 import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -984,17 +985,30 @@ def test_only_client_imports_requests():
 
 def test_files_are_latin1_safe():
     """FortiSOAR loads connector sources as latin-1: an en/em dash or any other
-    non-latin-1 code point breaks the install on the appliance."""
+    non-latin-1 code point breaks the install on the appliance.
+
+    The walk covers the git-tracked set -- exactly the files that can ship.
+    The release workflow installs the fsrpb compiler editable, and pip drops
+    that foreign checkout into ./src/ inside this workspace; a raw tree walk
+    would latin-1-test files this repo does not own (that exact false failure
+    stopped the first release run). Falls back to the full tree walk when this
+    is not a git checkout (e.g. a zip export)."""
     bad = []
-    for path in sorted(REPO.rglob('*')):
-        rel = path.relative_to(REPO)
-        if any(part in ('.venv', '.git', '__pycache__', '.pytest_cache', '.ruff_cache', 'dist',
-                        'FortiEDR') for part in rel.parts):
-            continue
-        if path.suffix not in ('.py', '.json', '.md', '.yaml', '.yml', '.txt', '.ini', '.sh', '.cfg'):
+    suffixes = ('.py', '.json', '.md', '.yaml', '.yml', '.txt', '.ini', '.sh', '.cfg')
+    skip_parts = ('.venv', '.git', '__pycache__', '.pytest_cache', '.ruff_cache', 'dist',
+                  'FortiEDR')
+    try:
+        files = subprocess.check_output(['git', 'ls-files'], cwd=REPO,
+                                         text=True).splitlines()
+    except (OSError, subprocess.CalledProcessError):
+        files = [str(path.relative_to(REPO)) for path in sorted(REPO.rglob('*'))
+                 if not any(part in skip_parts for part in path.relative_to(REPO).parts)]
+    for rel in files:
+        path = REPO / rel
+        if path.suffix not in suffixes or not path.is_file():
             continue
         try:
             path.read_text(encoding='utf-8').encode('latin-1')
         except (UnicodeEncodeError, UnicodeDecodeError):
-            bad.append(str(rel))
+            bad.append(rel)
     assert bad == [], f"files with non-latin-1 code points: {bad}"
