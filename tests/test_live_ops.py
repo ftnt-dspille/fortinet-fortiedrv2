@@ -7,26 +7,30 @@ registry covers every operation ``fortinet-fortiedrv2`` ships, so an
 operation that only ever ran offline is a test failure, not an oversight.
 
 This is MUTATING coverage, in narrow ways approved by the tenant owner
-before the first run (Palm Labs tenant, all three collectors being offline
-lab VMs):
+before the first run (a demo tenant whose collectors are all offline lab
+VMs):
 
 - every round trip restores prior state exactly (read toggle, isolate,
   collector group, IP set create -> update -> delete);
-- the exception created on the sacrificial event 1503820 (MicrosoftEdgeUpdate
-  app-control noise) is DELETED again by the suite through v2's
-  delete_exception; nothing the suite touches stays behind;
-- set_collector_state is exercised enable-direction only: on this tenant the
-  console job behind a state change never completes (every collector is
-  offline), so what the op can prove live is the accepted, authed request and
-  its bounded 10-minute poll rather than a state flip;
+- the exception created on the sacrificial event is DELETED again by the
+  suite through v2's delete_exception; nothing the suite touches stays
+  behind;
+- set_collector_state is exercised enable-direction only: on this tenant
+  the console job behind a state change never completes (every collector
+  is offline), so what the op can prove live is the accepted, authed
+  request and its bounded 10-minute poll rather than a state flip;
 - ops that need a live collector (remediate_device, get_file) can only be
   validated up to the tenant's own clean rejection on this tenant: every
-  collector answers 'Operation cannot run on Disconnected device'. The tests
-  pin that the request path, auth and error surfacing all work end to end.
+  collector answers 'Operation cannot run on Disconnected device'. The
+  tests pin that the request path, auth and error surfacing all work end
+  to end.
 
-Operations discover their targets from the tenant at session start (org id,
-'ubuntu' collector, the demo and sacrificial events); a missing target skips
-the tests that need it rather than guessing.
+Targets are per-tenant and configured through .env.live (never hardcodes
+in this file): the configured org, the collector approved for the round
+trips (EDR_ROUNDTRIP_COLLECTOR), the long-lived event the ingestion
+semantics depend on (EDR_DEMO_EVENT_ID) and the event approved as the
+sacrificial carrier for the exception ops (EDR_SACRIFICIAL_EVENT_ID). A
+missing target skips the tests that need it rather than guessing.
 """
 import json
 import time
@@ -37,14 +41,6 @@ from connectors.core.connector import ConnectorError
 from fortiedrv2.operations import OPERATIONS
 
 pytestmark = pytest.mark.live
-
-# Canonical demo event (control.exe re-detections on The-Flame: firstSeen long
-# before lastSeen) and the approved sacrificial carrier for the one permanent
-# artifact this suite leaves behind (the exception).
-DEMO_EVENT_ID = 1493703
-SACRIFICIAL_EVENT_ID = 1503820
-
-UBUNTU = 'ubuntu'                     # the approved round-trip collector
 
 IPSET = 'zfortiedrv2-selftest'        # created and deleted again by its test
 
@@ -75,7 +71,7 @@ def fast_400s(monkeypatch):
 
 @pytest.fixture(scope='session')
 def org_id(call_op, live_config):
-    """The console organizationId of the configured org (Palm Labs).
+    """The console organizationId of the configured org.
 
     list-organizations names it ``organizationId`` (live 7.2.3); ``id`` is
     accepted as a fallback for API revisions that spell it differently.
@@ -96,10 +92,13 @@ def collectors(call_op):
 
 
 @pytest.fixture(scope='session')
-def ubuntu(collectors):
-    row = collectors.get(UBUNTU)
+def approved_collector(collectors, roundtrip_collector):
+    """Row (list-collectors shape) of the collector approved for the state
+    round trips, from EDR_ROUNDTRIP_COLLECTOR."""
+    row = collectors.get(roundtrip_collector) if roundtrip_collector else None
     if not row:
-        pytest.skip("the round-trip collector {0!r} is not visible".format(UBUNTU))
+        pytest.skip("the round-trip collector EDR_ROUNDTRIP_COLLECTOR="
+                    "{0!r} is not set in .env.live or not visible".format(roundtrip_collector))
     return row
 
 
@@ -114,29 +113,39 @@ def _event(call_op, event_id):
 
 
 @pytest.fixture(scope='session')
-def demo_event(call_op):
-    event = _event(call_op, DEMO_EVENT_ID)
+def demo_event(call_op, demo_event_id):
+    """The tenant's long-lived event (re-detections absorb into it without
+    moving its firstSeen) -- the shape the ingestion fix exists for."""
+    if not demo_event_id:
+        pytest.skip('EDR_DEMO_EVENT_ID not set (.env.live): the ingestion '
+                    'semantics canaries need a long-lived event id')
+    event = _event(call_op, demo_event_id)
     if not event:
-        pytest.skip('the canonical demo event {0} is no longer visible'.format(DEMO_EVENT_ID))
+        pytest.skip('the configured EDR_DEMO_EVENT_ID event is no longer visible')
     return event
 
 
 @pytest.fixture(scope='session')
-def sacrificial_event(call_op):
-    event = _event(call_op, SACRIFICIAL_EVENT_ID)
+def sacrificial_event(call_op, sacrificial_event_id):
+    """The event approved as the carrier for the exception round trip (an
+    event nobody minds an exception rule on -- here, app-control noise)."""
+    if not sacrificial_event_id:
+        pytest.skip('EDR_SACRIFICIAL_EVENT_ID not set (.env.live): the '
+                    'exception round trip needs an approved carrier event')
+    event = _event(call_op, sacrificial_event_id)
     if not event:
-        pytest.skip('the sacrificial event {0} is no longer visible'.format(SACRIFICIAL_EVENT_ID))
+        pytest.skip('the configured EDR_SACRIFICIAL_EVENT_ID event is no longer visible')
     return event
 
 
 # ----------------------------------------------------------------- read-only ops
 
-def test_get_collector_list_names_groups_and_state(call_op, collectors):
+def test_get_collector_list_names_groups_and_state(call_op, collectors, roundtrip_collector):
     """list-collectors answers the fields the round-trip tests verify against:
     name, id, state, stateAdditionalInfo and collectorGroupName
     (live-observed shape)."""
-    assert UBUNTU in collectors
-    row = collectors[UBUNTU]
+    assert roundtrip_collector in collectors
+    row = collectors[roundtrip_collector]
     assert row.get('id') and row.get('state')
     assert row.get('collectorGroupName'), 'list-collectors shapes changed: no collectorGroupName'
 
@@ -178,16 +187,16 @@ def test_get_event_list_rows_in_an_activity_window(call_op):
         assert row.get('eventId')
 
 
-def test_get_event_list_extended_is_a_deduped_union(call_op, demo_event):
+def test_get_event_list_extended_is_a_deduped_union(call_op, demo_event, demo_event_id):
     """List Events Extended queries archived=True and archived=False and keys
     the union on eventId; the demo event answers exactly one row."""
-    rows = call_op('get_event_list_extended', {'eventIds': str(DEMO_EVENT_ID)})
+    rows = call_op('get_event_list_extended', {'eventIds': str(demo_event_id)})
     assert rows, 'the demo event is invisible to list-events-extended'
-    assert [r.get('eventId') for r in rows] == [DEMO_EVENT_ID]
+    assert [r.get('eventId') for r in rows] == [demo_event_id]
 
 
-def test_get_raw_data_items_and_json_export(call_op, demo_event):
-    items = call_op('get_raw_data_items', {'eventId': DEMO_EVENT_ID})
+def test_get_raw_data_items_and_json_export(call_op, demo_event, demo_event_id):
+    items = call_op('get_raw_data_items', {'eventId': demo_event_id})
     assert items, 'no raw data items for the demo event'
     raw_id = items[0]['rawEventId']
     export = call_op('get_raw_json_event_data', {'rawItemIds': str(raw_id)})
@@ -237,7 +246,7 @@ def test_update_event_accepts_both_read_directions(call_op, sacrificial_event):
     does to the per-user audit), and `handle: false` additionally triggers a
     server-side 400 NPE ('batchSize is null') -- a FortiEDR server bug this
     test deliberately does not exercise."""
-    event_id = SACRIFICIAL_EVENT_ID
+    event_id = sacrificial_event['eventId']
     before = {key: _event(call_op, event_id).get(key)
               for key in ('seen', 'handled', 'archived', 'muted')}
 
@@ -257,38 +266,40 @@ def test_update_event_accepts_both_read_directions(call_op, sacrificial_event):
     assert after_restore == before, 'the read round trip left residue: {0}'.format(after_restore)
 
 
-def test_isolate_and_unisolate_round_trip(call_op, ubuntu):
-    call_op('isolate_collector', {'type': 'Name', 'devices': UBUNTU})
-    row = _collector(call_op, UBUNTU)
+def test_isolate_and_unisolate_round_trip(call_op, approved_collector):
+    name = approved_collector['name']
+    call_op('isolate_collector', {'type': 'Name', 'devices': name})
+    row = _collector(call_op, name)
     assert 'Isolated' in (row.get('stateAdditionalInfo') or ''), \
         'isolate answers OK but the collector state is {0!r}'.format(row.get('stateAdditionalInfo'))
-    call_op('unisolate_collector', {'type': 'Name', 'devices': UBUNTU})
-    row = _collector(call_op, UBUNTU)
+    call_op('unisolate_collector', {'type': 'Name', 'devices': name})
+    row = _collector(call_op, name)
     assert 'Isolated' not in (row.get('stateAdditionalInfo') or ''), \
-        'failed to restore the isolation state of {0}'.format(UBUNTU)
+        'failed to restore the isolation state of {0}'.format(name)
 
 
-def test_move_collectors_round_trip(call_op, ubuntu):
-    original = (ubuntu.get('collectorGroupName')
-                or _collector(call_op, UBUNTU).get('collectorGroupName'))
-    assert original, 'cannot learn the current group of {0}'.format(UBUNTU)
+def test_move_collectors_round_trip(call_op, approved_collector):
+    name = approved_collector['name']
+    original = (approved_collector.get('collectorGroupName')
+                or _collector(call_op, name).get('collectorGroupName'))
+    assert original, 'cannot learn the current group of {0}'.format(name)
     if original == 'High Security Collector Group':
         pytest.skip('the round-trip collector already sits in the target group')
 
-    call_op('move_collectors', {'collectors': UBUNTU,
+    call_op('move_collectors', {'collectors': name,
                                 'targetCollectorGroup': 'High Security Collector Group'})
-    row = _collector(call_op, UBUNTU)
+    row = _collector(call_op, name)
     assert row.get('collectorGroupName') == 'High Security Collector Group'
 
-    call_op('move_collectors', {'collectors': UBUNTU, 'targetCollectorGroup': original})
-    row = _collector(call_op, UBUNTU)
+    call_op('move_collectors', {'collectors': name, 'targetCollectorGroup': original})
+    row = _collector(call_op, name)
     assert row.get('collectorGroupName') == original
 
 
-def test_update_collector_installer_sends_objects_up_to_the_org_policy(call_op, ubuntu, live_config,
+def test_update_collector_installer_sends_objects_up_to_the_org_policy(call_op, approved_collector, live_config,
                                                                        fast_400s):
     """The request must reach the server's POLICY layer, which is as far as
-    this tenant lets the op go: Palm Labs runs a dedicated Core with a lower
+    this tenant lets the op go: it runs a dedicated Core with a lower
     revision and update-collector-installer answers a clean 400 explaining
     exactly that (with or without the organization query), on any version
     pinned.
@@ -297,10 +308,10 @@ def test_update_collector_installer_sends_objects_up_to_the_org_policy(call_op, 
     with the pre-encoded JSON string the shipped form tolerated) the server
     rejected the request earlier, at its deserializer, naming
     CollectorInstallerRequest."""
-    version = ubuntu.get('version')
-    group = ubuntu.get('collectorGroupName') or _collector(call_op, UBUNTU).get('collectorGroupName')
+    version = approved_collector.get('version')
+    group = approved_collector.get('collectorGroupName') or _collector(call_op, approved_collector['name']).get('collectorGroupName')
     os_family = next((f for f in ('Linux', 'OSX', 'Windows')
-                      if (ubuntu.get('osFamily') or '').startswith(f)), None)
+                      if (approved_collector.get('osFamily') or '').startswith(f)), None)
     if not (version and group and os_family):
         pytest.skip('no collector version/group/os family to pin')
     with pytest.raises(ConnectorError, match='dedicated Core with a lower revision'):
@@ -310,7 +321,7 @@ def test_update_collector_installer_sends_objects_up_to_the_org_policy(call_op, 
                                      'allowDowngrade': True}]})
 
 
-def test_set_collector_state_bounds_its_wait_on_an_offline_collector(call_op, org_id, ubuntu, monkeypatch):
+def test_set_collector_state_bounds_its_wait_on_an_offline_collector(call_op, org_id, approved_collector, monkeypatch):
     """The state change is an async console job polled to completion, bounded
     at 10 minutes (the FortiSOAR playbook step ceiling). Live-observed on this
     tenant: every collector is offline, and the job for an enable/disable
@@ -336,14 +347,14 @@ def test_set_collector_state_bounds_its_wait_on_an_offline_collector(call_op, or
     result = None
     try:
         result = call_op('set_collector_state',
-                         {'collectorIds': str(ubuntu['id']),
+                         {'collectorIds': str(approved_collector['id']),
                           'organizationId': org_id, 'enabled': 'True'})
     except ConnectorError as err:
         timed_out = 'Timed out waiting for job' in str(err)
     assert timed_out or (isinstance(result, dict) and 'percentage' in result), \
         'expected the bounded job poll to time out (or to return a completed job)'
     # the (enable) request cannot have left the collector disabled
-    row = _collector(call_op, UBUNTU)
+    row = _collector(call_op, approved_collector['name'])
     assert row.get('state') != 'Disabled', row.get('state')
 
 
@@ -377,9 +388,10 @@ def test_ipset_create_update_delete_round_trip(call_op, live_config):
 
 # ----------------------------------------------------------------- the exception
 
-def test_the_exception_round_trip_on_the_sacrificial_event(call_op, sacrificial_event, live_config):
+def test_the_exception_round_trip_on_the_sacrificial_event(call_op, sacrificial_event,
+                                                           sacrificial_event_id, live_config):
     """create -> get_event_exceptions -> update -> delete -> gone, all on the
-    approved sacrificial event 1503820.
+    approved sacrificial event (EDR_SACRIFICIAL_EVENT_ID).
 
     Create is NOT idempotent (each call mints a further exception rule), so
     the cleanup deletes EVERY exception whose originEventId is the sacrificial
@@ -401,13 +413,14 @@ def test_the_exception_round_trip_on_the_sacrificial_event(call_op, sacrificial_
     """
     org = sacrificial_event.get('organization') or live_config['organization']
     exact_org = {'organization': 'Exact Organization Name', 'org_name': live_config['organization']}
+    event_id = sacrificial_event_id
 
     def exceptions_on_event():
-        excs = call_op('get_event_exceptions', {'eventId': SACRIFICIAL_EVENT_ID, 'organization': org})
-        return [e for e in excs if e.get('originEventId') == SACRIFICIAL_EVENT_ID]
+        excs = call_op('get_event_exceptions', {'eventId': event_id, 'organization': org})
+        return [e for e in excs if e.get('originEventId') == event_id]
 
     try:
-        created = call_op('create_exception', {'eventId': SACRIFICIAL_EVENT_ID,
+        created = call_op('create_exception', {'eventId': event_id,
                                                'allCollectorGroups': 'All Collector Groups',
                                                'allOrganizations': 'False',
                                                'allDestinations': 'All Destinations',
@@ -419,7 +432,7 @@ def test_the_exception_round_trip_on_the_sacrificial_event(call_op, sacrificial_
         assert ours, 'the exception did not appear on the event'
         exception_id = ours[0]['exceptionId']
 
-        updated = call_op('update_exception', {'eventId': SACRIFICIAL_EVENT_ID,
+        updated = call_op('update_exception', {'eventId': event_id,
                                                'exceptionId': exception_id,
                                                'organization': org,
                                                'comment': ' [fortiedrv2 selftest]'})
@@ -446,12 +459,13 @@ def test_the_exception_round_trip_on_the_sacrificial_event(call_op, sacrificial_
 
 # --------------------------------------------------- clean tenant-state rejections
 
-def test_get_event_file_rejects_a_file_that_is_not_part_of_the_event(call_op, demo_event, fast_400s):
+def test_get_event_file_rejects_a_file_that_is_not_part_of_the_event(call_op, demo_event,
+                                                                      demo_event_id, fast_400s):
     """The tenant answers this forbidden file request with a clean 400
     ('Action is not permitted because the requested file is not part of the
     event') -- which is precisely the end-to-end validation available on a
     tenant whose collectors are all offline."""
-    items = call_op('get_raw_data_items', {'eventId': DEMO_EVENT_ID})
+    items = call_op('get_raw_data_items', {'eventId': demo_event_id})
     assert items
     with pytest.raises(ConnectorError, match='not part of the event'):
         call_op('get_event_file', {'rawEventId': str(items[0]['rawEventId']),
@@ -460,21 +474,21 @@ def test_get_event_file_rejects_a_file_that_is_not_part_of_the_event(call_op, de
                                    'organization': demo_event.get('organization')})
 
 
-def test_get_file_rejects_an_offline_collector(call_op, ubuntu, live_config, fast_400s):
+def test_get_file_rejects_an_offline_collector(call_op, approved_collector, live_config, fast_400s):
     """forensics/get-file on an offline collector: the server 400s (its NPE
     about the missing aggregator surfaces verbatim in the error). Request
     path, auth and error surfacing are the things this proves."""
     with pytest.raises(ConnectorError, match='Get File Response'):
-        call_op('get_file', {'type': 'Name', 'device': UBUNTU,
+        call_op('get_file', {'type': 'Name', 'device': approved_collector['name'],
                              'filePaths': '/tmp/fortiedrv2-selftest-nonexistent',
                              'organization': live_config['organization']})
 
 
-def test_remediate_device_rejects_an_offline_collector(call_op, ubuntu, live_config, fast_400s):
+def test_remediate_device_rejects_an_offline_collector(call_op, approved_collector, live_config, fast_400s):
     with pytest.raises(ConnectorError, match='Disconnected device'):
-        call_op('remediate_device', {'type': 'Name', 'device': UBUNTU,
+        call_op('remediate_device', {'type': 'Name', 'device': approved_collector['name'],
                                      'remediate_action': 'Delete File',
-                                     'executablesToRemove': '/usr/local/fortiedrv2-selftest-nonexistent-20261102',
+                                     'executablesToRemove': '/usr/local/fortiedrv2-selftest-nonexistent',
                                      'organization': live_config['organization']})
 
 

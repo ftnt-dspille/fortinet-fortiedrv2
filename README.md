@@ -8,9 +8,9 @@ semantics, and console-incident operations.
 
 FortiEDR correlates a re-detection of the same process into the **existing**
 event: the event's `firstSeen` stays pinned at the first detection and only
-`lastSeen` moves (verified live: a `control.exe` event created 2026-10-13
-kept absorbing detections through 2026-10-29 while its incident grew past
-ten events). The shipped connector's ingestion playbooks query the pull
+`lastSeen` moves (verified live: a `control.exe` event kept absorbing
+re-detections for weeks while its incident grew past ten events). The
+shipped connector's ingestion playbooks query the pull
 window on `firstSeenFrom` and leave `lastSeenFrom` blank, so a scheduled pull
 after any re-detection finds **zero** new events -- the ingestion report says
 "no incidents found" while the FortiEDR console shows a live incident.
@@ -81,9 +81,18 @@ There are two live suites, both opt-in with `--live`:
   isolates, or remediates anything on the tenant.
 - `tests/test_live_ops.py` exercises **every** operation, including narrow,
   state-restoring round trips (read toggle, isolate/unisolate, collector
-  group, enable state, IP set create/update/delete) on an approved
-  sacrificial collector and event. Its last test gates that the session
-  really executed all 36 operations.
+  group, IP set create/update/delete) on an approved sacrificial collector
+  and event. Its last test gates that the session really executed all 36
+  operations.
+
+The mutating suite takes its targets from `.env.live` keys (documented in
+`.env.template`): `EDR_ROUNDTRIP_COLLECTOR` (collector approved for the
+isolate/move/state exercises), `EDR_DEMO_EVENT_ID` (a long-lived event
+whose pinned `firstSeen` proves the ingestion semantics) and
+`EDR_SACRIFICIAL_EVENT_ID` (event approved to carry the exception round
+trip, which the suite also removes through `delete_exception`). All three
+are optional and tenant-specific; a suite that does not know a target
+skips the tests that need it instead of guessing.
 
 Run both together:
 

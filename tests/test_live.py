@@ -54,13 +54,17 @@ def test_an_activity_window_covers_everything_a_creation_window_does(call_op):
             created['event_count'], activity['event_count'])
 
 
-def test_a_long_lived_event_keeps_its_first_seen(call_op):
+def test_a_long_lived_event_keeps_its_first_seen(call_op, demo_event_id):
     """The canonical repro: an event that keeps absorbing re-detections has
-    firstSeen != lastSeen. Verified against a live tenant; skipped quietly if
-    that event is no longer present."""
-    rows = call_op('get_event_by_id', {'eventIds': 1493703})
+    firstSeen != lastSeen. The demo event is tenant-specific, so its ID comes
+    from EDR_DEMO_EVENT_ID; without it this canary has no subject."""
+    if not demo_event_id:
+        pytest.skip('EDR_DEMO_EVENT_ID not set (.env.live): the long-lived '
+                    'event whose pinned firstSeen proves the correlation model '
+                    'is a per-tenant stable id, not something this repo hardcodes')
+    rows = call_op('get_event_by_id', {'eventIds': str(demo_event_id)})
     if not rows:
-        pytest.skip('known long-lived event 1493703 is no longer visible')
+        pytest.skip('the configured EDR_DEMO_EVENT_ID event is no longer visible')
     row = rows[0]
     assert row['firstSeenEpoch'] < row['lastSeenEpoch'], \
         'expected the pinned-firstSeen shape, got {0} / {1}'.format(row['firstSeen'], row['lastSeen'])

@@ -437,7 +437,8 @@ def test_update_exception_refuses_an_unknown_exception_id(edr):
 
 
 def test_update_exception_finds_the_exception_on_a_later_raw_item(edr):
-    """Live-observed on 7.2.3 (event 1503820, exception 1507477): an event
+    """Live-observed on 7.2.3 (the live exception leg of the first full
+    live-suite run): an event
     correlates one raw item per detection batch and the exception is embedded
     in the export of ITS origin raw item -- which is not necessarily the
     first. Every raw item is exported until the requested id shows up."""
@@ -475,7 +476,7 @@ def test_update_exception_finds_the_exception_on_a_later_raw_item(edr):
 
 def test_update_exception_fails_when_no_raw_item_carries_the_id(edr):
     """The pre-fix op returned 'success: Exceptions list not found' here --
-    a live run proved that shape is a silent lie (exception 1507477 existed
+    a live run proved that shape is a silent lie (a real exception existed
     on a later raw item). With no raw item carrying the id at all, the only
     honest answer is failure."""
     items = [fixture('raw_data_items')[0],
@@ -598,12 +599,12 @@ def test_update_collector_installer_posts_version_objects(edr):
     edr.post(MGMT + '/admin/update-collector-installer', json={})
     result = run('update_collector_installer',
                  {'collectorGroups': 'Default Collector Group',
-                  'organization': 'Palm Labs',
+                  'organization': 'Demo Org',
                   'updateVersions': [{'osFamily': 'Linux', 'version': '6.2.0.1350',
                                       'allowDowngrade': False}]})
     call = calls('POST', 'update-collector-installer')[0]
     assert query(call)['collectorGroups'] == ['Default Collector Group']
-    assert query(call)['organization'] == ['Palm Labs']
+    assert query(call)['organization'] == ['Demo Org']
     assert body(call) == {'updateVersions': [{'osFamily': 'Linux', 'version': '6.2.0.1350',
                                                'allowDowngrade': False}]}
     assert result == {'message': 'Update collector installer process started successfully',
@@ -621,13 +622,13 @@ def test_update_collector_installer_parses_a_pre_encoded_json_string(edr):
 
 def test_delete_exception_sends_the_ids(edr):
     edr.delete(MGMT + '/exceptions/delete', json={'result': 'gone'})
-    result = run('delete_exception', {'exceptionIds': '1507477',
+    result = run('delete_exception', {'exceptionIds': '95001',
                                       'organization': 'Exact Organization Name',
-                                      'org_name': 'Palm Labs'})
+                                      'org_name': 'Demo Org'})
     call = calls('DELETE', 'exceptions/delete')[0]
-    assert query(call)['exceptionIds'] == ['1507477']
+    assert query(call)['exceptionIds'] == ['95001']
     assert query(call)['deleteAll'] == ['False']
-    assert query(call)['organization'] == ['Palm Labs']
+    assert query(call)['organization'] == ['Demo Org']
     assert not body(call)
     assert result == {'result': 'gone'}
 

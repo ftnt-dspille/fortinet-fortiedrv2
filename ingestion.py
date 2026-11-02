@@ -11,9 +11,10 @@ Why a time_field choice exists
 ------------------------------
 FortiEDR correlates a re-detection of the same process into the EXISTING
 event/incident: the event's ``firstSeen`` stays at the first detection and
-only ``lastSeen`` moves (verified live under 7.2: a control.exe event created
-2026-10-13 kept absorbing detections until 2026-10-29; a VSSVC.exe event
-created 2026-06-08 was still absorbing them in mid-October). The shipped
+only ``lastSeen`` moves (verified live under 7.2: one control.exe event kept
+absorbing re-detections for weeks on end while its incident grew past ten
+events, and a VSSVC.exe event from mid-year was still absorbing them months
+later). The shipped
 ``fortinet-fortiedr`` ingestion playbooks query ``firstSeenFrom`` and leave
 ``lastSeenFrom`` blank, so a scheduled pull re-running the same detection finds
 zero new events -- the reporter sees the ingestion report 'no incidents found'

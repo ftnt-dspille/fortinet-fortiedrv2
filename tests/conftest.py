@@ -7,7 +7,9 @@ Test fixtures for the FortiEDR v2 connector.
   integrations.crudhub, django, cshmac) so the connector imports standalone.
 - ``--live`` opts in to tests/test_live.py against a real FortiEDR tenant;
   credentials come from a gitignored ``.env.live`` at the repo root with
-  EDR_SERVER / EDR_USERNAME / EDR_PASSWORD / EDR_ORGANIZATION keys.
+  EDR_SERVER / EDR_USERNAME / EDR_PASSWORD / EDR_ORGANIZATION keys, plus the
+  optional per-tenant suite targets EDR_DEMO_EVENT_ID, EDR_SACRIFICIAL_EVENT_ID
+  and EDR_ROUNDTRIP_COLLECTOR (tests needing an unset target skip themselves).
 """
 
 import logging
@@ -159,6 +161,39 @@ def live_config(env):
         'verify_ssl': env.get('EDR_VERIFY_SSL', 'false').lower() == 'true',
     }
     return config
+
+
+# ---------------------------------------------------------------------------
+# Live-suite targets. The tenants these tests run against are demo tenants and
+# the suite must ship without their identifiers: which event is the canonical
+# long-lived event, which is the approved sacrificial carrier for the
+# exception round trip, and which collector tolerates the state round trips
+# are configured per tenant through .env.live (all optional -- a suite that
+# does not know a target skips the tests that need it instead of guessing).
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope='session')
+def demo_event_id(env):
+    """Event ID of a long-lived event (firstSeen << lastSeen) on this tenant."""
+    value = env.get('EDR_DEMO_EVENT_ID')
+    # the API rows carry numeric event ids; an env value arrives as a string
+    # and every comparison in the suite is against the row value
+    return int(value) if value else None
+
+
+@pytest.fixture(scope='session')
+def sacrificial_event_id(env):
+    """Event ID approved as the sacrificial carrier for the exception ops."""
+    value = env.get('EDR_SACRIFICIAL_EVENT_ID')
+    return int(value) if value else None
+
+
+@pytest.fixture(scope='session')
+def roundtrip_collector(env):
+    """Collector name approved for the isolate/move/state round trips."""
+    return env.get('EDR_ROUNDTRIP_COLLECTOR')
+
 
 
 @pytest.fixture(scope='session')
