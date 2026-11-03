@@ -22,7 +22,7 @@ DEFAULT_STOCK = (Path.home() / 'PycharmProjects/Miscellaneous/fortisoar/corpus_b
                  'fortisoar-rpm-extracted/fortinet-fortiedr/fortinet-fortiedr/info.json')
 
 NAME = 'fortinet-fortiedrv2'
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,
@@ -66,7 +66,14 @@ def _new_operations():
                         'ingestion playbooks. FortiEDR links re-detections of the '
                         'same process into the EXISTING event -- its firstSeen never '
                         'moves -- so the default window is on Last Seen; a firstSeen '
-                        'window misses re-triggered events entirely.'),
+                        'window misses re-triggered events entirely. '
+                        'The window is count-verified rather than paged: count-events '
+                        'is asked first, the fetch is one list-events request sized '
+                        'to that count (pageNumber is never sent -- on FortiEDR 7.x '
+                        'a windowed list-events query carrying it answers 200 with an '
+                        'empty page), and an answer short of the count is re-read, '
+                        'then escalated by splitting the window, failing loudly '
+                        'rather than returning part of a window.'),
         'category': 'investigation',
         'annotation': 'ingest_events',
         'handler_method': True,
@@ -87,11 +94,11 @@ def _new_operations():
                             'Likely Safe', 'Safe']),
             _param('Severities', 'severities', 'multiselect',
                    options=['Critical', 'High', 'Medium']),
-            _param('Items Per Page', 'itemsPerPage', 'integer', value=200,
-                   minimum=1, maximum=1000,
-                   description='Page size for the event query (default 200, max 1000).'),
             _param('Max Events', 'max_events', 'integer', value=5000, minimum=1,
-                   description='Safety cap on one ingestion run (default 5000).'),
+                   description=('Safety cap on one ingestion run (default 5000). A '
+                                'window whose count-events exceeds it fails the run '
+                                'instead of silently skipping events -- raise the '
+                                'cap or shorten the pull schedule.')),
             _param('Organization', 'organization', 'text',
                    description='Optional exact organization name.'),
         ],

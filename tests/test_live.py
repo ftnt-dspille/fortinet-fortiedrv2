@@ -71,9 +71,20 @@ def test_a_long_lived_event_keeps_its_first_seen(call_op, demo_event_id):
 
 
 def test_ingest_events_round_trip(call_op):
-    alerts = call_op('ingest_events',
-                     {'from': _ago(days=45), 'to': _now(), 'max_events': '50'})
-    assert isinstance(alerts, list)
+    """The window fetch, cross-checked against the count the server itself
+    reports for the same window. The 1.0.0 round trip asserted shape over
+    what could be -- and once was, through a pageNumber-poisoned request --
+    an empty list; the count agreement makes that vacuous green impossible.
+    (The two calls run back to back; on an actively-detecting tenant they
+    may legitimately differ by events arriving between them.)"""
+    window = {'from': _ago(days=45), 'to': _now()}
+    counted = call_op('count_events',
+                      {'lastSeenFrom': window['from'],
+                       'lastSeenTo': window['to']})['event_count']
+    alerts = call_op('ingest_events', dict(window))
+    assert len(alerts) == counted, \
+        'ingest_events read {0} of the {1} event(s) count-events reports ' \
+        'for the same window'.format(len(alerts), counted)
     for alert in alerts:
         assert alert['external_id']
         assert alert['severity'] in SEVERITIES, alert['severity']

@@ -44,11 +44,29 @@ jobs:
         # onto sys.path, and the wheel does not ship tooling/ -- only a checkout
         # install has it. A non-editable install dies with "No module named cli".
 
+      - name: Provision the reference store from this checkout
+        # The pinned fsrpb catalog ships only the stock Fortinet connectors,
+        # so it has never heard of this one - validate/fsrpb compile reject
+        # every step that references it until taught. Provisioning from this
+        # checkout's info.json (36 operations, parameters, types) makes the
+        # compile below STRICT: a misspelled operation or an undeclared
+        # parameter is an error, not the --lax demotion. The store lives inside
+        # the ephemeral fsrpb checkout in runner.temp - this touches nothing
+        # in the repo.
+        run: fsrpb provision "$GITHUB_WORKSPACE"
+
       - name: Compile playbooks.yaml -> playbooks.json
-        # Until fortinet-fortiedrv2 is merged into the fsrpb reference store,
-        # this compiles under --lax with a warning (build.py falls back
-        # automatically); the offline suite pins the step wiring either way.
-        run: python playbooks/build.py
+        # Provision ran one step ago, so build.py's --lax fallback must NOT
+        # fire. Guard it explicitly: the fallback prints a warning and exits
+        # 0, and a silently-lax release is exactly what the provision step
+        # exists to prevent.
+        run: |
+          set -o pipefail
+          python playbooks/build.py 2>&1 | tee "$RUNNER_TEMP/build.log"
+          if grep -q 'compiling with --lax' "$RUNNER_TEMP/build.log"; then
+            echo "::error::compile fell back to --lax - the provision step did not take"
+            exit 1
+          fi
 
       - name: Compiled playbooks must match info.json version
         # Belt-and-braces: build.py stamps the collection name from info.json,

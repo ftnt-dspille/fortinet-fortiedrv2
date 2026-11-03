@@ -1,7 +1,7 @@
 {
   "name": "fortinet-fortiedrv2",
   "label": "Fortinet FortiEDR v2",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "FortiEDR protects endpoints pre and post infection, stopping data breaches in real-time and automatically orchestrating incident investigation and response. This connector covers events, forensics, collectors, exceptions, IP sets, console incidents and scheduled ingestion keyed on event activity (lastSeen).",
   "publisher": "Fortinet",
   "cs_approved": true,
@@ -5871,7 +5871,7 @@
     {
       "operation": "ingest_events",
       "title": "Ingest Events",
-      "description": "Fetches every event whose Last Seen (or First Seen, per Time Field) falls in [From, To] and returns them already mapped to FortiSOAR alert payloads (external_id = eventId, severity clamped to the picklist). Built for the scheduled ingestion playbooks. FortiEDR links re-detections of the same process into the EXISTING event -- its firstSeen never moves -- so the default window is on Last Seen; a firstSeen window misses re-triggered events entirely.",
+      "description": "Fetches every event whose Last Seen (or First Seen, per Time Field) falls in [From, To] and returns them already mapped to FortiSOAR alert payloads (external_id = eventId, severity clamped to the picklist). Built for the scheduled ingestion playbooks. FortiEDR links re-detections of the same process into the EXISTING event -- its firstSeen never moves -- so the default window is on Last Seen; a firstSeen window misses re-triggered events entirely. The window is count-verified rather than paged: count-events is asked first, the fetch is one list-events request sized to that count (pageNumber is never sent -- on FortiEDR 7.x a windowed list-events query carrying it answers 200 with an empty page), and an answer short of the count is re-read, then escalated by splitting the window, failing loudly rather than returning part of a window.",
       "category": "investigation",
       "annotation": "ingest_events",
       "handler_method": true,
@@ -5946,19 +5946,6 @@
           ]
         },
         {
-          "title": "Items Per Page",
-          "name": "itemsPerPage",
-          "type": "integer",
-          "required": false,
-          "editable": true,
-          "visible": true,
-          "value": 200,
-          "description": "Page size for the event query (default 200, max 1000).",
-          "tooltip": "Page size for the event query (default 200, max 1000).",
-          "minimum": 1,
-          "maximum": 1000
-        },
-        {
           "title": "Max Events",
           "name": "max_events",
           "type": "integer",
@@ -5966,8 +5953,8 @@
           "editable": true,
           "visible": true,
           "value": 5000,
-          "description": "Safety cap on one ingestion run (default 5000).",
-          "tooltip": "Safety cap on one ingestion run (default 5000).",
+          "description": "Safety cap on one ingestion run (default 5000). A window whose count-events exceeds it fails the run instead of silently skipping events -- raise the cap or shorten the pull schedule.",
+          "tooltip": "Safety cap on one ingestion run (default 5000). A window whose count-events exceeds it fails the run instead of silently skipping events -- raise the cap or shorten the pull schedule.",
           "minimum": 1
         },
         {

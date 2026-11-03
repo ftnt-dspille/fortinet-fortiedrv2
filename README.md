@@ -102,9 +102,39 @@ Run both together:
 
 ## Packaging
 
-`scripts/package.sh` builds `dist/fortinet-fortiedrv2-1_0_0.tgz` from
+`scripts/package.sh` builds `dist/fortinet-fortiedrv2-<version>.tgz` from
 `git ls-files` (version dots become underscores: the FortiSOAR installer
 misroutes a filename with more than one dot).
+
+## Live box: install and verify
+
+`scripts/install_to_fsr.py` installs the built bundle on a FortiSOAR box with
+`$replace`, recycles the integrations workers (an upgrade keeps serving the
+old in-process module otherwise), and creates/refreshes a configuration and
+health-checks it. Installing needs JWT auth -- a username/password pyfsr
+alias; an API key is not a JWT and stalls at Draft, which pyfsr refuses up
+front:
+
+```bash
+python scripts/install_to_fsr.py --instance <pyfsr-alias> --with-config
+```
+
+`scripts/verify_ingestion.py` walks the data ingestion chain end to end with
+the same calls the Data Ingestion Wizard's Finish makes: get-or-create the
+per-configuration ingestion collection, write the Initial Backfill Range into
+the cloned Fetch exactly the way the confirm step does, fire
+*Trigger Ingestion Now* twice, and assert the contract the chain promises --
+alerts keyed `sourceId == eventId`, the rich-text card stored unescaped,
+pinned-firstSeen re-detections ingested (the defect v2 exists to fix), upsert
+dedup across passes, and the watermark advancing every pass:
+
+```bash
+python scripts/verify_ingestion.py --instance <pyfsr-alias>
+```
+
+Both scripts run under a pyfsr environment (its checkout's `.venv`); targets
+resolve from `~/.pyfsr/instances.toml` and the `EDR_*` environment from
+`.env.live`.
 
 ## Playbooks
 
@@ -112,4 +142,9 @@ misroutes a filename with more than one dot).
 with `python3 playbooks/build.py` (requires the fsrpb compiler). The
 collection ships the Data Ingestion Wizard chain (Init Macros / Fetch /
 Ingest) plus the sample collection the wizard discovers by its
-`dataingestion` tags.
+`dataingestion` tags. The Fetch step's window read is count-verified and
+never paged: on FortiEDR 7.x, a windowed `list-events` request carrying
+`pageNumber` answers `200` with an empty page, so the connector asks
+`count-events` first, sizes one request to the count, and fails loudly
+rather than reading part of a window (See Ingest Events in the release
+notes).

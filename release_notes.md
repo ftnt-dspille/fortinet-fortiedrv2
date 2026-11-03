@@ -1,5 +1,53 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.0.1
+
+Scheduled ingestion fix: **the window fetch no longer pages
+`GET /management-rest/events/list-events` -- `pageNumber` is never sent.**
+
+Live-observed on FortiEDR 7.2.3: a WINDOWED list-events query that carries
+`pageNumber` answers `200` with an EMPTY page whenever `itemsPerPage` sits
+at or near the documented default of 100 (and pages come back short,
+duplicated or reordered even at page size 5), while the SAME window without
+`pageNumber` returns every matching row in one response -- and
+`/events/count-events` honors the same window filters exactly. 1.0.0's
+ingest loop always sent `pageNumber`, so every scheduled pull answered "no
+incidents found" on a populated tenant: the connector reintroduced, in its
+own fetch loop, the exact failure it exists to fix. (The shipped 2.1.0
+playbooks never sent the parameter.)
+
+The pull is now count-verified rather than paged:
+
+- `/events/count-events` is asked first. A window holding more events than
+  **Max Events** FAILS the run instead of silently trimming -- a partial
+  read must never advance the pull watermark past unread events.
+- The window is fetched in ONE list-events request sized to the count
+  (floor 200 items, ceiling the documented maximum of 1000); `pageNumber`
+  is never sent.
+- An answer short of the count is re-read (the earlier live-observed
+  200-with-`[]` flake), then escalated by splitting the window in halves,
+  bounded depth, each half verified against its own count; a fetch still
+  short at maximum depth raises, naming both numbers.
+- Rows that arrive despite a zero count are kept: the verification is
+  one-sided (fetched must be at least counted), so a lagging count-events
+  can only add noise, not drop events.
+- The `itemsPerPage` parameter is REMOVED from the Ingest Events form: it
+  only ever sized pages that must not be sent. **Max Events** keeps its
+  5000 default and its tooltip now documents the fail-loud semantics, as
+  does the bundled Fetch playbook's Maximum Events Per Run form field.
+
+Tests: the offline ingest suite pins the request shape (no `pageNumber`,
+a single count-verified request, the split/dedup/loud-failure paths); the
+live round trip cross-checks list against count for the same window, so the
+vacuous green that let 1.0.0 ship -- shape assertions over what was an
+empty list -- is structurally gone.
+
+Also new in this release: box tooling -- `scripts/install_to_fsr.py`
+(JWT-auth install, integrations-worker recycle, configuration upsert,
+health check) and `scripts/verify_ingestion.py`, which drives the deployed
+Data Ingestion Wizard chain end to end through the same API calls the
+wizard's Finish button makes.
+
 ## 1.0.0
 
 Initial release: a v2 rebuild of the shipped `fortinet-fortiedr` 2.1.0

@@ -172,10 +172,13 @@ def test_get_collector_installers_lists_versions(call_op, live_config):
 
 
 def test_get_event_list_rows_in_an_activity_window(call_op):
-    """The list-events page the scheduled pull rides on. list-events has been
-    observed (live) to answer a good paged query once with 200 + [] (the
-    connector's scheduled pull now retries that page); the test tolerates the
-    same transient with two reads of an open 45-day window."""
+    """The list-events read whose no-pageNumber shape the scheduled pull
+    relies on. Live-observed on 7.2.3: a windowed list-events query that
+    CARRIES pageNumber at the default page size answers 200 + [] even on
+    a populated window (which is why ingest_events never sends it), while
+    this query without it returns the rows. A 200 + [] flake on a good
+    query has also been seen, so the read retries a couple of times before
+    failing."""
     rows = []
     for _ in range(3):
         rows = call_op('get_event_list', {'lastSeenFrom': _ago(days=45),

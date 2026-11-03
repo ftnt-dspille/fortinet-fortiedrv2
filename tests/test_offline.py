@@ -31,6 +31,7 @@ PLAYBOOKS = json.loads((REPO / 'playbooks' / 'playbooks.json').read_text())
 BASE = 'https://edr.example.com'
 MGMT = BASE + '/management-rest'
 LIST_EVENTS = MGMT + '/events/list-events'
+COUNT_EVENTS = MGMT + '/events/count-events'
 
 CONFIG = {'server_url': 'edr.example.com', 'username': 'lab', 'password': 'secret',
           'organization': 'Demo Org', 'verify_ssl': False}
@@ -693,101 +694,174 @@ def test_generic_rest_api_call(edr):
 
 # --------------------------------------------------------------------------- ingestion (the fix)
 
-def _mock_events(edr, rows_by_page):
-    edr.add_callback(responses.GET, LIST_EVENTS, callback=list_events_handler(rows_by_page),
-                     content_type='application/json')
+def _mock_count(edr, answer):
+    """Answer count-events: a fixed count, or callable(query_string) -> int."""
+    def handler(request):
+        qs = parse_qs(urlparse(request.url).query)
+        value = answer(qs) if callable(answer) else answer
+        return 200, {}, json.dumps(value)
+    edr.add_callback(responses.GET, COUNT_EVENTS, callback=handler,
+                    content_type='application/json')
+
+
+def _mock_list(edr, answer):
+    """Answer list-events: a fixed row list, a per-call sequence of row
+    lists, or callable(query_string) -> row list."""
+    remaining = None
+    if isinstance(answer, list) and answer and isinstance(answer[0], list):
+        remaining = list(answer)
+
+    def handler(request):
+        qs = parse_qs(urlparse(request.url).query)
+        if remaining is not None:
+            rows = remaining.pop(0) if remaining else []
+        elif callable(answer):
+            rows = answer(qs)
+        else:
+            rows = answer
+        return 200, {}, json.dumps(rows)
+
+    edr.add_callback(responses.GET, LIST_EVENTS, callback=handler,
+                    content_type='application/json')
+
+
+def _mock_window(edr, count, rows):
+    """A cooperative tenant: the window holds `count` events and answers
+    them in one list-events response."""
+    _mock_count(edr, count)
+    _mock_list(edr, rows)
+
+
+def _list_qs():
+    """The query strings of every list-events request the run made."""
+    return [query(c) for c in calls('GET', 'list-events')]
 
 
 def test_ingest_windows_on_last_seen_by_default(edr):
-    _mock_events(edr, {1: fixture('events_full_page')})
-    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00', 'to': '2026-10-29 14:00:00',
-                                   'max_events': '10'})
-    qs = query(calls('GET', 'list-events')[0])
+    _mock_window(edr, 2, fixture('events_full_page'))
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00',
+                                   'to': '2026-10-29 14:00:00'})
+    count_qs = query(calls('GET', 'count-events')[0])
+    assert count_qs['lastSeenFrom'] == ['2026-10-29 13:00:00']
+    assert count_qs['lastSeenTo'] == ['2026-10-29 14:00:00']
+    qs = _list_qs()[0]
     assert qs['lastSeenFrom'] == ['2026-10-29 13:00:00']
     assert qs['lastSeenTo'] == ['2026-10-29 14:00:00']
     assert 'firstSeenFrom' not in qs
     assert 'firstSeenTo' not in qs
+    # The regression this section exists for: pageNumber must NEVER ride a
+    # windowed list-events request. Live-observed on 7.2.3 -- the endpoint
+    # answers 200 with an empty page for a windowed query that carries it
+    # at the documented page size, while the same window without it
+    # returns every row. An empty-but-successful answer is exactly the
+    # 'no incidents found' failure the connector exists to fix.
+    assert 'pageNumber' not in qs
     assert len(alerts) == 2
 
 
 def test_ingest_first_seen_option_is_still_selectable(edr):
-    _mock_events(edr, {1: fixture('events_full_page')})
+    _mock_window(edr, 2, fixture('events_full_page'))
     run('ingest_events', {'from': '2026-10-29 13:00:00', 'to': '2026-10-29 14:00:00',
-                          'time_field': 'First Seen (creations only)', 'max_events': '10'})
-    qs = query(calls('GET', 'list-events')[0])
+                          'time_field': 'First Seen (creations only)'})
+    qs = _list_qs()[0]
     assert qs['firstSeenFrom'] == ['2026-10-29 13:00:00']
     assert qs['firstSeenTo'] == ['2026-10-29 14:00:00']
     assert 'lastSeenFrom' not in qs
+    assert 'pageNumber' not in qs
 
 
-def test_ingest_pages_until_a_short_page(edr):
-    _mock_events(edr, {1: fixture('events_full_page'), 2: fixture('events_tail_page')})
-    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00', 'max_events': '50',
-                                    'itemsPerPage': '2'})
-    pages = [query(c)['pageNumber'][0] for c in calls('GET', 'list-events')]
-    assert pages == ['1', '2']
-    assert len(alerts) == 3
-    assert all(query(c)['itemsPerPage'] == ['2'] for c in calls('GET', 'list-events'))
+def test_ingest_requests_once_per_window_sized_to_the_count(edr):
+    """One list-events request per window, itemsPerPage sized to the
+    window's count (floor 200, ceiling 1000) -- never pageNumber."""
+    _mock_window(edr, 2, fixture('events_full_page'))
+    run('ingest_events', {'from': '2026-10-29 13:00:00'})
+    qs = _list_qs()
+    assert len(qs) == 1
+    assert qs[0]['itemsPerPage'] == ['200']
+    assert 'pageNumber' not in qs[0]
+    # "to" left blank means now: neither request bounds the window's end
+    assert 'lastSeenTo' not in qs[0]
+    assert 'lastSeenTo' not in query(calls('GET', 'count-events')[0])
 
 
-def test_ingest_respects_max_events(edr):
-    _mock_events(edr, {1: fixture('events_full_page'), 2: fixture('events_full_page')})
-    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00', 'max_events': '3',
-                                    'itemsPerPage': '2'})
-    assert len(alerts) == 3
+def test_ingest_recovers_a_transient_empty_answer(edr, monkeypatch):
+    """The live-observed flake: a good window answers 200 + [] once; the
+    identical request returns the rows a moment later. The fetch re-reads
+    the window instead of declaring it empty."""
+    monkeypatch.setattr(ingestion, 'EMPTY_PAGE_RETRY_WAIT', 0)
+    _mock_count(edr, 2)
+    _mock_list(edr, [[], fixture('events_full_page')])
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00'})
+    assert len(alerts) == 2
     assert len(calls('GET', 'list-events')) == 2
 
 
-def test_ingest_stops_on_an_empty_window(edr, monkeypatch):
-    # A genuinely empty window costs the empty-first-page retries: the SAME
-    # page-1 request is answered empty 1 + EMPTY_PAGE_RETRIES times before
-    # the window is believed empty and the run returns [].
-    monkeypatch.setattr(ingestion, 'EMPTY_PAGE_RETRY_WAIT', 0)
-    _mock_events(edr, {1: []})
+def test_ingest_believes_an_empty_window_when_the_count_agrees(edr):
+    _mock_window(edr, 0, [])
     assert run('ingest_events', {'from': '2026-10-29 13:00:00'}) == []
-    page_one = calls('GET', 'list-events')
-    assert len(page_one) == 1 + ingestion.EMPTY_PAGE_RETRIES
-    assert [query(c)['pageNumber'][0] for c in page_one] == ['1'] * (1 + ingestion.EMPTY_PAGE_RETRIES)
+    # count-events says zero: the first empty answer is believed, no retries
+    assert len(calls('GET', 'list-events')) == 1
 
 
-def _mock_events_sequence(edr, answers):
-    """Answer list-events from a fixed per-call sequence (not per page)."""
-    remaining = list(answers)
-
-    def handler(request):
-        rows = remaining.pop(0) if remaining else []
-        return 200, {}, json.dumps(rows)
-
-    edr.add_callback(responses.GET, LIST_EVENTS, callback=handler, content_type='application/json')
+def test_ingest_keeps_rows_that_arrive_despite_a_zero_count(edr):
+    """Rows outrank the count (the check is one-sided: fetched >= counted),
+    so a count-events that lags list-events cannot silently drop events."""
+    _mock_window(edr, 0, fixture('events_full_page'))
+    assert len(run('ingest_events', {'from': '2026-10-29 13:00:00'})) == 2
 
 
-def test_ingest_recovers_a_transient_empty_first_page(edr, monkeypatch):
-    """The live-observed failure mode: the first page answers 200 + [] once,
-    while count-events reports rows for the same window; the next identical
-    request returns the rows. The fetch re-requests the first page instead of
-    advancing the watermark over a window it never received."""
+def test_ingest_max_events_is_a_loud_cap_not_a_trim(edr):
+    """A window bigger than Max Events fails the run: a partial read must
+    never look like a complete one, or the pull watermark would advance
+    past the unread events -- the exact silence the connector exists to
+    end."""
+    _mock_window(edr, 50, fixture('events_full_page'))
+    with pytest.raises(ConnectorError, match='more than Max Events'):
+        run('ingest_events', {'from': '2026-10-29 13:00:00', 'max_events': '10'})
+    # the cap is checked against count-events BEFORE anything is fetched
+    assert calls('GET', 'list-events') == []
+
+
+def test_ingest_splits_a_withholding_window_and_dedupes(edr):
+    """A fetch short of its count escalates by halving the window; each
+    half is verified against its own count, and the halves share their
+    midpoint, so the same eventId may be answered twice -- the merge
+    deduplicates on it."""
+    full = fixture('events_full_page')
+    by_id = {r['eventId']: r for r in full}
+    mid = '2026-10-29 13:30:00'   # the exact midpoint of [13:00 .. 14:00]
+
+    def count_answer(qs):
+        if qs.get('lastSeenTo') == [mid]:
+            return 2        # left half answers both rows
+        if qs.get('lastSeenFrom') == [mid]:
+            return 1        # right half: the shared-boundary row
+        return 2            # the whole window
+
+    def list_answer(qs):
+        if qs.get('lastSeenTo') == [mid]:
+            return [by_id[1493703], by_id[1492374]]
+        if qs.get('lastSeenFrom') == [mid]:
+            return [by_id[1493703]]   # answered by BOTH halves
+        return [full[0]]              # the withheld short answer
+
+    _mock_count(edr, count_answer)
+    _mock_list(edr, list_answer)
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00',
+                                   'to': '2026-10-29 14:00:00'})
+    assert sorted(a['external_id'] for a in alerts) == ['1492374', '1493703']
+    # the whole window, then both halves -- and no pageNumber anywhere
+    assert len(_list_qs()) == 3
+    assert all('pageNumber' not in qs for qs in _list_qs())
+
+
+def test_ingest_fails_loud_when_the_server_withholds_at_max_depth(edr, monkeypatch):
     monkeypatch.setattr(ingestion, 'EMPTY_PAGE_RETRY_WAIT', 0)
-    _mock_events_sequence(edr, [[], fixture('events_full_page')])
-    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00', 'itemsPerPage': '2',
-                                   'max_events': '50'})
-    # page 1 empty -> re-request page 1 -> recovered (2 rows = a full page,
-    # so the scroll advances: the third call is PAGE 2, answered [] by the
-    # exhausted sequence and believed as a short-scroll end).
-    pages = [query(c)['pageNumber'][0] for c in calls('GET', 'list-events')]
-    assert pages == ['1', '1', '2']
-    assert len(alerts) == 2
-
-
-def test_ingest_believes_an_empty_page_after_the_first(edr):
-    """Only the FIRST page is retried: a full page already ends the loop when
-    followed by an empty one, so a mid-scroll transient costs at most the
-    window's tail, and the pull never dead-loops on later pages."""
-    _mock_events(edr, {1: fixture('events_full_page'), 2: []})
-    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00', 'itemsPerPage': '2',
-                                   'max_events': '50'})
-    pages = [query(c)['pageNumber'][0] for c in calls('GET', 'list-events')]
-    assert pages == ['1', '2']
-    assert len(alerts) == 2
+    monkeypatch.setattr(ingestion, 'MAX_SLICE_DEPTH', 1)
+    _mock_window(edr, 2, [])
+    with pytest.raises(ConnectorError, match='of the 2 event'):
+        run('ingest_events', {'from': '2026-10-29 13:00:00',
+                              'to': '2026-10-29 14:00:00'})
 
 
 def test_ingest_bad_time_field_is_named(edr):
@@ -801,7 +875,7 @@ def test_ingest_requires_from(edr):
 
 
 def test_ingest_maps_rows_to_alert_payloads(edr):
-    _mock_events(edr, {1: fixture('events_full_page')})
+    _mock_window(edr, 2, fixture('events_full_page'))
     alerts = run('ingest_events', {'from': '2026-10-29 13:00:00'})
     by_id = {a['external_id']: a for a in alerts}
 

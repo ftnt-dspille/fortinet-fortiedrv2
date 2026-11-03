@@ -6,7 +6,7 @@
 # Requires alongside this connector on the appliance:
 #   - fortinet-fortiedrv2 in its default config
 
-collection: Sample - Fortinet FortiEDR v2 - 1.0.0
+collection: Sample - Fortinet FortiEDR v2 - 1.0.1
 description: >-
   Sample playbooks for the "Fortinet FortiEDR v2" connector. If you are
   planning to use the sample playbooks in your environment, ensure that you
@@ -178,7 +178,7 @@ playbooks:
         type: text
         name: max_events
         value: '2000'
-        tooltip: Most events one run reads. A run that reaches the cap does not read the older events of its window, so raise the cap or shorten the schedule rather than let it bind.
+        tooltip: Safety cap on one run's window. A window whose event count exceeds it fails the run instead of silently skipping events -- raise the cap or shorten the schedule rather than let it bind.
       next: Configuration
 
     - name: Configuration
@@ -187,7 +187,9 @@ playbooks:
         Wizard-editable defaults. `fetch_last_minutes` is the backfill window
         used while the watermark is missing or '0'. The macro name is scoped to
         this playbook's UUID, so two ingestion configurations never share a
-        watermark.
+        watermark. `max_events` fails a run whose window exceeds it -- the
+        window fetch is count-verified and never paged, so a partial read
+        must never advance the watermark.
       vars:
         fetch_last_minutes: '60'
         time_field: Last Seen (activity)
