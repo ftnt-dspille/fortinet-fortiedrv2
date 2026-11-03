@@ -104,6 +104,24 @@ def test_version_and_release_notes_agree():
         f"release_notes.md's newest section is {newest.group(1) if newest else 'none'}, info.json is {version}"
 
 
+def test_operation_descriptions_fit_the_importers_field_cap():
+    """The importer's serializer caps an operation's description at 1000
+    characters -- one over the cap fails the WHOLE import, and the import
+    pipeline reports it as the meaningless catch-all "Connector with same
+    name is already active." because its own formatting of the DRF
+    ValidationError crashes first (live-established on an 8.0.1 box:
+    connectors.log shows "Ensure this field has no more than 1000
+    characters" for the one operation that crossed it). Parameter-level
+    strings are NOT capped on this path -- stock 2.1.0 operations ship
+    ~3000-character parameter tooltips and import fine."""
+    for op in INFO['operations']:
+        desc = op.get('description') or ''
+        assert len(desc) <= 1000, \
+            f"{op['operation']}'s description is {len(desc)} chars; the importer " \
+            "serializer caps the field at 1000 characters and the rejected import " \
+            "surfaces as 'Connector with same name is already active.'"
+
+
 def test_select_defaults_are_valid_options():
     """A select's default must be one of its options; otherwise playbooks keep a value the
     code does not recognise."""
@@ -182,6 +200,10 @@ def test_fetch_reads_events_since_the_watermark_on_last_seen():
     assert params['to'] == '{{vars.curr_timestamp}}'
     assert params['time_field'] == '{{vars.time_field}}'
     assert params['max_events'] == '{{vars.max_events}}'
+    assert params['classifications'] == '{{vars.classifications}}'
+    assert params['severities'] == '{{vars.severities}}'
+    assert params['device'] == '{{vars.device}}'
+    assert params['collector_groups'] == '{{vars.collector_groups}}'
 
     # The window's default time field is the activity axis -- FortiEDR pins an
     # event's firstSeen at its first detection and only moves lastSeen, so a
@@ -190,10 +212,61 @@ def test_fetch_reads_events_since_the_watermark_on_last_seen():
         == 'Last Seen (activity)'
     schema = json.loads(
         _step('> FortiEDR v2 > Fetch', 'Start')['arguments']['step_variables']['_configuration_schema'])
-    assert [f['name'] for f in schema] == ['fetch_last_minutes', 'time_field', 'max_events']
+    assert [f['name'] for f in schema] == ['fetch_last_minutes', 'time_field', 'max_events',
+                                           'classifications', 'severities', 'device',
+                                           'collector_groups']
     assert schema[1]['value'] == 'Last Seen (activity)'
     assert 'Last Seen (activity)' in schema[1]['options']
     assert 'First Seen (creations only)' in schema[1]['options']
+
+
+def test_wizard_filters_blank_by_default_and_match_the_configuration_defaults():
+    """The filter wizard fields are optional by construction: every one ships
+    blank in BOTH the start schema and the Configuration defaults (the pair the
+    Data Ingestion Wizard keeps in lockstep), so a pristine configuration
+    pulls everything and only an analyst's edit narrows the window."""
+    fetch = _workflow('> FortiEDR v2 > Fetch')
+    schema = json.loads(
+        _step(fetch['name'], 'Start')['arguments']['step_variables']['_configuration_schema'])
+    by_name = {f['name']: f for f in schema}
+    config_defaults = _step(fetch['name'], 'Configuration')['arguments']
+    for name in ('classifications', 'severities', 'device', 'collector_groups'):
+        assert by_name[name]['value'] == ''
+        assert by_name[name]['required'] is False
+        assert config_defaults[name] == ''
+
+
+def test_ingest_pull_filters_reach_both_the_count_and_the_fetch_query(edr):
+    """The pull filters ride the ONE query count-events and list-events share
+    (the count-verify invariant), with the wire names the events API takes:
+    collector_groups renames to collectorGroups, a list joins into the API's
+    comma form, blanks are dropped, and whitespace-only is a blank."""
+    rows = fixture('events_full_page')
+
+    edr.add_callback(responses.GET, COUNT_EVENTS,
+                    callback=lambda request: (200, {}, str(len(rows))),
+                    content_type='application/json')
+    edr.add_callback(responses.GET, LIST_EVENTS,
+                     callback=lambda request: (200, {}, json.dumps(rows)),
+                     content_type='application/json')
+
+    alerts = run('ingest_events', {'from': '2026-10-29 00:00:00',
+                                   'classifications': 'Malicious',
+                                   'severities': '',
+                                   'device': ' lab-endpoint ',
+                                   'collector_groups': ['GroupA', '', 'GroupB']})
+    assert len(alerts) == len(rows)
+
+    # both endpoints saw the same normalized filter set
+    seen = calls('GET', 'count-events') + calls('GET', 'list-events')
+    assert seen
+    for c in seen:
+        q = parse_qs(urlparse(c.request.url).query)
+        assert q['classifications'] == ['Malicious'], q
+        assert q['collectorGroups'] == ['GroupA,GroupB'], q
+        assert q['device'] == ['lab-endpoint'], q
+        assert 'severities' not in q, q          # blank filter is dropped
+        assert 'organization' not in q, q        # blank filter is dropped
 
 
 def test_create_record_upserts_each_event_on_its_eventid():
@@ -259,6 +332,28 @@ def test_two_collections_ship_and_only_the_chain_is_wizard_visible():
         'FortiEDR v2 > IOC Retro-Hunt',
         'FortiEDR v2 > Fleet Compliance Audit',
     ]
+
+
+def test_every_compiled_step_runs_against_the_default_configuration():
+    # The portability contract: no step may ship carrying a per-appliance
+    # configuration UUID. The compiler fills an empty config from the build
+    # host's per-appliance catalog when one is warmed, so every connector and
+    # code-snippet step must pin config: '' -- the FortiSOAR "use the default
+    # configuration" sentinel -- or the first run on any other appliance
+    # refuses the step with INTEGRATION-12 (live-caught on 8.0.1: the sweep's
+    # snippet step). build.py refuses the build at compile time; this pins
+    # the committed artifact itself.
+    offenders = []
+    for collection in PLAYBOOKS['data']:
+        for wf in collection['workflows']:
+            for st in wf['steps']:
+                args = st.get('arguments')
+                if not isinstance(args, dict):
+                    continue
+                if 'config' in args and args['config'] not in ('', None):
+                    offenders.append((collection['name'], wf['name'],
+                                      st.get('name'), args['config']))
+    assert offenders == []
 
 
 def test_triage_refreshes_the_event_and_gates_isolation_on_a_record_action():
@@ -359,8 +454,26 @@ def test_redetection_digest_ranks_long_runners_and_files_a_task():
     assert "map(attribute='eventsNum')" in script
     assert 'rows.sort(reverse=True)' in script
     task = _uc_step('FortiEDR v2 > Re-detection Digest', 'Digest Task')['arguments']['resource']
-    assert task['status'] == 'Open'
+    # portability pin: task status/priority are picklist references the
+    # appliance resolves by item IRI/uuid, never by label -- a bare label
+    # dies with FSR_CH_0000001 even when it IS a real item on the box
+    # (live-caught on 8.0.1 with status 'Open'), and the per-item IRIs are
+    # appliance uuids this bundle never ships. Name + description only.
+    assert set(task) == {'name', 'description'}
     assert task['description'] == '{{ vars.steps.Rank_Incidents.data.code_output.digest_html }}'
+
+
+def test_task_steps_pin_only_portable_fields():
+    # a ManualTask step parks the run awaiting a human task completion
+    # (live-caught on 8.0.1); the file-and-finish semantics are the
+    # insertion step the ingestion chain writes its alerts with.
+    INSERT_DATA = '/api/3/workflow_step_types/2597053c-e718-44b4-8394-4d40fe26d357'
+    for pb, step in (('FortiEDR v2 > Re-detection Digest', 'Digest Task'),
+                     ('FortiEDR v2 > Fleet Compliance Audit', 'Compliance Task')):
+        st = _uc_step(pb, step)
+        res = st['arguments']['resource']
+        assert set(res) == {'name', 'description'}, (pb, sorted(res))
+        assert st['stepType'] == INSERT_DATA, (pb, st.get('stepType'))
 
 
 def test_retrohunt_upserts_alerts_without_moving_detection_date():
@@ -1285,3 +1398,20 @@ def test_playbook_sources_carry_no_tenant_specifics():
     ]
     for pattern in forbidden:
         assert re.search(pattern, text) is None, pattern
+
+
+def test_scripts_carry_no_box_name_or_address():
+    """The live tooling resolves its target from files that stay local
+    (~/.pyfsr/instances.toml, .env.live); the tracked sources themselves
+    must not name the box. A lab pod alias slipped into a usage example
+    once and shipped in a docstring -- this makes the check part of every
+    suite run, not just review."""
+    forbidden = [
+        r'\b\d{1,3}(\.\d{1,3}){3}\b',          # IP literals
+        r'\bsoar1\d\d\b',                        # lab pod-alias family
+        r'\bfsr80\d?\b',                         # lab instance-alias family
+    ]
+    for path in sorted((REPO / 'scripts').glob('*.py')):
+        text = path.read_text()
+        for pattern in forbidden:
+            assert re.search(pattern, text) is None, (path.name, pattern)

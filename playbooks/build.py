@@ -96,6 +96,96 @@ def _sync_collection_version(doc):
     return doc
 
 
+def _assert_portable_configs(doc):
+    """Refuse any per-appliance configuration value in the compiled output.
+
+    Every step in this bundle must run against whatever configuration the
+    importing appliance resolves at play time: the connector steps and the
+    code-snippet steps alike pin ``config: ''`` -- the FortiSOAR "use the
+    default configuration" sentinel. The compiler fills an empty config from
+    the per-appliance ``connector_configs`` catalog of the machine the build
+    runs on (fsrpb's resolver: ``resolve_config_id(connector) or ""``), so a
+    host whose catalog was warmed against a live box silently bakes that
+    box's configuration UUID into the bundle -- and every OTHER appliance
+    then answers the step with ``INTEGRATION-12: Could not find a connector
+    configuration matching the given configuration id or name`` while CI,
+    which compiles a cold catalog, ships bytes that were never tested
+    (live-caught on 8.0.1: the sweep's, digest's and fleet audit's snippet
+    steps all died this way on their first run away from the build host).
+    This check makes the break loud at build time instead.
+    """
+    offenders = []
+    for collection in doc.get("data", []):
+        for wf in collection.get("workflows", []):
+            for st in wf.get("steps", []):
+                args = st.get("arguments")
+                if not isinstance(args, dict):
+                    continue
+                if "config" in args and args["config"] not in ("", None):
+                    offenders.append(
+                        f"{collection.get('name', '?')} / {wf.get('name', '?')} / "
+                        f"{st.get('name', '?')}: connector="
+                        f"{args.get('connector')!r} config={args['config']!r}")
+    if offenders:
+        sys.stderr.write(
+            "refusing to write playbooks.json: per-appliance config value(s) "
+            "would make the bundle non-portable:\n  "
+            + "\n  ".join(offenders)
+            + "\nfix: the fsrpb reference store's per-appliance catalog has "
+              "rows for that connector (data/fsr_reference.db, table "
+              "connector_configs). Delete them and rebuild.\n")
+        sys.exit(2)
+    return doc
+
+
+def _assert_portable_task_fields(doc):
+    """Refuse picklist-typed fields in create_task resources.
+
+    A task write's status/priority are picklist *references* on the engine's
+    path: the appliance resolves them by picklist-item IRI/uuid, never by
+    label -- a bare string that even IS a real TaskStatus item dies as the
+    engine probes ``/api/3/picklists/<label>`` and answers ``FSR_CH_0000001
+    ... the provided value does not match any of the options listed in the
+    specified picklist`` (live-caught on 8.0.1: the digest's ``status:
+    Open`` step, on an appliance whose TaskStatus picklist carried ``Open``,
+    with ``priority: Low`` one field behind it on the same path).
+    Machine-authored playbooks ship per-appliance picklist IRIs instead,
+    which this bundle must never carry: the item uuids are appliance-local.
+    A create_task step here therefore pins only the appliance-neutral task
+    fields -- name and description -- and the importing SOC's own task
+    workflow decides status and priority. Same contract as
+    _assert_portable_configs: make the break loud at build time instead of
+    on the customer's box.
+    """
+    allowed = {"name", "description"}
+    offenders = []
+    for collection in doc.get("data", []):
+        for wf in collection.get("workflows", []):
+            for st in wf.get("steps", []):
+                args = st.get("arguments")
+                col = args.get("collection") if isinstance(args, dict) else None
+                if not isinstance(col, str) or col.rstrip("/").rsplit("/", 1)[-1] != "tasks":
+                    continue
+                resource = args.get("resource")
+                if not isinstance(resource, dict):
+                    continue
+                extra = sorted(set(resource) - allowed)
+                if extra:
+                    offenders.append(
+                        f"{collection.get('name', '?')} / {wf.get('name', '?')} / "
+                        f"{st.get('name', '?')}: appliance-bound task field(s) {extra}")
+    if offenders:
+        sys.stderr.write(
+            "refusing to write playbooks.json: create_task step(s) pin task "
+            "fields the importing appliance must own:\n  "
+            + "\n  ".join(offenders)
+            + "\nfix: drop status/priority (and any other picklist-typed "
+              "field) from the task resource; pin only name and description "
+              "and let the SOC's own task workflow decide the state.\n")
+        sys.exit(2)
+    return doc
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--fsrpb", default="fsrpb", help="path to the fsrpb executable")
@@ -129,6 +219,15 @@ def main():
         if proc.returncode != 0:
             sys.stderr.write(proc.stdout + proc.stderr)
             return proc.returncode
+        # A successful compile can still carry warnings (severity=warning
+        # findings don't flip the exit code); the fsrpb CLI prints them on
+        # success -- don't swallow them here. Warnings are how the
+        # reference-catalog gaps surface (unknown jinja tests, decision
+        # conditions that don't render strict bools, message: blocks
+        # without an explicit record:) -- all three were live-caught the
+        # hard way on runs that compiled "clean".
+        if proc.stderr:
+            sys.stderr.write(proc.stderr)
         part = json.loads(tmp_paths[idx].read_text())
         if doc is None:
             doc = part
@@ -146,6 +245,8 @@ def main():
 
     doc = _sync_collection_version(doc)
     doc = _freeze_timestamps(doc)
+    doc = _assert_portable_configs(doc)
+    doc = _assert_portable_task_fields(doc)
     JSON_OUT.write_text(json.dumps(doc, indent=2) + "\n")
 
     total = sum(len(c.get("workflows", [])) for c in doc.get("data", []))

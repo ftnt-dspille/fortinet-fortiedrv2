@@ -17,7 +17,7 @@
 # Requires alongside this connector on the appliance:
 #   - fortinet-fortiedrv2 in its default config
 
-collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.0.1
+collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.4
 description: >-
   Operational use-case playbooks for the "Fortinet FortiEDR v2" connector:
   alert triage with collector isolation, evidence collection, time-limited
@@ -257,17 +257,9 @@ playbooks:
         sourceId (the FortiEDR eventId) and the record IRI.
       vars:
         event_id: >-
-          {% if vars.input.params.event_id | default('', true) %}
-          {{ vars.input.params.event_id }}
-          {% else %}
-          {{ vars.input.records[0].sourceId | default('', true) }}
-          {% endif %}
+          {% if vars.input.params.event_id | default('', true) %}{{ vars.input.params.event_id }}{% else %}{{ vars.input.records[0].sourceId | default('', true) }}{% endif %}
         record_id: >-
-          {% if vars.input.params.record_id | default('', true) %}
-          {{ vars.input.params.record_id }}
-          {% else %}
-          {{ vars.input.records[0]['@id'] }}
-          {% endif %}
+          {% if vars.input.params.record_id | default('', true) %}{{ vars.input.params.record_id }}{% else %}{{ vars.input.records[0]['@id'] }}{% endif %}
         organization: "{{ vars.input.params.organization | default('', true) }}"
       next: No Event
 
@@ -275,7 +267,7 @@ playbooks:
       type: decision
       conditions:
       - display: Have Event
-        when: "{{ vars.event_id }}"
+        when: "{{ (vars.event_id | default('', true) | string) | length > 0 }}"
         next: Get Event
       - display: No FortiEDR Event
         default: true
@@ -283,7 +275,12 @@ playbooks:
 
     - name: No Event Audit
       type: set_variable
-      post_comment: "Collect Evidence: this alert carries no FortiEDR sourceId; nothing to bag."
+      # The comment's record target is explicit: this playbook also runs as a
+      # child from Triage, where no trigger record exists to default to (the
+      # platform answers "No record found for posting the given message").
+      message:
+        content: "Collect Evidence: this alert carries no FortiEDR sourceId; nothing to bag."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Get Event
@@ -307,7 +304,9 @@ playbooks:
 
     - name: Missing Event Audit
       type: set_variable
-      post_comment: "Collect Evidence: no FortiEDR event found for sourceId {{ vars.event_id }} (archived or pruned on the tenant); nothing to bag."
+      message:
+        content: "Collect Evidence: no FortiEDR event found for sourceId {{ vars.event_id }} (archived or pruned on the tenant); nothing to bag."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Bag Context
@@ -329,7 +328,7 @@ playbooks:
         disk-evidence bag; the retrieval API needs a path to pull.
       conditions:
       - display: Have Path
-        when: "{{ vars.bag_file_path }}"
+        when: "{{ (vars.bag_file_path | default('', true) | string) | length > 0 }}"
         next: Get Raw Data Items
       - display: No File Path
         default: true
@@ -337,7 +336,9 @@ playbooks:
 
     - name: No Path Audit
       type: set_variable
-      post_comment: "Collect Evidence: FortiEDR event {{ vars.event_id }} carries no process file path; nothing disk- retrievable to bag."
+      message:
+        content: "Collect Evidence: FortiEDR event {{ vars.event_id }} carries no process file path; nothing disk-retrievable to bag."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Get Raw Data Items
@@ -361,7 +362,9 @@ playbooks:
 
     - name: No Raw Data Audit
       type: set_variable
-      post_comment: "Collect Evidence: event {{ vars.event_id }} has no raw data items on the tenant (the collection window may have expired); nothing to bag."
+      message:
+        content: "Collect Evidence: event {{ vars.event_id }} has no raw data items on the tenant (the collection window may have expired); nothing to bag."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Collect File
@@ -386,7 +389,7 @@ playbooks:
       type: decision
       conditions:
       - display: Attachment Ready
-        when: "{{ (vars.steps.Collect_File.data['@id'] | default('', true)) is not empty }}"
+        when: "{{ (vars.steps.Collect_File.data['@id'] | default('', true) | string) | length > 0 }}"
         next: Link Evidence
       - display: Collection Failed
         default: true
@@ -407,12 +410,16 @@ playbooks:
 
     - name: Evidence Audit
       type: set_variable
-      post_comment: "Collect Evidence: {{ vars.steps.Collect_File.data['name'] }} attached -- the {{ vars.bag_file_path }} binary of FortiEDR event {{ vars.event_id }} off collector {{ vars.bag_device }} (raw event {{ vars.steps.Get_Raw_Data_Items.data[0].rawEventId }})."
+      message:
+        content: "Collect Evidence: {{ vars.steps.Collect_File.data['name'] }} attached -- the {{ vars.bag_file_path }} binary of FortiEDR event {{ vars.event_id }} off collector {{ vars.bag_device }} (raw event {{ vars.steps.Get_Raw_Data_Items.data[0].rawEventId }})."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Collection Failed Audit
       type: set_variable
-      post_comment: "Collect Evidence: the retrieval of {{ vars.bag_file_path }} from {{ vars.bag_device }} failed -- the tenant rejects forensics pulls from offline or decommissioned collectors; retry from the alert once the endpoint is back."
+      message:
+        content: "Collect Evidence: the retrieval of {{ vars.bag_file_path }} from {{ vars.bag_device }} failed -- the tenant rejects forensics pulls from offline or decommissioned collectors; retry from the alert once the endpoint is back."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: End
@@ -560,13 +567,17 @@ playbooks:
       comment: |
         The allow-the-event form of the create call: collector groups and
         destinations open, exactly the shipped connector's semantics for
-        "this event qualifies everywhere". A narrower scope belongs to a
-        hand-built console rule, which this playbook deliberately never
-        guesses on the operator's behalf.
+        "this event qualifies everywhere" -- within the event's own
+        organization. allOrganizations stays False (the live-proven wire:
+        a non-Admin API user is refused a cross-organization rule with
+        "Only a user with an Admin role can create/modify exceptions for
+        all organizations"), so a cross-org exception remains an Admin's
+        console action, which this playbook never does on the operator's
+        behalf.
       params:
         eventId: '{{ vars.event_id }}'
         allCollectorGroups: 'All Collector Groups'
-        allOrganizations: 'True'
+        allOrganizations: 'False'
         allDestinations: 'All Destinations'
         comment: '{{ vars.exception_comment }}'
         forceCreate: 'False'
@@ -685,7 +696,7 @@ playbooks:
       type: decision
       conditions:
       - display: Expired Rules Present
-        when: "{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv | default('', true) }}"
+        when: "{{ (vars.steps.Find_Expired.data.code_output.expiredIdsCsv | default('', true) | string) | length > 0 }}"
         next: Delete Expired
       - display: Nothing To Delete
         default: true
@@ -808,15 +819,24 @@ playbooks:
       next: Digest Task
 
     - name: Digest Task
-      type: create_task
+      type: create_record
+      module: tasks
       comment: |
         A task is the queueable artifact on a box without a mail relay: it
         lands in the SOC's task view with the digest as its description and
         the operator's follow-up goes through the task's own close loop.
+        This is a create_record insert, NOT a create_task: the ManualTask
+        engine step parks the whole run awaiting a human completing the
+        task, while filing-the-task-and-ending is the same InsertData
+        semantics the ingestion chain writes alerts with. Only the
+        appliance-neutral fields are pinned: status/priority are picklist
+        references the engine resolves by item IRI/uuid, never by label, so
+        a bare 'Open'/'Low' is refused with FSR_CH_0000001 even on an
+        appliance whose picklists carry those items -- and the per-item
+        IRIs published playbooks ship are appliance uuids this bundle
+        never carries. The SOC's own task workflow owns the state.
       resource:
         name: 'FortiEDR re-detection digest -- {{ vars.steps.Rank_Incidents.data.code_output.incident_count }} unhandled incidents'
-        status: Open
-        priority: Low
         description: "{{ vars.steps.Rank_Incidents.data.code_output.digest_html }}"
       next: End
 
@@ -874,7 +894,7 @@ playbooks:
         tenant.
       conditions:
       - display: Hash Present
-        when: "{{ vars.input.params.file_hash | default('', true) }}"
+        when: "{{ (vars.input.params.file_hash | default('', true) | string) | length > 0 }}"
         next: Hunt Hash
       - display: No Hash
         default: true
@@ -1083,11 +1103,20 @@ playbooks:
       next: Compliance Task
 
     - name: Compliance Task
-      type: create_task
+      type: create_record
+      module: tasks
+      comment: |
+        Filed the same way as the digest task: a create_record insert ends
+        the run -- the ManualTask engine step would park the run awaiting a
+        human completing the task. Only the appliance-neutral fields are
+        pinned: status/priority are picklist references the engine resolves
+        by item IRI/uuid, never by label -- a bare 'Open'/'Low' is refused
+        with FSR_CH_0000001 even on an appliance whose picklists carry
+        those items, and the per-item IRIs published playbooks ship are
+        appliance uuids this bundle never carries. The SOC's own task
+        workflow owns the task's state.
       resource:
         name: 'FortiEDR fleet compliance -- {{ vars.steps.Audit_Fleet.data.code_output.fleet_size }} collectors, {{ vars.steps.Audit_Fleet.data.code_output.outdated }} outdated, {{ vars.steps.Audit_Fleet.data.code_output.not_running }} not running'
-        status: Open
-        priority: Low
         description: "{{ vars.steps.Audit_Fleet.data.code_output.fleet_html }}"
       next: Staging Offered
 

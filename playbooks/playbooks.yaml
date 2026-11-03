@@ -6,7 +6,7 @@
 # Requires alongside this connector on the appliance:
 #   - fortinet-fortiedrv2 in its default config
 
-collection: Sample - Fortinet FortiEDR v2 - 1.0.1
+collection: Sample - Fortinet FortiEDR v2 - 1.1.4
 description: >-
   Sample playbooks for the "Fortinet FortiEDR v2" connector. If you are
   planning to use the sample playbooks in your environment, ensure that you
@@ -37,6 +37,10 @@ playbooks:
   #   * the wizard discovers these three by their tags: every one carries
   #     #dataingestion, Fetch carries #fetch, Ingest carries #ingest and #create;
   #   * Fetch's Start step carries configuration_schema, the form the wizard shows;
+  #     besides the window controls it carries four OPTIONAL pull filters
+  #     (classifications, severities, device, collector_groups) -- blank means
+  #     unfiltered; a set filter narrows the count-verified window, and the
+  #     watermark it advances past is final for the excluded events
   #   * Fetch ends in a set_variable ("Save Result") publishing `data` plus the
   #     carry-through vars. Ingest reads them back off the workflow_reference step
   #     ("Fetch Events") as vars.steps.Fetch_Events.<key>;
@@ -179,6 +183,38 @@ playbooks:
         name: max_events
         value: '2000'
         tooltip: Safety cap on one run's window. A window whose event count exceeds it fails the run instead of silently skipping events -- raise the cap or shorten the schedule rather than let it bind.
+      - title: Classifications (optional)
+        required: false
+        editable: true
+        visible: true
+        type: text
+        name: classifications
+        value: ''
+        tooltip: 'Comma-separated event classifications to pull, e.g. Malicious,Suspicious. Leave blank to pull everything. IMPORTANT: the pull watermark advances past events a filter excludes -- set filters before the first pull and keep them stable, or events skipped by earlier pulls are never re-read.'
+      - title: Severities (optional)
+        required: false
+        editable: true
+        visible: true
+        type: text
+        name: severities
+        value: ''
+        tooltip: 'Comma-separated severities to pull, e.g. Critical,High. Leave blank to pull every severity.'
+      - title: Device Name (optional)
+        required: false
+        editable: true
+        visible: true
+        type: text
+        name: device
+        value: ''
+        tooltip: 'Pull only events reported by collectors on this device name. Leave blank to pull events from every device.'
+      - title: Collector Groups (optional)
+        required: false
+        editable: true
+        visible: true
+        type: text
+        name: collector_groups
+        value: ''
+        tooltip: 'Comma-separated collector group names to pull from, e.g. GroupA,GroupB. Leave blank to pull from every group.'
       next: Configuration
 
     - name: Configuration
@@ -190,10 +226,21 @@ playbooks:
         watermark. `max_events` fails a run whose window exceeds it -- the
         window fetch is count-verified and never paged, so a partial read
         must never advance the watermark.
+
+        The four blank filter keys are the wizard's optional pull filters
+        (the Data Ingestion Wizard writes the analyst's edited values into
+        this step's variables -- the shipped-connector contract: schema
+        field names 1:1 the keys here). Blanks mean "pull everything": the
+        connector drops empty filters, so the default configuration's pull
+        is unfiltered.
       vars:
         fetch_last_minutes: '60'
         time_field: Last Seen (activity)
         max_events: '2000'
+        classifications: ''
+        severities: ''
+        device: ''
+        collector_groups: ''
         FortiEDRMacroName: "FortiEDRLastEventPullTime_{{vars['audit_info']['cyops_playbook_iri'].split('/')[-1].replace('-','_')}}"
       next: Get Macro Value
 
@@ -256,11 +303,19 @@ playbooks:
         external_id = eventId, severity clamped to the Severity picklist,
         process/device/destinations split into their own keys, and the raw
         event kept in source_payload.
+
+        The filter carry-through (classifications, severities, device,
+        collector_groups) rides the same op: blank values are dropped by
+        the connector, so an unconfigured wizard's pull stays unfiltered.
       params:
         from: '{{vars.window_from}}'
         to: '{{vars.curr_timestamp}}'
         time_field: '{{vars.time_field}}'
         max_events: '{{vars.max_events}}'
+        classifications: '{{vars.classifications}}'
+        severities: '{{vars.severities}}'
+        device: '{{vars.device}}'
+        collector_groups: '{{vars.collector_groups}}'
       next: Save Result
 
     - name: Save Result

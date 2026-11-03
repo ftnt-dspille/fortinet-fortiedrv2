@@ -22,7 +22,7 @@ DEFAULT_STOCK = (Path.home() / 'PycharmProjects/Miscellaneous/fortisoar/corpus_b
                  'fortisoar-rpm-extracted/fortinet-fortiedr/fortinet-fortiedr/info.json')
 
 NAME = 'fortinet-fortiedrv2'
-VERSION = '1.1.0'
+VERSION = '1.1.4'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,
@@ -66,14 +66,17 @@ def _new_operations():
                         'ingestion playbooks. FortiEDR links re-detections of the '
                         'same process into the EXISTING event -- its firstSeen never '
                         'moves -- so the default window is on Last Seen; a firstSeen '
-                        'window misses re-triggered events entirely. '
+                        'window misses re-triggered events. '
                         'The window is count-verified rather than paged: count-events '
                         'is asked first, the fetch is one list-events request sized '
-                        'to that count (pageNumber is never sent -- on FortiEDR 7.x '
-                        'a windowed list-events query carrying it answers 200 with an '
-                        'empty page), and an answer short of the count is re-read, '
-                        'then escalated by splitting the window, failing loudly '
-                        'rather than returning part of a window.'),
+                        'to that count (pageNumber is never sent; on FortiEDR 7.x it '
+                        'answers 200 with an empty page), and a short answer is '
+                        're-read, then escalated by splitting the window, failing '
+                        'loudly rather than returning part of a window. Optional '
+                        'filters (Classifications, Severities, Device Name, '
+                        'Collector Groups, Organization) narrow the one query '
+                        'count-events and list-events share, so the count-verify '
+                        'holds on the filtered window.'),
         'category': 'investigation',
         'annotation': 'ingest_events',
         'handler_method': True,
@@ -91,9 +94,19 @@ def _new_operations():
                                 'in the window (the shipped connector behavior).')),
             _param('Classifications', 'classifications', 'multiselect',
                    options=['Malicious', 'Suspicious', 'Inconclusive', 'PUP',
-                            'Likely Safe', 'Safe']),
+                            'Likely Safe', 'Safe'],
+                   description=('Optional: pull only these classifications. The '
+                                'pull watermark advances past non-matching '
+                                'events, so set the filter before the first '
+                                'pull and keep it stable.')),
             _param('Severities', 'severities', 'multiselect',
-                   options=['Critical', 'High', 'Medium']),
+                   options=['Critical', 'High', 'Medium'],
+                   description='Optional: pull only these severities. Same watermark note as Classifications.'),
+            _param('Device Name', 'device', 'text',
+                   description='Optional: pull only events on this device name. Blank means all devices.'),
+            _param('Collector Groups', 'collector_groups', 'text',
+                   description=('Optional: comma-separated collector group '
+                                'names to pull from. Blank means all groups.')),
             _param('Max Events', 'max_events', 'integer', value=5000, minimum=1,
                    description=('Safety cap on one ingestion run (default 5000). A '
                                 'window whose count-events exceeds it fails the run '

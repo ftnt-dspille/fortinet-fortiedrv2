@@ -13,11 +13,11 @@
   "data": [
     {
       "@type": "WorkflowCollection",
-      "name": "Sample - Fortinet FortiEDR v2 - 1.1.0",
+      "name": "Sample - Fortinet FortiEDR v2 - 1.1.4",
       "description": "Sample playbooks for the \"Fortinet FortiEDR v2\" connector. If you are planning to use the sample playbooks in your environment, ensure that you clone those playbooks and move them to a different collection, since the sample playbook collection gets deleted during connector upgrade and delete.",
       "visible": true,
       "image": null,
-      "uuid": "feeedee1-cd25-5fa4-8ee3-0505dae3021a",
+      "uuid": "97ab84aa-bba9-5960-88e0-ba79f86d41be",
       "recordTags": [
         "fortinet-fortiedrv2",
         "Fortinet",
@@ -44,10 +44,10 @@
             "overrideIfNoMatch"
           ],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/feeedee1-cd25-5fa4-8ee3-0505dae3021a",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/97ab84aa-bba9-5960-88e0-ba79f86d41be",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/2530eaeb-936c-5322-863a-a46118cfceab",
+          "triggerStep": "/api/3/workflow_steps/c7bda51d-7751-5a36-b257-f08958f54c52",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -65,7 +65,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/b348f017-9a94-471f-87f8-ce88b6a7ad62",
               "group": null,
-              "uuid": "2530eaeb-936c-5322-863a-a46118cfceab"
+              "uuid": "c7bda51d-7751-5a36-b257-f08958f54c52"
             },
             {
               "@type": "WorkflowStep",
@@ -91,7 +91,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "7681bf3a-9b51-55ff-923d-4e23f7d8b8b1"
+              "uuid": "751a991f-9139-586b-919e-6df77a2677dc"
             },
             {
               "@type": "WorkflowStep",
@@ -102,13 +102,13 @@
                   {
                     "option": "Not Exist",
                     "condition": "{{ vars.steps.Get_FortiEDR_Macros.data['hydra:totalItems'] == 0 }}",
-                    "step_iri": "/api/3/workflow_steps/56934045-f8f2-5645-a96b-f43987781e91",
+                    "step_iri": "/api/3/workflow_steps/dbcbc9dc-e67f-5123-b07a-6c02ee3da89e",
                     "step_name": "Create FortiEDR Macro"
                   },
                   {
                     "option": "Exist",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/e058ff99-07ee-51ca-a0b9-622a2cbd04ff",
+                    "step_iri": "/api/3/workflow_steps/6e407401-5b99-572a-a837-8042f7ec71c6",
                     "step_name": "Fetch Macro Current Value"
                   }
                 ]
@@ -118,7 +118,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "75d903c2-2735-545b-8ff7-6382307a1d6f"
+              "uuid": "be9e7c6e-f5ff-5164-bf30-7ae379e0b2b4"
             },
             {
               "@type": "WorkflowStep",
@@ -144,7 +144,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "56934045-f8f2-5645-a96b-f43987781e91"
+              "uuid": "dbcbc9dc-e67f-5123-b07a-6c02ee3da89e"
             },
             {
               "@type": "WorkflowStep",
@@ -158,7 +158,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "e058ff99-07ee-51ca-a0b9-622a2cbd04ff"
+              "uuid": "6e407401-5b99-572a-a837-8042f7ec71c6"
             },
             {
               "@type": "WorkflowStep",
@@ -185,66 +185,66 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "61471892-bea7-5433-ba4e-ff8729667afd"
+              "uuid": "aa5e4d49-5e20-53b4-ae6f-c2b60410b78d"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Get FortiEDR Macros",
-              "targetStep": "/api/3/workflow_steps/7681bf3a-9b51-55ff-923d-4e23f7d8b8b1",
-              "sourceStep": "/api/3/workflow_steps/2530eaeb-936c-5322-863a-a46118cfceab",
+              "targetStep": "/api/3/workflow_steps/751a991f-9139-586b-919e-6df77a2677dc",
+              "sourceStep": "/api/3/workflow_steps/c7bda51d-7751-5a36-b257-f08958f54c52",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "d93d5222-05ad-5e43-b53f-bcad5ec96d32"
+              "uuid": "9ff1c1b3-a0e6-5b00-a396-440913455a65"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get FortiEDR Macros -> FortiEDR Macro Exists",
-              "targetStep": "/api/3/workflow_steps/75d903c2-2735-545b-8ff7-6382307a1d6f",
-              "sourceStep": "/api/3/workflow_steps/7681bf3a-9b51-55ff-923d-4e23f7d8b8b1",
+              "targetStep": "/api/3/workflow_steps/be9e7c6e-f5ff-5164-bf30-7ae379e0b2b4",
+              "sourceStep": "/api/3/workflow_steps/751a991f-9139-586b-919e-6df77a2677dc",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "8801ffb2-da85-52b1-a577-4c3dd3346166"
+              "uuid": "cd6febfe-b30b-5de8-bec9-6cf21d1e929b"
             },
             {
               "@type": "WorkflowRoute",
               "name": "FortiEDR Macro Exists -> Create FortiEDR Macro",
-              "targetStep": "/api/3/workflow_steps/56934045-f8f2-5645-a96b-f43987781e91",
-              "sourceStep": "/api/3/workflow_steps/75d903c2-2735-545b-8ff7-6382307a1d6f",
+              "targetStep": "/api/3/workflow_steps/dbcbc9dc-e67f-5123-b07a-6c02ee3da89e",
+              "sourceStep": "/api/3/workflow_steps/be9e7c6e-f5ff-5164-bf30-7ae379e0b2b4",
               "label": "Not Exist",
               "isExecuted": false,
               "group": null,
-              "uuid": "4646d5eb-8a89-58db-bb12-15485ce83f64"
+              "uuid": "3254f56f-597d-5a31-87e8-31f2c3e0dd6a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "FortiEDR Macro Exists -> Fetch Macro Current Value",
-              "targetStep": "/api/3/workflow_steps/e058ff99-07ee-51ca-a0b9-622a2cbd04ff",
-              "sourceStep": "/api/3/workflow_steps/75d903c2-2735-545b-8ff7-6382307a1d6f",
+              "targetStep": "/api/3/workflow_steps/6e407401-5b99-572a-a837-8042f7ec71c6",
+              "sourceStep": "/api/3/workflow_steps/be9e7c6e-f5ff-5164-bf30-7ae379e0b2b4",
               "label": "Exist",
               "isExecuted": false,
               "group": null,
-              "uuid": "176d3f5f-acbe-545e-afdc-dacd21d18a9b"
+              "uuid": "a2d42c49-d2af-5a54-b25e-ab50b7f1c851"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Fetch Macro Current Value -> Update Macro If Required",
-              "targetStep": "/api/3/workflow_steps/61471892-bea7-5433-ba4e-ff8729667afd",
-              "sourceStep": "/api/3/workflow_steps/e058ff99-07ee-51ca-a0b9-622a2cbd04ff",
+              "targetStep": "/api/3/workflow_steps/aa5e4d49-5e20-53b4-ae6f-c2b60410b78d",
+              "sourceStep": "/api/3/workflow_steps/6e407401-5b99-572a-a837-8042f7ec71c6",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "a135347d-cf5f-5c04-be47-172be69f13b8"
+              "uuid": "8030152d-5279-502c-adb9-f11dd7c3423e"
             }
           ],
           "groups": [],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "94382f7e-3d05-5f6b-968e-f30f842cc557",
+          "uuid": "154a4ba1-7a28-5aff-bb6d-12f1a8b6b48b",
           "owners": [],
           "isPrivate": false
         },
@@ -265,10 +265,10 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/feeedee1-cd25-5fa4-8ee3-0505dae3021a",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/97ab84aa-bba9-5960-88e0-ba79f86d41be",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/5ac64f7d-02e1-53b0-b929-6b25913a9903",
+          "triggerStep": "/api/3/workflow_steps/a3505bcd-281d-502c-b0fb-ad51265f927c",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -279,7 +279,7 @@
                   "input": {
                     "params": []
                   },
-                  "_configuration_schema": "[{\"title\": \"Initial Backfill Range (minutes)\", \"required\": true, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"fetch_last_minutes\", \"options\": [\"20\", \"60\", \"360\", \"1440\", \"10080\", \"43200\"], \"value\": \"60\", \"tooltip\": \"How many minutes back the first run reads, before a last-pull-time watermark exists. Later runs read from the watermark.\"}, {\"title\": \"Time Field\", \"required\": true, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"time_field\", \"options\": [\"Last Seen (activity)\", \"First Seen (creations only)\"], \"value\": \"Last Seen (activity)\", \"tooltip\": \"Last Seen (activity) fetches every event created or re-triggered in the window. FortiEDR links a re-detection of the same process into the existing event, whose firstSeen never moves -- use First Seen (creations only) only if you want the shipped connector's created-only behavior, which misses re-triggered events.\"}, {\"title\": \"Maximum Events Per Run\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"max_events\", \"value\": \"2000\", \"tooltip\": \"Safety cap on one run's window. A window whose event count exceeds it fails the run instead of silently skipping events -- raise the cap or shorten the schedule rather than let it bind.\"}]"
+                  "_configuration_schema": "[{\"title\": \"Initial Backfill Range (minutes)\", \"required\": true, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"fetch_last_minutes\", \"options\": [\"20\", \"60\", \"360\", \"1440\", \"10080\", \"43200\"], \"value\": \"60\", \"tooltip\": \"How many minutes back the first run reads, before a last-pull-time watermark exists. Later runs read from the watermark.\"}, {\"title\": \"Time Field\", \"required\": true, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"time_field\", \"options\": [\"Last Seen (activity)\", \"First Seen (creations only)\"], \"value\": \"Last Seen (activity)\", \"tooltip\": \"Last Seen (activity) fetches every event created or re-triggered in the window. FortiEDR links a re-detection of the same process into the existing event, whose firstSeen never moves -- use First Seen (creations only) only if you want the shipped connector's created-only behavior, which misses re-triggered events.\"}, {\"title\": \"Maximum Events Per Run\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"max_events\", \"value\": \"2000\", \"tooltip\": \"Safety cap on one run's window. A window whose event count exceeds it fails the run instead of silently skipping events -- raise the cap or shorten the schedule rather than let it bind.\"}, {\"title\": \"Classifications (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"classifications\", \"value\": \"\", \"tooltip\": \"Comma-separated event classifications to pull, e.g. Malicious,Suspicious. Leave blank to pull everything. IMPORTANT: the pull watermark advances past events a filter excludes -- set filters before the first pull and keep them stable, or events skipped by earlier pulls are never re-read.\"}, {\"title\": \"Severities (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"severities\", \"value\": \"\", \"tooltip\": \"Comma-separated severities to pull, e.g. Critical,High. Leave blank to pull every severity.\"}, {\"title\": \"Device Name (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"device\", \"value\": \"\", \"tooltip\": \"Pull only events reported by collectors on this device name. Leave blank to pull events from every device.\"}, {\"title\": \"Collector Groups (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"collector_groups\", \"value\": \"\", \"tooltip\": \"Comma-separated collector group names to pull from, e.g. GroupA,GroupB. Leave blank to pull from every group.\"}]"
                 }
               },
               "status": null,
@@ -287,7 +287,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/b348f017-9a94-471f-87f8-ce88b6a7ad62",
               "group": null,
-              "uuid": "5ac64f7d-02e1-53b0-b929-6b25913a9903"
+              "uuid": "a3505bcd-281d-502c-b0fb-ad51265f927c"
             },
             {
               "@type": "WorkflowStep",
@@ -297,6 +297,10 @@
                 "fetch_last_minutes": "60",
                 "time_field": "Last Seen (activity)",
                 "max_events": "2000",
+                "classifications": "",
+                "severities": "",
+                "device": "",
+                "collector_groups": "",
                 "FortiEDRMacroName": "FortiEDRLastEventPullTime_{{vars['audit_info']['cyops_playbook_iri'].split('/')[-1].replace('-','_')}}"
               },
               "status": null,
@@ -304,7 +308,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "848ba7df-c97b-578a-9fad-2d8b8eebe0af"
+              "uuid": "ff0ab61e-a5e5-525f-affe-06b7560777ba"
             },
             {
               "@type": "WorkflowStep",
@@ -330,7 +334,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "410facf8-6db2-5c9a-b655-5d327ab2cf62"
+              "uuid": "bfb83eb5-27ca-539f-83b6-5a20cd07aaef"
             },
             {
               "@type": "WorkflowStep",
@@ -346,14 +350,14 @@
                   "FortiEDRMacroValue": "0",
                   "overrideIfNoMatch": "false"
                 },
-                "workflowReference": "/api/3/workflows/94382f7e-3d05-5f6b-968e-f30f842cc557"
+                "workflowReference": "/api/3/workflows/154a4ba1-7a28-5aff-bb6d-12f1a8b6b48b"
               },
               "status": null,
               "top": "510",
               "left": "200",
               "stepType": "/api/3/workflow_step_types/74932bdc-b8b6-4d24-88c4-1a4dfbc524f3",
               "group": null,
-              "uuid": "44505822-7699-59ee-bbf2-8677d1b84d41"
+              "uuid": "7a8cda8b-4c32-5dfc-b010-17010cb06e74"
             },
             {
               "@type": "WorkflowStep",
@@ -369,7 +373,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "2bb7e468-fcba-53f4-a05a-b6c9f29935a0"
+              "uuid": "a583127c-d6c9-563a-bebf-deaf97c27f92"
             },
             {
               "@type": "WorkflowStep",
@@ -384,9 +388,13 @@
                   "from": "{{vars.window_from}}",
                   "to": "{{vars.curr_timestamp}}",
                   "time_field": "{{vars.time_field}}",
-                  "max_events": "{{vars.max_events}}"
+                  "max_events": "{{vars.max_events}}",
+                  "classifications": "{{vars.classifications}}",
+                  "severities": "{{vars.severities}}",
+                  "device": "{{vars.device}}",
+                  "collector_groups": "{{vars.collector_groups}}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "step_variables": [],
                 "pickFromTenant": false
@@ -396,7 +404,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "e3e13a6a-5d21-5c26-8203-25c4bb665a10"
+              "uuid": "9b0c6372-cdb2-59e2-8c43-4d32fcbdd774"
             },
             {
               "@type": "WorkflowStep",
@@ -412,76 +420,76 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "e29b92c4-ebb4-5c81-90f6-84fc08097aee"
+              "uuid": "61da92b0-9772-56d1-ac85-6723c10ca2db"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Configuration",
-              "targetStep": "/api/3/workflow_steps/848ba7df-c97b-578a-9fad-2d8b8eebe0af",
-              "sourceStep": "/api/3/workflow_steps/5ac64f7d-02e1-53b0-b929-6b25913a9903",
+              "targetStep": "/api/3/workflow_steps/ff0ab61e-a5e5-525f-affe-06b7560777ba",
+              "sourceStep": "/api/3/workflow_steps/a3505bcd-281d-502c-b0fb-ad51265f927c",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "599de129-4202-5dd1-b091-3fe51cbde5f1"
+              "uuid": "ad357bd4-d9be-5458-85ae-bc487936de1f"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Configuration -> Get Macro Value",
-              "targetStep": "/api/3/workflow_steps/410facf8-6db2-5c9a-b655-5d327ab2cf62",
-              "sourceStep": "/api/3/workflow_steps/848ba7df-c97b-578a-9fad-2d8b8eebe0af",
+              "targetStep": "/api/3/workflow_steps/bfb83eb5-27ca-539f-83b6-5a20cd07aaef",
+              "sourceStep": "/api/3/workflow_steps/ff0ab61e-a5e5-525f-affe-06b7560777ba",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "d428daf9-6ee7-5020-825e-3b6a8d0cd4df"
+              "uuid": "33da5822-5f04-5dd7-8d53-b23ba9e1058e"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Macro Value -> Environment Setup",
-              "targetStep": "/api/3/workflow_steps/44505822-7699-59ee-bbf2-8677d1b84d41",
-              "sourceStep": "/api/3/workflow_steps/410facf8-6db2-5c9a-b655-5d327ab2cf62",
+              "targetStep": "/api/3/workflow_steps/7a8cda8b-4c32-5dfc-b010-17010cb06e74",
+              "sourceStep": "/api/3/workflow_steps/bfb83eb5-27ca-539f-83b6-5a20cd07aaef",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "a823156c-783e-5cd6-9e19-06ff7bc8b137"
+              "uuid": "654767ab-bd5f-52ca-82fa-1a9a64715020"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Environment Setup -> Set Time Configuration",
-              "targetStep": "/api/3/workflow_steps/2bb7e468-fcba-53f4-a05a-b6c9f29935a0",
-              "sourceStep": "/api/3/workflow_steps/44505822-7699-59ee-bbf2-8677d1b84d41",
+              "targetStep": "/api/3/workflow_steps/a583127c-d6c9-563a-bebf-deaf97c27f92",
+              "sourceStep": "/api/3/workflow_steps/7a8cda8b-4c32-5dfc-b010-17010cb06e74",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "8c555c57-1d74-5871-9c20-08b2b2d8085e"
+              "uuid": "7f239e78-475c-5df9-a644-8c8da21a9622"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Set Time Configuration -> Ingest Events",
-              "targetStep": "/api/3/workflow_steps/e3e13a6a-5d21-5c26-8203-25c4bb665a10",
-              "sourceStep": "/api/3/workflow_steps/2bb7e468-fcba-53f4-a05a-b6c9f29935a0",
+              "targetStep": "/api/3/workflow_steps/9b0c6372-cdb2-59e2-8c43-4d32fcbdd774",
+              "sourceStep": "/api/3/workflow_steps/a583127c-d6c9-563a-bebf-deaf97c27f92",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "f119769b-b2ad-5a7c-8de2-1bd6d05545e4"
+              "uuid": "5111ceab-27a0-5b9e-90d9-f67a19d4e148"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Ingest Events -> Save Result",
-              "targetStep": "/api/3/workflow_steps/e29b92c4-ebb4-5c81-90f6-84fc08097aee",
-              "sourceStep": "/api/3/workflow_steps/e3e13a6a-5d21-5c26-8203-25c4bb665a10",
+              "targetStep": "/api/3/workflow_steps/61da92b0-9772-56d1-ac85-6723c10ca2db",
+              "sourceStep": "/api/3/workflow_steps/9b0c6372-cdb2-59e2-8c43-4d32fcbdd774",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "7fe7e750-676c-5c2d-b762-a1915e671ad5"
+              "uuid": "390715eb-4114-540b-bb7d-81d296f441a7"
             }
           ],
           "groups": [
             {
               "@type": "WorkflowGroup",
               "name": "Note: Configuration",
-              "description": "Wizard-editable defaults. `fetch_last_minutes` is the backfill window\nused while the watermark is missing or '0'. The macro name is scoped to\nthis playbook's UUID, so two ingestion configurations never share a\nwatermark. `max_events` fails a run whose window exceeds it -- the\nwindow fetch is count-verified and never paged, so a partial read\nmust never advance the watermark.\n",
+              "description": "Wizard-editable defaults. `fetch_last_minutes` is the backfill window\nused while the watermark is missing or '0'. The macro name is scoped to\nthis playbook's UUID, so two ingestion configurations never share a\nwatermark. `max_events` fails a run whose window exceeds it -- the\nwindow fetch is count-verified and never paged, so a partial read\nmust never advance the watermark.\n\nThe four blank filter keys are the wizard's optional pull filters\n(the Data Ingestion Wizard writes the analyst's edited values into\nthis step's variables -- the shipped-connector contract: schema\nfield names 1:1 the keys here). Blanks mean \"pull everything\": the\nconnector drops empty filters, so the default configuration's pull\nis unfiltered.\n",
               "type": "note",
               "isCollapsed": false,
               "hasTriggerStep": false,
@@ -490,9 +498,9 @@
               "reusable": false,
               "top": "250",
               "left": "540",
-              "height": "292",
+              "height": "360",
               "width": "440",
-              "uuid": "d63724fb-4ff1-572c-8589-ff8b9e200790",
+              "uuid": "ad7634a6-f374-5f4a-8888-3ad6640a588d",
               "recordTags": []
             },
             {
@@ -505,11 +513,11 @@
               "hideInLogs": true,
               "metadata": [],
               "reusable": false,
-              "top": "562",
+              "top": "630",
               "left": "540",
               "height": "358",
               "width": "440",
-              "uuid": "6611369d-51db-5961-9da4-be6fc76e3d1e",
+              "uuid": "b1977ad3-2d9f-53ec-8522-2f0ed9831da8",
               "recordTags": []
             },
             {
@@ -522,28 +530,28 @@
               "hideInLogs": true,
               "metadata": [],
               "reusable": false,
-              "top": "940",
+              "top": "1008",
               "left": "540",
               "height": "314",
               "width": "440",
-              "uuid": "faf5bd66-c37a-57a1-a20d-b4e19b92c7a1",
+              "uuid": "ebd8a52a-9e5e-5681-889d-7984641ae01c",
               "recordTags": []
             },
             {
               "@type": "WorkflowGroup",
               "name": "Note: Ingest Events",
-              "description": "The connector op pages through the events itself (up to Maximum Events\nPer Run) and returns each one already mapped to an alert payload:\nexternal_id = eventId, severity clamped to the Severity picklist,\nprocess/device/destinations split into their own keys, and the raw\nevent kept in source_payload.\n",
+              "description": "The connector op pages through the events itself (up to Maximum Events\nPer Run) and returns each one already mapped to an alert payload:\nexternal_id = eventId, severity clamped to the Severity picklist,\nprocess/device/destinations split into their own keys, and the raw\nevent kept in source_payload.\n\nThe filter carry-through (classifications, severities, device,\ncollector_groups) rides the same op: blank values are dropped by\nthe connector, so an unconfigured wizard's pull stays unfiltered.\n",
               "type": "note",
               "isCollapsed": false,
               "hasTriggerStep": false,
               "hideInLogs": true,
               "metadata": [],
               "reusable": false,
-              "top": "1274",
+              "top": "1342",
               "left": "540",
-              "height": "248",
+              "height": "360",
               "width": "440",
-              "uuid": "4dddaf87-a673-5632-9aae-394f6a870b5d",
+              "uuid": "0469bedb-c043-52b7-a3cf-a7fa339c26d9",
               "recordTags": []
             },
             {
@@ -556,18 +564,18 @@
               "hideInLogs": true,
               "metadata": [],
               "reusable": false,
-              "top": "1542",
+              "top": "1722",
               "left": "540",
               "height": "138",
               "width": "440",
-              "uuid": "0ddefc64-5880-5805-b26a-ec6d899dab57",
+              "uuid": "aa375d5a-2e64-5fed-803f-5c2ad5947a83",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "f20897ce-f06c-5e02-b76b-2dcc613c78e8",
+          "uuid": "102a350d-2df4-5918-b75c-9789f4d01ccf",
           "owners": [],
           "isPrivate": false
         },
@@ -589,10 +597,10 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/feeedee1-cd25-5fa4-8ee3-0505dae3021a",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/97ab84aa-bba9-5960-88e0-ba79f86d41be",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/71d5d326-7af3-5178-98cd-dffd3b0d50e5",
+          "triggerStep": "/api/3/workflow_steps/6b3fc077-6783-5413-9280-0f92fae9dc70",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -635,7 +643,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
               "group": null,
-              "uuid": "71d5d326-7af3-5178-98cd-dffd3b0d50e5"
+              "uuid": "6b3fc077-6783-5413-9280-0f92fae9dc70"
             },
             {
               "@type": "WorkflowStep",
@@ -645,14 +653,14 @@
                 "apply_async": false,
                 "pass_parent_env": false,
                 "pass_input_record": false,
-                "workflowReference": "/api/3/workflows/f20897ce-f06c-5e02-b76b-2dcc613c78e8"
+                "workflowReference": "/api/3/workflows/102a350d-2df4-5918-b75c-9789f4d01ccf"
               },
               "status": null,
               "top": "250",
               "left": "200",
               "stepType": "/api/3/workflow_step_types/74932bdc-b8b6-4d24-88c4-1a4dfbc524f3",
               "group": null,
-              "uuid": "b2dcf2e6-c098-5a50-bcd3-8ce8fe7f01ca"
+              "uuid": "c3d3face-d577-5ddc-896d-25035eaf87f2"
             },
             {
               "@type": "WorkflowStep",
@@ -663,13 +671,13 @@
                   {
                     "option": "Mapping Preview",
                     "condition": "{{ vars.request.env_setup | default(false) | bool }}",
-                    "step_iri": "/api/3/workflow_steps/3cfeae6d-1b04-535f-b43e-5766c7234b3c",
+                    "step_iri": "/api/3/workflow_steps/02c1b3c9-30f5-5b77-a06f-bcff6253c783",
                     "step_name": "Return Sample"
                   },
                   {
                     "option": "Ingest",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/6e019a69-3d3c-5d25-bbff-904bb5e4fb09",
+                    "step_iri": "/api/3/workflow_steps/a6928484-b834-5100-ac45-6da85d9577d2",
                     "step_name": "Configuration"
                   }
                 ]
@@ -679,7 +687,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "5ac27e10-a40e-57e5-8d66-3c8454562735"
+              "uuid": "9ee9ee31-555a-564d-8e53-bedbf3d0aa39"
             },
             {
               "@type": "WorkflowStep",
@@ -693,7 +701,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "3cfeae6d-1b04-535f-b43e-5766c7234b3c"
+              "uuid": "02c1b3c9-30f5-5b77-a06f-bcff6253c783"
             },
             {
               "@type": "WorkflowStep",
@@ -708,7 +716,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "6e019a69-3d3c-5d25-bbff-904bb5e4fb09"
+              "uuid": "a6928484-b834-5100-ac45-6da85d9577d2"
             },
             {
               "@type": "WorkflowStep",
@@ -743,7 +751,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/2597053c-e718-44b4-8394-4d40fe26d357",
               "group": null,
-              "uuid": "eeca7d09-2c4a-5cd8-9eba-f3494db79cf8"
+              "uuid": "c6ce1d12-db22-5491-afb6-1e3fb1a6ad3d"
             },
             {
               "@type": "WorkflowStep",
@@ -768,69 +776,69 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "fa3ecaea-ee1a-5d43-a64d-68c076e3671b"
+              "uuid": "efe53a89-1fe4-5ca0-b4d8-148bebc4a304"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Fetch Events",
-              "targetStep": "/api/3/workflow_steps/b2dcf2e6-c098-5a50-bcd3-8ce8fe7f01ca",
-              "sourceStep": "/api/3/workflow_steps/71d5d326-7af3-5178-98cd-dffd3b0d50e5",
+              "targetStep": "/api/3/workflow_steps/c3d3face-d577-5ddc-896d-25035eaf87f2",
+              "sourceStep": "/api/3/workflow_steps/6b3fc077-6783-5413-9280-0f92fae9dc70",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "74138609-0213-50d6-a551-a34edececc26"
+              "uuid": "cfb90ec5-32c5-5ff4-808e-f32690397dfe"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Fetch Events -> Mapping Preview",
-              "targetStep": "/api/3/workflow_steps/5ac27e10-a40e-57e5-8d66-3c8454562735",
-              "sourceStep": "/api/3/workflow_steps/b2dcf2e6-c098-5a50-bcd3-8ce8fe7f01ca",
+              "targetStep": "/api/3/workflow_steps/9ee9ee31-555a-564d-8e53-bedbf3d0aa39",
+              "sourceStep": "/api/3/workflow_steps/c3d3face-d577-5ddc-896d-25035eaf87f2",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "5b0d3920-bea3-5e84-93a2-acc0be749ae4"
+              "uuid": "1ab3d3fe-2281-5543-9e13-dda02eb731af"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Mapping Preview -> Return Sample",
-              "targetStep": "/api/3/workflow_steps/3cfeae6d-1b04-535f-b43e-5766c7234b3c",
-              "sourceStep": "/api/3/workflow_steps/5ac27e10-a40e-57e5-8d66-3c8454562735",
+              "targetStep": "/api/3/workflow_steps/02c1b3c9-30f5-5b77-a06f-bcff6253c783",
+              "sourceStep": "/api/3/workflow_steps/9ee9ee31-555a-564d-8e53-bedbf3d0aa39",
               "label": "Mapping Preview",
               "isExecuted": false,
               "group": null,
-              "uuid": "e5418499-167f-59b2-9c73-6adf63ea895d"
+              "uuid": "b2e309c9-8a7c-5c73-b265-855749f55845"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Mapping Preview -> Configuration",
-              "targetStep": "/api/3/workflow_steps/6e019a69-3d3c-5d25-bbff-904bb5e4fb09",
-              "sourceStep": "/api/3/workflow_steps/5ac27e10-a40e-57e5-8d66-3c8454562735",
+              "targetStep": "/api/3/workflow_steps/a6928484-b834-5100-ac45-6da85d9577d2",
+              "sourceStep": "/api/3/workflow_steps/9ee9ee31-555a-564d-8e53-bedbf3d0aa39",
               "label": "Ingest",
               "isExecuted": false,
               "group": null,
-              "uuid": "424255d4-ef90-5b0f-b835-3287abf75893"
+              "uuid": "68f6b523-4cef-5992-a30e-b255d23f7517"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Configuration -> Create Record",
-              "targetStep": "/api/3/workflow_steps/eeca7d09-2c4a-5cd8-9eba-f3494db79cf8",
-              "sourceStep": "/api/3/workflow_steps/6e019a69-3d3c-5d25-bbff-904bb5e4fb09",
+              "targetStep": "/api/3/workflow_steps/c6ce1d12-db22-5491-afb6-1e3fb1a6ad3d",
+              "sourceStep": "/api/3/workflow_steps/a6928484-b834-5100-ac45-6da85d9577d2",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "382ec38a-e543-5ffd-b7a9-75464dfca85b"
+              "uuid": "9b45cb2f-5cc9-56e3-8020-23ebeab0dabf"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Create Record -> Update Last Pull Time",
-              "targetStep": "/api/3/workflow_steps/fa3ecaea-ee1a-5d43-a64d-68c076e3671b",
-              "sourceStep": "/api/3/workflow_steps/eeca7d09-2c4a-5cd8-9eba-f3494db79cf8",
+              "targetStep": "/api/3/workflow_steps/efe53a89-1fe4-5ca0-b4d8-148bebc4a304",
+              "sourceStep": "/api/3/workflow_steps/c6ce1d12-db22-5491-afb6-1e3fb1a6ad3d",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "21b7d4c2-5a33-5cc1-91d7-db97405585bd"
+              "uuid": "8dd89f4b-50f3-5cab-af57-0ff2fa4855fe"
             }
           ],
           "groups": [
@@ -848,7 +856,7 @@
               "left": "880",
               "height": "226",
               "width": "440",
-              "uuid": "030bf6e0-54c4-56a7-9862-544c8c746cc4",
+              "uuid": "4004ac11-2bb8-5435-9ea5-47085b8c2255",
               "recordTags": []
             },
             {
@@ -865,7 +873,7 @@
               "left": "880",
               "height": "204",
               "width": "440",
-              "uuid": "5cc11d6f-6b4d-5cfd-b74b-85d903290711",
+              "uuid": "9132b88e-4da3-5bf1-a0b9-07a7f6087f95",
               "recordTags": []
             },
             {
@@ -882,7 +890,7 @@
               "left": "880",
               "height": "116",
               "width": "440",
-              "uuid": "d1c29a0f-cb83-5099-8540-d8b4dd852d4c",
+              "uuid": "a165dba5-fe9a-5d19-b986-c48101b20433",
               "recordTags": []
             },
             {
@@ -899,7 +907,7 @@
               "left": "880",
               "height": "360",
               "width": "440",
-              "uuid": "7d734e3d-dd41-521e-9a2e-e0329a459759",
+              "uuid": "a774f583-b22c-5980-b5d6-b436693cae74",
               "recordTags": []
             },
             {
@@ -916,14 +924,14 @@
               "left": "880",
               "height": "116",
               "width": "440",
-              "uuid": "ddb8223d-1d1e-5610-a144-3112e4afbe36",
+              "uuid": "0dbb1efc-5740-5be4-a333-3d2cea4b578c",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "0eb83917-e8f7-5c44-9f49-52f1d7de3f2f",
+          "uuid": "a0e9b78f-1e80-5a65-88ae-85f1dbfb437d",
           "owners": [],
           "isPrivate": false
         }
@@ -931,11 +939,11 @@
     },
     {
       "@type": "WorkflowCollection",
-      "name": "Sample - Fortinet FortiEDR v2 Use Cases - 1.1.0",
+      "name": "Sample - Fortinet FortiEDR v2 Use Cases - 1.1.4",
       "description": "Operational use-case playbooks for the \"Fortinet FortiEDR v2\" connector: alert triage with collector isolation, evidence collection, time-limited exception governance, a re-detection digest over console incidents, a file-hash IOC retro-hunt, and a fleet compliance audit. Clone before use, like every sample collection: the connector upgrade deletes and re-imports sample collections, so local edits are lost on upgrade.",
       "visible": true,
       "image": null,
-      "uuid": "9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+      "uuid": "12ac4843-559b-5c90-a850-10ab526418da",
       "recordTags": [
         "fortinet-fortiedrv2",
         "Fortinet",
@@ -959,10 +967,10 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/12ac4843-559b-5c90-a850-10ab526418da",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/265fdf9d-3234-5fad-8115-de8cc2597e50",
+          "triggerStep": "/api/3/workflow_steps/2d216331-57c6-5d47-999b-c7a8b0a02e80",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -1005,7 +1013,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
               "group": null,
-              "uuid": "265fdf9d-3234-5fad-8115-de8cc2597e50"
+              "uuid": "2d216331-57c6-5d47-999b-c7a8b0a02e80"
             },
             {
               "@type": "WorkflowStep",
@@ -1020,7 +1028,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "1b3600ae-d8ec-5814-b2e4-9489451b1696"
+              "uuid": "8a7acec4-84b2-54ec-8cde-4049fa35062f"
             },
             {
               "@type": "WorkflowStep",
@@ -1034,7 +1042,7 @@
                 "params": {
                   "eventIds": "{{ vars.event_id }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Event by ID",
                 "step_variables": [],
@@ -1045,7 +1053,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "350ff93f-1be1-5a20-b248-cb669300fabb"
+              "uuid": "a4cf0e7f-77ee-57b9-b48d-627616c9935a"
             },
             {
               "@type": "WorkflowStep",
@@ -1056,13 +1064,13 @@
                   {
                     "option": "Found",
                     "condition": "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}",
-                    "step_iri": "/api/3/workflow_steps/ea2b6080-a8ae-5428-b724-60ff45b085e4",
+                    "step_iri": "/api/3/workflow_steps/cddbaee0-0b16-5590-80eb-a4fe378c1608",
                     "step_name": "Enrich"
                   },
                   {
                     "option": "Missing Event",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/31117261-de27-5ca9-85de-fcefce56477c",
+                    "step_iri": "/api/3/workflow_steps/d0468b90-0db9-5199-bad7-cc37f9d88900",
                     "step_name": "Missing Event Audit"
                   }
                 ]
@@ -1072,7 +1080,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "cbe74c0e-ccdc-521e-82bc-24e6858db731"
+              "uuid": "c4f62e9a-cff7-55f1-abaa-ecc7c6d39c16"
             },
             {
               "@type": "WorkflowStep",
@@ -1092,7 +1100,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "31117261-de27-5ca9-85de-fcefce56477c"
+              "uuid": "d0468b90-0db9-5199-bad7-cc37f9d88900"
             },
             {
               "@type": "WorkflowStep",
@@ -1112,7 +1120,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "ea2b6080-a8ae-5428-b724-60ff45b085e4"
+              "uuid": "cddbaee0-0b16-5590-80eb-a4fe378c1608"
             },
             {
               "@type": "WorkflowStep",
@@ -1126,7 +1134,7 @@
                   "eventId": "{{ vars.event_id }}",
                   "organization": "{{ vars.organization }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Event Exceptions",
                 "step_variables": [],
@@ -1137,7 +1145,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "60e6bc44-40a6-576a-8792-578eea6a754c"
+              "uuid": "480eec6e-4c0f-5ef7-b28f-9696783bd085"
             },
             {
               "@type": "WorkflowStep",
@@ -1152,14 +1160,14 @@
                   "record_id": "{{ vars.record_id }}",
                   "organization": "{{ vars.organization }}"
                 },
-                "workflowReference": "/api/3/workflows/5dd89d28-c702-57ed-810f-7e01054a433f"
+                "workflowReference": "/api/3/workflows/f6dd9569-eeee-5da9-868b-140b1bc87f68"
               },
               "status": null,
               "top": "900",
               "left": "200",
               "stepType": "/api/3/workflow_step_types/74932bdc-b8b6-4d24-88c4-1a4dfbc524f3",
               "group": null,
-              "uuid": "d2ee07a1-7c5d-5cca-813b-1d627d1ea5c6"
+              "uuid": "81863a21-ca2b-5c5e-94f4-5618182cb950"
             },
             {
               "@type": "WorkflowStep",
@@ -1207,11 +1215,11 @@
                     {
                       "option": "Isolate Device",
                       "primary": true,
-                      "step_iri": "/api/3/workflow_steps/9d98c571-0572-562e-8fa7-3e02f8c38d39"
+                      "step_iri": "/api/3/workflow_steps/eab438b4-cb5b-500d-a404-4adda8928feb"
                     },
                     {
                       "option": "Skip Isolation",
-                      "step_iri": "/api/3/workflow_steps/84b28b8d-0c7d-5529-a0b3-e3356b652b6b"
+                      "step_iri": "/api/3/workflow_steps/2824f343-355f-5e2d-80ef-2a0154a89570"
                     }
                   ],
                   "duplicateOption": false,
@@ -1230,7 +1238,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/a19333c2-c822-11ed-afa1-0242ac120002",
               "group": null,
-              "uuid": "5661ac53-6731-536f-b601-1b45b8088996"
+              "uuid": "46c4a95b-4e0a-52c5-a294-d15f615ee9e2"
             },
             {
               "@type": "WorkflowStep",
@@ -1244,7 +1252,7 @@
                   "type": "Name",
                   "devices": "{{ vars.device }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Isolate Collector",
                 "step_variables": [],
@@ -1255,7 +1263,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "9d98c571-0572-562e-8fa7-3e02f8c38d39"
+              "uuid": "eab438b4-cb5b-500d-a404-4adda8928feb"
             },
             {
               "@type": "WorkflowStep",
@@ -1276,7 +1284,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "030b99d2-fc95-5ef3-a209-8fad322c5f7c"
+              "uuid": "1baf2158-0188-599c-8472-386e27f50dcb"
             },
             {
               "@type": "WorkflowStep",
@@ -1296,7 +1304,7 @@
               "left": "880",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "84b28b8d-0c7d-5529-a0b3-e3356b652b6b"
+              "uuid": "2824f343-355f-5e2d-80ef-2a0154a89570"
             },
             {
               "@type": "WorkflowStep",
@@ -1318,149 +1326,149 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "65aad62d-3c8b-5c5e-8d42-df5d863b7e3b"
+              "uuid": "78a9abbb-fd5b-5148-8a05-96877af3a361"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Resolve Event",
-              "targetStep": "/api/3/workflow_steps/1b3600ae-d8ec-5814-b2e4-9489451b1696",
-              "sourceStep": "/api/3/workflow_steps/265fdf9d-3234-5fad-8115-de8cc2597e50",
+              "targetStep": "/api/3/workflow_steps/8a7acec4-84b2-54ec-8cde-4049fa35062f",
+              "sourceStep": "/api/3/workflow_steps/2d216331-57c6-5d47-999b-c7a8b0a02e80",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "0cac38cc-ac08-5b23-b7c5-5c1284953c39"
+              "uuid": "a7abd1c5-18bc-58c8-b12a-95c8596d489a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Resolve Event -> Get Event",
-              "targetStep": "/api/3/workflow_steps/350ff93f-1be1-5a20-b248-cb669300fabb",
-              "sourceStep": "/api/3/workflow_steps/1b3600ae-d8ec-5814-b2e4-9489451b1696",
+              "targetStep": "/api/3/workflow_steps/a4cf0e7f-77ee-57b9-b48d-627616c9935a",
+              "sourceStep": "/api/3/workflow_steps/8a7acec4-84b2-54ec-8cde-4049fa35062f",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "536abb4d-ed8a-5fd3-b003-e9f83548717f"
+              "uuid": "d287197d-ba84-5c3f-a0f3-43c4b4cbfd12"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Event -> Event Resolved",
-              "targetStep": "/api/3/workflow_steps/cbe74c0e-ccdc-521e-82bc-24e6858db731",
-              "sourceStep": "/api/3/workflow_steps/350ff93f-1be1-5a20-b248-cb669300fabb",
+              "targetStep": "/api/3/workflow_steps/c4f62e9a-cff7-55f1-abaa-ecc7c6d39c16",
+              "sourceStep": "/api/3/workflow_steps/a4cf0e7f-77ee-57b9-b48d-627616c9935a",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "d559a56e-4cff-5044-b029-d5406fee6b33"
+              "uuid": "eac0f0e9-4478-5241-a0ca-92066e899125"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Event Resolved -> Enrich",
-              "targetStep": "/api/3/workflow_steps/ea2b6080-a8ae-5428-b724-60ff45b085e4",
-              "sourceStep": "/api/3/workflow_steps/cbe74c0e-ccdc-521e-82bc-24e6858db731",
+              "targetStep": "/api/3/workflow_steps/cddbaee0-0b16-5590-80eb-a4fe378c1608",
+              "sourceStep": "/api/3/workflow_steps/c4f62e9a-cff7-55f1-abaa-ecc7c6d39c16",
               "label": "Found",
               "isExecuted": false,
               "group": null,
-              "uuid": "f69f739a-1aaf-5571-b4a2-c1d889dbe249"
+              "uuid": "7d1bac27-e908-5b13-83ac-a42deb2d8a5f"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Event Resolved -> Missing Event Audit",
-              "targetStep": "/api/3/workflow_steps/31117261-de27-5ca9-85de-fcefce56477c",
-              "sourceStep": "/api/3/workflow_steps/cbe74c0e-ccdc-521e-82bc-24e6858db731",
+              "targetStep": "/api/3/workflow_steps/d0468b90-0db9-5199-bad7-cc37f9d88900",
+              "sourceStep": "/api/3/workflow_steps/c4f62e9a-cff7-55f1-abaa-ecc7c6d39c16",
               "label": "Missing Event",
               "isExecuted": false,
               "group": null,
-              "uuid": "07456707-b417-5399-a429-7a6f32afc17e"
+              "uuid": "3ce20527-4423-5c78-8faa-4b7dc8846d19"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Missing Event Audit -> End",
-              "targetStep": "/api/3/workflow_steps/65aad62d-3c8b-5c5e-8d42-df5d863b7e3b",
-              "sourceStep": "/api/3/workflow_steps/31117261-de27-5ca9-85de-fcefce56477c",
+              "targetStep": "/api/3/workflow_steps/78a9abbb-fd5b-5148-8a05-96877af3a361",
+              "sourceStep": "/api/3/workflow_steps/d0468b90-0db9-5199-bad7-cc37f9d88900",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "a0761cde-a810-58e0-8af0-19a39590c7a9"
+              "uuid": "83f27c73-882c-5c6d-9bb5-528e5a89c85a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Enrich -> Check Existing Exceptions",
-              "targetStep": "/api/3/workflow_steps/60e6bc44-40a6-576a-8792-578eea6a754c",
-              "sourceStep": "/api/3/workflow_steps/ea2b6080-a8ae-5428-b724-60ff45b085e4",
+              "targetStep": "/api/3/workflow_steps/480eec6e-4c0f-5ef7-b28f-9696783bd085",
+              "sourceStep": "/api/3/workflow_steps/cddbaee0-0b16-5590-80eb-a4fe378c1608",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "7ad76db0-3b99-5ac7-8698-f9bf96a1e748"
+              "uuid": "103bf596-96cf-5139-88ae-b35a09b02678"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Check Existing Exceptions -> Collect Evidence",
-              "targetStep": "/api/3/workflow_steps/d2ee07a1-7c5d-5cca-813b-1d627d1ea5c6",
-              "sourceStep": "/api/3/workflow_steps/60e6bc44-40a6-576a-8792-578eea6a754c",
+              "targetStep": "/api/3/workflow_steps/81863a21-ca2b-5c5e-94f4-5618182cb950",
+              "sourceStep": "/api/3/workflow_steps/480eec6e-4c0f-5ef7-b28f-9696783bd085",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "dffbb272-c411-5be6-9657-cf924ab1dab9"
+              "uuid": "eff94933-0ff9-5ea6-8357-8d03b5d92a88"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Collect Evidence -> Isolation Approval",
-              "targetStep": "/api/3/workflow_steps/5661ac53-6731-536f-b601-1b45b8088996",
-              "sourceStep": "/api/3/workflow_steps/d2ee07a1-7c5d-5cca-813b-1d627d1ea5c6",
+              "targetStep": "/api/3/workflow_steps/46c4a95b-4e0a-52c5-a294-d15f615ee9e2",
+              "sourceStep": "/api/3/workflow_steps/81863a21-ca2b-5c5e-94f4-5618182cb950",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "6c02821c-7e26-5bc2-ba0f-778909991c9a"
+              "uuid": "9b2b9348-7e43-59d5-a8b6-a37f9084b4a9"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Isolation Approval -> Isolate Collector",
-              "targetStep": "/api/3/workflow_steps/9d98c571-0572-562e-8fa7-3e02f8c38d39",
-              "sourceStep": "/api/3/workflow_steps/5661ac53-6731-536f-b601-1b45b8088996",
+              "targetStep": "/api/3/workflow_steps/eab438b4-cb5b-500d-a404-4adda8928feb",
+              "sourceStep": "/api/3/workflow_steps/46c4a95b-4e0a-52c5-a294-d15f615ee9e2",
               "label": "Isolate Device",
               "isExecuted": false,
               "group": null,
-              "uuid": "5f78872f-4b43-5531-9706-cdaa89ecdb71"
+              "uuid": "7ce197f5-189a-5077-937d-9b3459b16eac"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Isolation Approval -> Declined",
-              "targetStep": "/api/3/workflow_steps/84b28b8d-0c7d-5529-a0b3-e3356b652b6b",
-              "sourceStep": "/api/3/workflow_steps/5661ac53-6731-536f-b601-1b45b8088996",
+              "targetStep": "/api/3/workflow_steps/2824f343-355f-5e2d-80ef-2a0154a89570",
+              "sourceStep": "/api/3/workflow_steps/46c4a95b-4e0a-52c5-a294-d15f615ee9e2",
               "label": "Skip Isolation",
               "isExecuted": false,
               "group": null,
-              "uuid": "ef9ffc80-5874-50e3-a538-7dc95a9d9974"
+              "uuid": "c1ad4abf-583e-5253-acf1-c931a6183e28"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Isolate Collector -> Isolation Audit",
-              "targetStep": "/api/3/workflow_steps/030b99d2-fc95-5ef3-a209-8fad322c5f7c",
-              "sourceStep": "/api/3/workflow_steps/9d98c571-0572-562e-8fa7-3e02f8c38d39",
+              "targetStep": "/api/3/workflow_steps/1baf2158-0188-599c-8472-386e27f50dcb",
+              "sourceStep": "/api/3/workflow_steps/eab438b4-cb5b-500d-a404-4adda8928feb",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "5751588e-94a4-55ae-a6e8-9a8a33f2bf8a"
+              "uuid": "f9c81caa-74f9-584c-a092-2cd8deecca3a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Isolation Audit -> End",
-              "targetStep": "/api/3/workflow_steps/65aad62d-3c8b-5c5e-8d42-df5d863b7e3b",
-              "sourceStep": "/api/3/workflow_steps/030b99d2-fc95-5ef3-a209-8fad322c5f7c",
+              "targetStep": "/api/3/workflow_steps/78a9abbb-fd5b-5148-8a05-96877af3a361",
+              "sourceStep": "/api/3/workflow_steps/1baf2158-0188-599c-8472-386e27f50dcb",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "29eaa4e1-2882-55d7-831c-ca7b002291fe"
+              "uuid": "6fbf014f-78a5-58c3-88a3-46f6a4573285"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Declined -> End",
-              "targetStep": "/api/3/workflow_steps/65aad62d-3c8b-5c5e-8d42-df5d863b7e3b",
-              "sourceStep": "/api/3/workflow_steps/84b28b8d-0c7d-5529-a0b3-e3356b652b6b",
+              "targetStep": "/api/3/workflow_steps/78a9abbb-fd5b-5148-8a05-96877af3a361",
+              "sourceStep": "/api/3/workflow_steps/2824f343-355f-5e2d-80ef-2a0154a89570",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "4d674dae-8b5a-5444-affb-dcbec258ae98"
+              "uuid": "ef73f26f-de2e-529d-bd7b-8f5e00f5182b"
             }
           ],
           "groups": [
@@ -1478,7 +1486,7 @@
               "left": "540",
               "height": "248",
               "width": "440",
-              "uuid": "62d10646-bd5f-51e2-b36b-92c4ec304670",
+              "uuid": "d13fc6ac-7662-521f-8c9c-2daf6da921ac",
               "recordTags": []
             },
             {
@@ -1495,7 +1503,7 @@
               "left": "880",
               "height": "182",
               "width": "440",
-              "uuid": "1065ae7d-3ced-5ed3-8c94-ef1f3b6b637f",
+              "uuid": "b7ce2f35-1c69-5479-b4ec-0024276b4405",
               "recordTags": []
             },
             {
@@ -1512,7 +1520,7 @@
               "left": "1220",
               "height": "248",
               "width": "440",
-              "uuid": "2ea83862-ae60-59ee-be05-13db6d8a85ef",
+              "uuid": "3aab6055-4c53-5f1e-b6fd-e3356ec35b07",
               "recordTags": []
             },
             {
@@ -1529,7 +1537,7 @@
               "left": "1220",
               "height": "204",
               "width": "440",
-              "uuid": "8886d0fb-4bba-5486-8ff9-5855504e0e13",
+              "uuid": "95d64a44-2f8b-5871-be67-5e3ba79cbc47",
               "recordTags": []
             },
             {
@@ -1546,14 +1554,14 @@
               "left": "880",
               "height": "204",
               "width": "440",
-              "uuid": "2d5f5a51-be5a-5714-bf0d-9f922b827887",
+              "uuid": "5d9ffc3f-4439-5128-89c3-a4d28b90ef06",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "6d2d3a83-bb8e-56df-a21f-96b106a2d9da",
+          "uuid": "02a0adc8-953b-5fdd-8ed2-5987410faf18",
           "owners": [],
           "isPrivate": false
         },
@@ -1578,10 +1586,10 @@
             "organization"
           ],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/12ac4843-559b-5c90-a850-10ab526418da",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/0d3c4e61-8134-54ea-98fb-656024ac7d23",
+          "triggerStep": "/api/3/workflow_steps/bee4c212-5993-5092-8f44-584fa30f4802",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -1624,15 +1632,15 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
               "group": null,
-              "uuid": "0d3c4e61-8134-54ea-98fb-656024ac7d23"
+              "uuid": "bee4c212-5993-5092-8f44-584fa30f4802"
             },
             {
               "@type": "WorkflowStep",
               "name": "Resolve Inputs",
               "description": null,
               "arguments": {
-                "event_id": "{% if vars.input.params.event_id | default('', true) %} {{ vars.input.params.event_id }} {% else %} {{ vars.input.records[0].sourceId | default('', true) }} {% endif %}",
-                "record_id": "{% if vars.input.params.record_id | default('', true) %} {{ vars.input.params.record_id }} {% else %} {{ vars.input.records[0]['@id'] }} {% endif %}",
+                "event_id": "{% if vars.input.params.event_id | default('', true) %}{{ vars.input.params.event_id }}{% else %}{{ vars.input.records[0].sourceId | default('', true) }}{% endif %}",
+                "record_id": "{% if vars.input.params.record_id | default('', true) %}{{ vars.input.params.record_id }}{% else %}{{ vars.input.records[0]['@id'] }}{% endif %}",
                 "organization": "{{ vars.input.params.organization | default('', true) }}"
               },
               "status": null,
@@ -1640,7 +1648,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "5f092351-5913-5f07-a7c4-9b960155fd1d"
+              "uuid": "da6fda6a-b0fa-5e57-a315-d1ce7c5e0a52"
             },
             {
               "@type": "WorkflowStep",
@@ -1650,14 +1658,14 @@
                 "conditions": [
                   {
                     "option": "Have Event",
-                    "condition": "{{ vars.event_id }}",
-                    "step_iri": "/api/3/workflow_steps/8075eee9-a313-5328-a708-4d8abafd8195",
+                    "condition": "{{ (vars.event_id | default('', true) | string) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/85f8ac15-895b-5848-9c81-e2ea631a88c5",
                     "step_name": "Get Event"
                   },
                   {
                     "option": "No FortiEDR Event",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/8a2fa9d6-195e-56a2-a051-46869bdff126",
+                    "step_iri": "/api/3/workflow_steps/979bdd0f-11fd-5415-afdd-f4699dd9b0cb",
                     "step_name": "No Event Audit"
                   }
                 ]
@@ -1667,7 +1675,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "c7aff810-9126-5506-886b-f2aea6f6b232"
+              "uuid": "a7b59e36-98cf-5bb6-ad2a-092ece7a0d84"
             },
             {
               "@type": "WorkflowStep",
@@ -1679,7 +1687,7 @@
                   "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
                   "thread": false,
                   "content": "<p>Collect Evidence: this alert carries no FortiEDR sourceId; nothing to bag.</p>",
-                  "records": ""
+                  "records": "{{ vars.record_id }}"
                 }
               },
               "status": null,
@@ -1687,7 +1695,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "8a2fa9d6-195e-56a2-a051-46869bdff126"
+              "uuid": "979bdd0f-11fd-5415-afdd-f4699dd9b0cb"
             },
             {
               "@type": "WorkflowStep",
@@ -1700,7 +1708,7 @@
                 "params": {
                   "eventIds": "{{ vars.event_id }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Event by ID",
                 "step_variables": [],
@@ -1711,7 +1719,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "8075eee9-a313-5328-a708-4d8abafd8195"
+              "uuid": "85f8ac15-895b-5848-9c81-e2ea631a88c5"
             },
             {
               "@type": "WorkflowStep",
@@ -1722,13 +1730,13 @@
                   {
                     "option": "Found",
                     "condition": "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}",
-                    "step_iri": "/api/3/workflow_steps/5ad1f9dc-efea-538c-aaac-910de705ceb0",
+                    "step_iri": "/api/3/workflow_steps/c4345869-2d7e-5e8d-ac3c-07c943b984b9",
                     "step_name": "Bag Context"
                   },
                   {
                     "option": "Missing Event",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/5c919195-f998-50e2-852b-57fb3c1ac284",
+                    "step_iri": "/api/3/workflow_steps/a54afd4a-2665-54ec-8073-19d06f4bafcd",
                     "step_name": "Missing Event Audit"
                   }
                 ]
@@ -1738,7 +1746,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "f4fc7160-862a-5a77-af2b-bb4741d06efa"
+              "uuid": "44965a50-684c-5a71-a590-c3d97b6f6e1c"
             },
             {
               "@type": "WorkflowStep",
@@ -1750,7 +1758,7 @@
                   "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
                   "thread": false,
                   "content": "<p>Collect Evidence: no FortiEDR event found for sourceId {{ vars.event_id }} (archived or pruned on the tenant); nothing to bag.</p>",
-                  "records": ""
+                  "records": "{{ vars.record_id }}"
                 }
               },
               "status": null,
@@ -1758,7 +1766,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "5c919195-f998-50e2-852b-57fb3c1ac284"
+              "uuid": "a54afd4a-2665-54ec-8073-19d06f4bafcd"
             },
             {
               "@type": "WorkflowStep",
@@ -1774,7 +1782,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "5ad1f9dc-efea-538c-aaac-910de705ceb0"
+              "uuid": "c4345869-2d7e-5e8d-ac3c-07c943b984b9"
             },
             {
               "@type": "WorkflowStep",
@@ -1784,14 +1792,14 @@
                 "conditions": [
                   {
                     "option": "Have Path",
-                    "condition": "{{ vars.bag_file_path }}",
-                    "step_iri": "/api/3/workflow_steps/f30995ed-e853-536d-b190-5a7ec36dbdf8",
+                    "condition": "{{ (vars.bag_file_path | default('', true) | string) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/b53bd538-237e-5229-8087-132a335d744e",
                     "step_name": "Get Raw Data Items"
                   },
                   {
                     "option": "No File Path",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/6f68e812-c435-5544-ad04-19cd77724cf2",
+                    "step_iri": "/api/3/workflow_steps/4104cc49-4b0e-5b68-bda0-8072552ed940",
                     "step_name": "No Path Audit"
                   }
                 ]
@@ -1801,7 +1809,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "cd62bb62-07b3-5b5b-83d5-c682be053781"
+              "uuid": "9ef4d0ce-015b-50b9-a4a5-4b2bda98a85b"
             },
             {
               "@type": "WorkflowStep",
@@ -1812,8 +1820,8 @@
                   "tags": [],
                   "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
                   "thread": false,
-                  "content": "<p>Collect Evidence: FortiEDR event {{ vars.event_id }} carries no process file path; nothing disk- retrievable to bag.</p>",
-                  "records": ""
+                  "content": "<p>Collect Evidence: FortiEDR event {{ vars.event_id }} carries no process file path; nothing disk-retrievable to bag.</p>",
+                  "records": "{{ vars.record_id }}"
                 }
               },
               "status": null,
@@ -1821,7 +1829,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "6f68e812-c435-5544-ad04-19cd77724cf2"
+              "uuid": "4104cc49-4b0e-5b68-bda0-8072552ed940"
             },
             {
               "@type": "WorkflowStep",
@@ -1834,7 +1842,7 @@
                 "params": {
                   "eventId": "{{ vars.event_id }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Raw Data Items",
                 "step_variables": [],
@@ -1845,7 +1853,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "f30995ed-e853-536d-b190-5a7ec36dbdf8"
+              "uuid": "b53bd538-237e-5229-8087-132a335d744e"
             },
             {
               "@type": "WorkflowStep",
@@ -1856,13 +1864,13 @@
                   {
                     "option": "Have Raw Data",
                     "condition": "{{ vars.steps.Get_Raw_Data_Items.data | default([]) | length > 0 }}",
-                    "step_iri": "/api/3/workflow_steps/cfd77110-fbea-52b2-9e48-5a40f29be938",
+                    "step_iri": "/api/3/workflow_steps/4bbe21e2-4155-595c-8f4f-6afd5c46f0c7",
                     "step_name": "Collect File"
                   },
                   {
                     "option": "No Raw Data",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/1081299d-df54-532e-8fcc-af501d3dcc8d",
+                    "step_iri": "/api/3/workflow_steps/62e128cd-49d7-5b94-bfca-314cead88dce",
                     "step_name": "No Raw Data Audit"
                   }
                 ]
@@ -1872,7 +1880,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "51e4f220-c47f-599c-837d-9c7ae5ffe4a7"
+              "uuid": "c69a8061-9b73-5195-be53-c2686f651124"
             },
             {
               "@type": "WorkflowStep",
@@ -1884,7 +1892,7 @@
                   "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
                   "thread": false,
                   "content": "<p>Collect Evidence: event {{ vars.event_id }} has no raw data items on the tenant (the collection window may have expired); nothing to bag.</p>",
-                  "records": ""
+                  "records": "{{ vars.record_id }}"
                 }
               },
               "status": null,
@@ -1892,7 +1900,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "1081299d-df54-532e-8fcc-af501d3dcc8d"
+              "uuid": "62e128cd-49d7-5b94-bfca-314cead88dce"
             },
             {
               "@type": "WorkflowStep",
@@ -1909,7 +1917,7 @@
                   "filePaths": "{{ vars.bag_file_path }}",
                   "organization": "{{ vars.bag_organization }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Retrieve File or Memory",
                 "step_variables": [],
@@ -1920,7 +1928,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "cfd77110-fbea-52b2-9e48-5a40f29be938"
+              "uuid": "4bbe21e2-4155-595c-8f4f-6afd5c46f0c7"
             },
             {
               "@type": "WorkflowStep",
@@ -1930,14 +1938,14 @@
                 "conditions": [
                   {
                     "option": "Attachment Ready",
-                    "condition": "{{ (vars.steps.Collect_File.data['@id'] | default('', true)) is not empty }}",
-                    "step_iri": "/api/3/workflow_steps/20d7ed2f-697f-518c-b577-f2582f331329",
+                    "condition": "{{ (vars.steps.Collect_File.data['@id'] | default('', true) | string) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/b3ada518-d8cb-59cd-9943-680f6ad1d69b",
                     "step_name": "Link Evidence"
                   },
                   {
                     "option": "Collection Failed",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/05a88871-d652-5b82-984a-a68c49d1e919",
+                    "step_iri": "/api/3/workflow_steps/fb3f0717-2726-5142-8d31-0a285aa5ce96",
                     "step_name": "Collection Failed Audit"
                   }
                 ]
@@ -1947,7 +1955,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "101dabab-cbea-52f5-9a1e-57fc344dc338"
+              "uuid": "dbca458e-9051-50c2-b50c-e2d98724785e"
             },
             {
               "@type": "WorkflowStep",
@@ -1969,7 +1977,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/b593663d-7d13-40ce-a3a3-96dece928722",
               "group": null,
-              "uuid": "20d7ed2f-697f-518c-b577-f2582f331329"
+              "uuid": "b3ada518-d8cb-59cd-9943-680f6ad1d69b"
             },
             {
               "@type": "WorkflowStep",
@@ -1981,7 +1989,7 @@
                   "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
                   "thread": false,
                   "content": "<p>Collect Evidence: {{ vars.steps.Collect_File.data['name'] }} attached -- the {{ vars.bag_file_path }} binary of FortiEDR event {{ vars.event_id }} off collector {{ vars.bag_device }} (raw event {{ vars.steps.Get_Raw_Data_Items.data[0].rawEventId }}).</p>",
-                  "records": ""
+                  "records": "{{ vars.record_id }}"
                 }
               },
               "status": null,
@@ -1989,7 +1997,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "2219c4c8-3cf4-57a7-bb83-fd767002fed0"
+              "uuid": "2baf9f73-8e0c-5abb-aa71-40b8aae26a5b"
             },
             {
               "@type": "WorkflowStep",
@@ -2001,7 +2009,7 @@
                   "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
                   "thread": false,
                   "content": "<p>Collect Evidence: the retrieval of {{ vars.bag_file_path }} from {{ vars.bag_device }} failed -- the tenant rejects forensics pulls from offline or decommissioned collectors; retry from the alert once the endpoint is back.</p>",
-                  "records": ""
+                  "records": "{{ vars.record_id }}"
                 }
               },
               "status": null,
@@ -2009,7 +2017,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "05a88871-d652-5b82-984a-a68c49d1e919"
+              "uuid": "fb3f0717-2726-5142-8d31-0a285aa5ce96"
             },
             {
               "@type": "WorkflowStep",
@@ -2031,239 +2039,239 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "ea1d8efb-9eaf-5276-8228-bf36c84674ca"
+              "uuid": "013bdbb5-b9f5-5b7f-b5e9-031ae2618083"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Resolve Inputs",
-              "targetStep": "/api/3/workflow_steps/5f092351-5913-5f07-a7c4-9b960155fd1d",
-              "sourceStep": "/api/3/workflow_steps/0d3c4e61-8134-54ea-98fb-656024ac7d23",
+              "targetStep": "/api/3/workflow_steps/da6fda6a-b0fa-5e57-a315-d1ce7c5e0a52",
+              "sourceStep": "/api/3/workflow_steps/bee4c212-5993-5092-8f44-584fa30f4802",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "401b4979-4299-5930-81c4-a31588780412"
+              "uuid": "25657dcf-0b3c-5378-a6e0-a66f8b1241e9"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Resolve Inputs -> No Event",
-              "targetStep": "/api/3/workflow_steps/c7aff810-9126-5506-886b-f2aea6f6b232",
-              "sourceStep": "/api/3/workflow_steps/5f092351-5913-5f07-a7c4-9b960155fd1d",
+              "targetStep": "/api/3/workflow_steps/a7b59e36-98cf-5bb6-ad2a-092ece7a0d84",
+              "sourceStep": "/api/3/workflow_steps/da6fda6a-b0fa-5e57-a315-d1ce7c5e0a52",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "bece07f2-5b58-5c6b-9afb-5080c45e217f"
+              "uuid": "ade99a06-d826-5b03-950f-3dd47e6d0585"
             },
             {
               "@type": "WorkflowRoute",
               "name": "No Event -> Get Event",
-              "targetStep": "/api/3/workflow_steps/8075eee9-a313-5328-a708-4d8abafd8195",
-              "sourceStep": "/api/3/workflow_steps/c7aff810-9126-5506-886b-f2aea6f6b232",
+              "targetStep": "/api/3/workflow_steps/85f8ac15-895b-5848-9c81-e2ea631a88c5",
+              "sourceStep": "/api/3/workflow_steps/a7b59e36-98cf-5bb6-ad2a-092ece7a0d84",
               "label": "Have Event",
               "isExecuted": false,
               "group": null,
-              "uuid": "9c36efa5-3f69-5283-a1ff-973a43dc9783"
+              "uuid": "5f5fb4a9-581f-5947-82aa-621087e5dae6"
             },
             {
               "@type": "WorkflowRoute",
               "name": "No Event -> No Event Audit",
-              "targetStep": "/api/3/workflow_steps/8a2fa9d6-195e-56a2-a051-46869bdff126",
-              "sourceStep": "/api/3/workflow_steps/c7aff810-9126-5506-886b-f2aea6f6b232",
+              "targetStep": "/api/3/workflow_steps/979bdd0f-11fd-5415-afdd-f4699dd9b0cb",
+              "sourceStep": "/api/3/workflow_steps/a7b59e36-98cf-5bb6-ad2a-092ece7a0d84",
               "label": "No FortiEDR Event",
               "isExecuted": false,
               "group": null,
-              "uuid": "766be1ff-aeb4-5714-9232-7259a6d16346"
+              "uuid": "b4cc6a3e-a51d-58d8-acb5-d5123a0cb6cc"
             },
             {
               "@type": "WorkflowRoute",
               "name": "No Event Audit -> End",
-              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
-              "sourceStep": "/api/3/workflow_steps/8a2fa9d6-195e-56a2-a051-46869bdff126",
+              "targetStep": "/api/3/workflow_steps/013bdbb5-b9f5-5b7f-b5e9-031ae2618083",
+              "sourceStep": "/api/3/workflow_steps/979bdd0f-11fd-5415-afdd-f4699dd9b0cb",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "4f7a8bce-a0b2-502b-9d96-754b34c62671"
+              "uuid": "0bb58331-1946-55c4-8710-e14a3d0eafc6"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Event -> Event Resolved",
-              "targetStep": "/api/3/workflow_steps/f4fc7160-862a-5a77-af2b-bb4741d06efa",
-              "sourceStep": "/api/3/workflow_steps/8075eee9-a313-5328-a708-4d8abafd8195",
+              "targetStep": "/api/3/workflow_steps/44965a50-684c-5a71-a590-c3d97b6f6e1c",
+              "sourceStep": "/api/3/workflow_steps/85f8ac15-895b-5848-9c81-e2ea631a88c5",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "697ae6a7-caa5-59d3-84aa-b37c3b944012"
+              "uuid": "4fb5f1fc-e559-566a-8185-446b198991d1"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Event Resolved -> Bag Context",
-              "targetStep": "/api/3/workflow_steps/5ad1f9dc-efea-538c-aaac-910de705ceb0",
-              "sourceStep": "/api/3/workflow_steps/f4fc7160-862a-5a77-af2b-bb4741d06efa",
+              "targetStep": "/api/3/workflow_steps/c4345869-2d7e-5e8d-ac3c-07c943b984b9",
+              "sourceStep": "/api/3/workflow_steps/44965a50-684c-5a71-a590-c3d97b6f6e1c",
               "label": "Found",
               "isExecuted": false,
               "group": null,
-              "uuid": "dfe8dde0-e680-575f-b7c4-4d5f1b57dafb"
+              "uuid": "28fcc353-a826-579d-93a6-5f303e04b1ed"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Event Resolved -> Missing Event Audit",
-              "targetStep": "/api/3/workflow_steps/5c919195-f998-50e2-852b-57fb3c1ac284",
-              "sourceStep": "/api/3/workflow_steps/f4fc7160-862a-5a77-af2b-bb4741d06efa",
+              "targetStep": "/api/3/workflow_steps/a54afd4a-2665-54ec-8073-19d06f4bafcd",
+              "sourceStep": "/api/3/workflow_steps/44965a50-684c-5a71-a590-c3d97b6f6e1c",
               "label": "Missing Event",
               "isExecuted": false,
               "group": null,
-              "uuid": "c0712ed1-3fa3-520b-b712-1ccec1bec90b"
+              "uuid": "a6ddc1d4-e2b4-5e92-8ea1-5f3310c68cc1"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Missing Event Audit -> End",
-              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
-              "sourceStep": "/api/3/workflow_steps/5c919195-f998-50e2-852b-57fb3c1ac284",
+              "targetStep": "/api/3/workflow_steps/013bdbb5-b9f5-5b7f-b5e9-031ae2618083",
+              "sourceStep": "/api/3/workflow_steps/a54afd4a-2665-54ec-8073-19d06f4bafcd",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "5bd39a36-0fa5-5be3-ae07-464466b24bc5"
+              "uuid": "e940e18a-48e9-52a1-9f5b-6cd8b243fe38"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Bag Context -> Bag Path Resolved",
-              "targetStep": "/api/3/workflow_steps/cd62bb62-07b3-5b5b-83d5-c682be053781",
-              "sourceStep": "/api/3/workflow_steps/5ad1f9dc-efea-538c-aaac-910de705ceb0",
+              "targetStep": "/api/3/workflow_steps/9ef4d0ce-015b-50b9-a4a5-4b2bda98a85b",
+              "sourceStep": "/api/3/workflow_steps/c4345869-2d7e-5e8d-ac3c-07c943b984b9",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "4a646980-4085-56db-a45f-b581708d2879"
+              "uuid": "90f4f09e-b0dc-5f86-ae0b-56671eb4b64a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Bag Path Resolved -> Get Raw Data Items",
-              "targetStep": "/api/3/workflow_steps/f30995ed-e853-536d-b190-5a7ec36dbdf8",
-              "sourceStep": "/api/3/workflow_steps/cd62bb62-07b3-5b5b-83d5-c682be053781",
+              "targetStep": "/api/3/workflow_steps/b53bd538-237e-5229-8087-132a335d744e",
+              "sourceStep": "/api/3/workflow_steps/9ef4d0ce-015b-50b9-a4a5-4b2bda98a85b",
               "label": "Have Path",
               "isExecuted": false,
               "group": null,
-              "uuid": "7ea5700b-464b-5b33-ad32-aa1aaae2c5ff"
+              "uuid": "b99b1e4c-1210-5eec-961e-2d3ab1a68501"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Bag Path Resolved -> No Path Audit",
-              "targetStep": "/api/3/workflow_steps/6f68e812-c435-5544-ad04-19cd77724cf2",
-              "sourceStep": "/api/3/workflow_steps/cd62bb62-07b3-5b5b-83d5-c682be053781",
+              "targetStep": "/api/3/workflow_steps/4104cc49-4b0e-5b68-bda0-8072552ed940",
+              "sourceStep": "/api/3/workflow_steps/9ef4d0ce-015b-50b9-a4a5-4b2bda98a85b",
               "label": "No File Path",
               "isExecuted": false,
               "group": null,
-              "uuid": "49f8fc9c-8146-5d07-874a-c4daaf6cacba"
+              "uuid": "f894e002-1736-5879-9748-04dc8d702ea6"
             },
             {
               "@type": "WorkflowRoute",
               "name": "No Path Audit -> End",
-              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
-              "sourceStep": "/api/3/workflow_steps/6f68e812-c435-5544-ad04-19cd77724cf2",
+              "targetStep": "/api/3/workflow_steps/013bdbb5-b9f5-5b7f-b5e9-031ae2618083",
+              "sourceStep": "/api/3/workflow_steps/4104cc49-4b0e-5b68-bda0-8072552ed940",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "8026b494-cc4e-5d6f-95a1-7d3001e032a5"
+              "uuid": "fc0b87e7-0919-5918-a655-813e7adc551c"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Raw Data Items -> Raw Data Available",
-              "targetStep": "/api/3/workflow_steps/51e4f220-c47f-599c-837d-9c7ae5ffe4a7",
-              "sourceStep": "/api/3/workflow_steps/f30995ed-e853-536d-b190-5a7ec36dbdf8",
+              "targetStep": "/api/3/workflow_steps/c69a8061-9b73-5195-be53-c2686f651124",
+              "sourceStep": "/api/3/workflow_steps/b53bd538-237e-5229-8087-132a335d744e",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "eeb15243-6603-5737-b82c-3e9445460584"
+              "uuid": "dc9dd695-7a70-5c1e-b039-6154353f10c4"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Raw Data Available -> Collect File",
-              "targetStep": "/api/3/workflow_steps/cfd77110-fbea-52b2-9e48-5a40f29be938",
-              "sourceStep": "/api/3/workflow_steps/51e4f220-c47f-599c-837d-9c7ae5ffe4a7",
+              "targetStep": "/api/3/workflow_steps/4bbe21e2-4155-595c-8f4f-6afd5c46f0c7",
+              "sourceStep": "/api/3/workflow_steps/c69a8061-9b73-5195-be53-c2686f651124",
               "label": "Have Raw Data",
               "isExecuted": false,
               "group": null,
-              "uuid": "1caec406-0f81-5419-8539-5da495d2c006"
+              "uuid": "1c6f7934-39c6-53fb-8291-cf5957e9136d"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Raw Data Available -> No Raw Data Audit",
-              "targetStep": "/api/3/workflow_steps/1081299d-df54-532e-8fcc-af501d3dcc8d",
-              "sourceStep": "/api/3/workflow_steps/51e4f220-c47f-599c-837d-9c7ae5ffe4a7",
+              "targetStep": "/api/3/workflow_steps/62e128cd-49d7-5b94-bfca-314cead88dce",
+              "sourceStep": "/api/3/workflow_steps/c69a8061-9b73-5195-be53-c2686f651124",
               "label": "No Raw Data",
               "isExecuted": false,
               "group": null,
-              "uuid": "1c97370d-b139-555f-bbd6-a0e1acf17bb1"
+              "uuid": "abefafab-034c-59dd-8d3b-790a61545f68"
             },
             {
               "@type": "WorkflowRoute",
               "name": "No Raw Data Audit -> End",
-              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
-              "sourceStep": "/api/3/workflow_steps/1081299d-df54-532e-8fcc-af501d3dcc8d",
+              "targetStep": "/api/3/workflow_steps/013bdbb5-b9f5-5b7f-b5e9-031ae2618083",
+              "sourceStep": "/api/3/workflow_steps/62e128cd-49d7-5b94-bfca-314cead88dce",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "e3ddf117-551f-50bf-98e6-6b83499931d7"
+              "uuid": "fe378ced-2953-57e1-ac7f-b30b70c02271"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Collect File -> File Collected",
-              "targetStep": "/api/3/workflow_steps/101dabab-cbea-52f5-9a1e-57fc344dc338",
-              "sourceStep": "/api/3/workflow_steps/cfd77110-fbea-52b2-9e48-5a40f29be938",
+              "targetStep": "/api/3/workflow_steps/dbca458e-9051-50c2-b50c-e2d98724785e",
+              "sourceStep": "/api/3/workflow_steps/4bbe21e2-4155-595c-8f4f-6afd5c46f0c7",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "0ff01949-3f57-58c0-ae8c-acf276febaaa"
+              "uuid": "e4f15ab2-fb36-5883-b564-52a4339c6b75"
             },
             {
               "@type": "WorkflowRoute",
               "name": "File Collected -> Link Evidence",
-              "targetStep": "/api/3/workflow_steps/20d7ed2f-697f-518c-b577-f2582f331329",
-              "sourceStep": "/api/3/workflow_steps/101dabab-cbea-52f5-9a1e-57fc344dc338",
+              "targetStep": "/api/3/workflow_steps/b3ada518-d8cb-59cd-9943-680f6ad1d69b",
+              "sourceStep": "/api/3/workflow_steps/dbca458e-9051-50c2-b50c-e2d98724785e",
               "label": "Attachment Ready",
               "isExecuted": false,
               "group": null,
-              "uuid": "8a447f2e-6a9c-5fcc-bdff-2e1a4959ccbc"
+              "uuid": "ac755164-7800-5fa0-8454-9072107ec637"
             },
             {
               "@type": "WorkflowRoute",
               "name": "File Collected -> Collection Failed Audit",
-              "targetStep": "/api/3/workflow_steps/05a88871-d652-5b82-984a-a68c49d1e919",
-              "sourceStep": "/api/3/workflow_steps/101dabab-cbea-52f5-9a1e-57fc344dc338",
+              "targetStep": "/api/3/workflow_steps/fb3f0717-2726-5142-8d31-0a285aa5ce96",
+              "sourceStep": "/api/3/workflow_steps/dbca458e-9051-50c2-b50c-e2d98724785e",
               "label": "Collection Failed",
               "isExecuted": false,
               "group": null,
-              "uuid": "2335b39b-e449-5e67-8463-4e00973aac2a"
+              "uuid": "9e357c25-ec7b-55af-a082-c1657f678e42"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Link Evidence -> Evidence Audit",
-              "targetStep": "/api/3/workflow_steps/2219c4c8-3cf4-57a7-bb83-fd767002fed0",
-              "sourceStep": "/api/3/workflow_steps/20d7ed2f-697f-518c-b577-f2582f331329",
+              "targetStep": "/api/3/workflow_steps/2baf9f73-8e0c-5abb-aa71-40b8aae26a5b",
+              "sourceStep": "/api/3/workflow_steps/b3ada518-d8cb-59cd-9943-680f6ad1d69b",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "6110cad2-df8d-52a5-b76a-bdb40ee01bbe"
+              "uuid": "313af8be-f5d9-5dfb-9d09-81cbc64f190e"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Evidence Audit -> End",
-              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
-              "sourceStep": "/api/3/workflow_steps/2219c4c8-3cf4-57a7-bb83-fd767002fed0",
+              "targetStep": "/api/3/workflow_steps/013bdbb5-b9f5-5b7f-b5e9-031ae2618083",
+              "sourceStep": "/api/3/workflow_steps/2baf9f73-8e0c-5abb-aa71-40b8aae26a5b",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "ee639e55-011f-5683-88b0-37db3120bc56"
+              "uuid": "122b8160-c603-5913-89de-93d166e286eb"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Collection Failed Audit -> End",
-              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
-              "sourceStep": "/api/3/workflow_steps/05a88871-d652-5b82-984a-a68c49d1e919",
+              "targetStep": "/api/3/workflow_steps/013bdbb5-b9f5-5b7f-b5e9-031ae2618083",
+              "sourceStep": "/api/3/workflow_steps/fb3f0717-2726-5142-8d31-0a285aa5ce96",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "ea19b6e9-b3e3-58b2-9412-3ed52615abc5"
+              "uuid": "a8e5146a-374d-550c-995c-ecb3d2542da6"
             }
           ],
           "groups": [
@@ -2281,7 +2289,7 @@
               "left": "880",
               "height": "160",
               "width": "440",
-              "uuid": "851b865a-87df-5319-9de7-638beba422cf",
+              "uuid": "d3fa2d3b-98ae-5e75-8c96-c42c42953b59",
               "recordTags": []
             },
             {
@@ -2298,7 +2306,7 @@
               "left": "880",
               "height": "182",
               "width": "440",
-              "uuid": "d4932199-9c35-5999-bb54-95a6e468ae33",
+              "uuid": "58eedeb4-6f43-543f-a11b-4e5b5d458b29",
               "recordTags": []
             },
             {
@@ -2315,7 +2323,7 @@
               "left": "880",
               "height": "138",
               "width": "440",
-              "uuid": "b858a5aa-018d-5ccf-b40a-61195f946aa9",
+              "uuid": "13da73ed-fbbe-5aea-9fdc-6a60ef418ec8",
               "recordTags": []
             },
             {
@@ -2332,7 +2340,7 @@
               "left": "880",
               "height": "226",
               "width": "440",
-              "uuid": "3d5233d0-7fb4-5a9e-b180-2116a25a688a",
+              "uuid": "efc287cb-c006-599c-99f9-2aaf719fa9c8",
               "recordTags": []
             },
             {
@@ -2349,14 +2357,14 @@
               "left": "880",
               "height": "182",
               "width": "440",
-              "uuid": "35f9b90f-44f1-5872-8e34-cf231b52b0d0",
+              "uuid": "5ca6d833-6622-547b-83e3-3539aad51f87",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "5dd89d28-c702-57ed-810f-7e01054a433f",
+          "uuid": "f6dd9569-eeee-5da9-868b-140b1bc87f68",
           "owners": [],
           "isPrivate": false
         },
@@ -2377,10 +2385,10 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/12ac4843-559b-5c90-a850-10ab526418da",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/857dcef9-494f-5441-9051-48814d0f145f",
+          "triggerStep": "/api/3/workflow_steps/e51c2fe3-d47f-553b-9e70-75b26df9a324",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -2423,7 +2431,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
               "group": null,
-              "uuid": "857dcef9-494f-5441-9051-48814d0f145f"
+              "uuid": "e51c2fe3-d47f-553b-9e70-75b26df9a324"
             },
             {
               "@type": "WorkflowStep",
@@ -2437,7 +2445,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "facd22da-2826-55c8-8048-e814fe9d791e"
+              "uuid": "234f50c7-9185-5e85-aebd-7923c0fd5a75"
             },
             {
               "@type": "WorkflowStep",
@@ -2451,7 +2459,7 @@
                 "params": {
                   "eventIds": "{{ vars.event_id }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Event by ID",
                 "step_variables": [],
@@ -2462,7 +2470,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "e7fad3a8-8404-505b-824f-42fd148d0981"
+              "uuid": "944b1edd-88a6-5277-99ff-60c058c26f7d"
             },
             {
               "@type": "WorkflowStep",
@@ -2473,13 +2481,13 @@
                   {
                     "option": "Found",
                     "condition": "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}",
-                    "step_iri": "/api/3/workflow_steps/ca92b8b9-bc0a-5d30-b2dc-5ba2a9580b6b",
+                    "step_iri": "/api/3/workflow_steps/3c607856-f155-58a8-ba15-9e746289195b",
                     "step_name": "Check Existing Exceptions"
                   },
                   {
                     "option": "Missing Event",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/dcaf5b9a-5d0c-5fc3-a07a-8dd542939081",
+                    "step_iri": "/api/3/workflow_steps/e8228498-127e-5c1e-847e-d3fc77f6b73e",
                     "step_name": "Missing Event Audit"
                   }
                 ]
@@ -2489,7 +2497,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "df2733c2-656b-53dc-a307-9e359c87502a"
+              "uuid": "46751835-d8dd-52ae-b099-82e8c8d19fbe"
             },
             {
               "@type": "WorkflowStep",
@@ -2509,7 +2517,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "dcaf5b9a-5d0c-5fc3-a07a-8dd542939081"
+              "uuid": "e8228498-127e-5c1e-847e-d3fc77f6b73e"
             },
             {
               "@type": "WorkflowStep",
@@ -2523,7 +2531,7 @@
                   "eventId": "{{ vars.event_id }}",
                   "organization": "{{ vars.steps.Get_Event.data[0].organization }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Event Exceptions",
                 "step_variables": [],
@@ -2534,7 +2542,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "ca92b8b9-bc0a-5d30-b2dc-5ba2a9580b6b"
+              "uuid": "3c607856-f155-58a8-ba15-9e746289195b"
             },
             {
               "@type": "WorkflowStep",
@@ -2545,13 +2553,13 @@
                   {
                     "option": "Rule Exists",
                     "condition": "{{ vars.steps.Check_Existing_Exceptions.data | default([]) | length > 0 }}",
-                    "step_iri": "/api/3/workflow_steps/376b10c2-f794-596c-9b86-d7566b038431",
+                    "step_iri": "/api/3/workflow_steps/17c6191f-2e2b-59d6-a13f-9e4a7b3ac275",
                     "step_name": "Rule Exists Audit"
                   },
                   {
                     "option": "Clear",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/d035914e-b7a2-5575-8f94-de791512d74a",
+                    "step_iri": "/api/3/workflow_steps/abf27c3b-0df2-5ecd-add9-78d29889339b",
                     "step_name": "Expiry Form"
                   }
                 ]
@@ -2561,7 +2569,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "b0ab7661-7e40-5879-81a9-ffb65b83814a"
+              "uuid": "5f8efe42-5be6-5492-ad31-6a0d3ce4ccc0"
             },
             {
               "@type": "WorkflowStep",
@@ -2581,7 +2589,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "376b10c2-f794-596c-9b86-d7566b038431"
+              "uuid": "17c6191f-2e2b-59d6-a13f-9e4a7b3ac275"
             },
             {
               "@type": "WorkflowStep",
@@ -2661,11 +2669,11 @@
                     {
                       "option": "Create Exception",
                       "primary": true,
-                      "step_iri": "/api/3/workflow_steps/4bd8c421-4f1a-5d16-89df-a0951f3aae81"
+                      "step_iri": "/api/3/workflow_steps/1ee7fbd0-7790-5bbb-ab18-5556669d2130"
                     },
                     {
                       "option": "Cancel",
-                      "step_iri": "/api/3/workflow_steps/e812ce51-b534-5ab1-9e04-f5b6c2d93c53"
+                      "step_iri": "/api/3/workflow_steps/3f3cbcba-843d-54a3-9996-d3150692a096"
                     }
                   ],
                   "duplicateOption": false,
@@ -2684,7 +2692,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/fc04082a-d7dc-4299-96fb-6837b1baa0fe",
               "group": null,
-              "uuid": "d035914e-b7a2-5575-8f94-de791512d74a"
+              "uuid": "abf27c3b-0df2-5ecd-add9-78d29889339b"
             },
             {
               "@type": "WorkflowStep",
@@ -2699,7 +2707,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "4bd8c421-4f1a-5d16-89df-a0951f3aae81"
+              "uuid": "1ee7fbd0-7790-5bbb-ab18-5556669d2130"
             },
             {
               "@type": "WorkflowStep",
@@ -2712,12 +2720,12 @@
                 "params": {
                   "eventId": "{{ vars.event_id }}",
                   "allCollectorGroups": "All Collector Groups",
-                  "allOrganizations": "True",
+                  "allOrganizations": "False",
                   "allDestinations": "All Destinations",
                   "comment": "{{ vars.exception_comment }}",
                   "forceCreate": "False"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Create Exception",
                 "step_variables": [],
@@ -2728,7 +2736,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "6f30a98d-eb4f-5101-945b-ec4806561380"
+              "uuid": "5c7aba08-f499-531e-9210-ab3c17818d4b"
             },
             {
               "@type": "WorkflowStep",
@@ -2748,7 +2756,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "56ebc10a-f4e5-5434-b83c-f05985e306c9"
+              "uuid": "4bbfa440-9fe5-54b1-bc2b-7246fa9a5b3d"
             },
             {
               "@type": "WorkflowStep",
@@ -2768,7 +2776,7 @@
               "left": "1220",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "e812ce51-b534-5ab1-9e04-f5b6c2d93c53"
+              "uuid": "3f3cbcba-843d-54a3-9996-d3150692a096"
             },
             {
               "@type": "WorkflowStep",
@@ -2790,169 +2798,169 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "87e81634-51cf-5fb6-8bf6-5805de08437a"
+              "uuid": "c3af6b01-3a51-5a45-933b-c7eeb70afb8a"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Resolve Event",
-              "targetStep": "/api/3/workflow_steps/facd22da-2826-55c8-8048-e814fe9d791e",
-              "sourceStep": "/api/3/workflow_steps/857dcef9-494f-5441-9051-48814d0f145f",
+              "targetStep": "/api/3/workflow_steps/234f50c7-9185-5e85-aebd-7923c0fd5a75",
+              "sourceStep": "/api/3/workflow_steps/e51c2fe3-d47f-553b-9e70-75b26df9a324",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "8d1e31dd-2462-5164-82e8-a2accf8ba220"
+              "uuid": "d07d45f5-0788-5ac0-8f1b-e051a41a0571"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Resolve Event -> Get Event",
-              "targetStep": "/api/3/workflow_steps/e7fad3a8-8404-505b-824f-42fd148d0981",
-              "sourceStep": "/api/3/workflow_steps/facd22da-2826-55c8-8048-e814fe9d791e",
+              "targetStep": "/api/3/workflow_steps/944b1edd-88a6-5277-99ff-60c058c26f7d",
+              "sourceStep": "/api/3/workflow_steps/234f50c7-9185-5e85-aebd-7923c0fd5a75",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "cf48493f-d367-516a-8102-17645516cb1d"
+              "uuid": "84f5cb89-4f8d-5cae-8dbb-c77589845597"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Event -> Event Resolved",
-              "targetStep": "/api/3/workflow_steps/df2733c2-656b-53dc-a307-9e359c87502a",
-              "sourceStep": "/api/3/workflow_steps/e7fad3a8-8404-505b-824f-42fd148d0981",
+              "targetStep": "/api/3/workflow_steps/46751835-d8dd-52ae-b099-82e8c8d19fbe",
+              "sourceStep": "/api/3/workflow_steps/944b1edd-88a6-5277-99ff-60c058c26f7d",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "1274b3cd-b0be-550a-99ab-3d305c2c6acc"
+              "uuid": "48fae68e-ac5d-5166-bbde-a4cc6aed17b5"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Event Resolved -> Check Existing Exceptions",
-              "targetStep": "/api/3/workflow_steps/ca92b8b9-bc0a-5d30-b2dc-5ba2a9580b6b",
-              "sourceStep": "/api/3/workflow_steps/df2733c2-656b-53dc-a307-9e359c87502a",
+              "targetStep": "/api/3/workflow_steps/3c607856-f155-58a8-ba15-9e746289195b",
+              "sourceStep": "/api/3/workflow_steps/46751835-d8dd-52ae-b099-82e8c8d19fbe",
               "label": "Found",
               "isExecuted": false,
               "group": null,
-              "uuid": "55b77869-4b25-5c66-ab32-87856979c0ab"
+              "uuid": "aaaba57f-497f-5680-a1a0-4c8a231f45b1"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Event Resolved -> Missing Event Audit",
-              "targetStep": "/api/3/workflow_steps/dcaf5b9a-5d0c-5fc3-a07a-8dd542939081",
-              "sourceStep": "/api/3/workflow_steps/df2733c2-656b-53dc-a307-9e359c87502a",
+              "targetStep": "/api/3/workflow_steps/e8228498-127e-5c1e-847e-d3fc77f6b73e",
+              "sourceStep": "/api/3/workflow_steps/46751835-d8dd-52ae-b099-82e8c8d19fbe",
               "label": "Missing Event",
               "isExecuted": false,
               "group": null,
-              "uuid": "13f944a1-4eae-52dd-b8cb-91bed917082d"
+              "uuid": "b3c0f64e-8a52-5149-9a99-488dd1eaa87c"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Missing Event Audit -> End",
-              "targetStep": "/api/3/workflow_steps/87e81634-51cf-5fb6-8bf6-5805de08437a",
-              "sourceStep": "/api/3/workflow_steps/dcaf5b9a-5d0c-5fc3-a07a-8dd542939081",
+              "targetStep": "/api/3/workflow_steps/c3af6b01-3a51-5a45-933b-c7eeb70afb8a",
+              "sourceStep": "/api/3/workflow_steps/e8228498-127e-5c1e-847e-d3fc77f6b73e",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "8a8eb8a3-c140-586d-adf5-ba086845b3c5"
+              "uuid": "37102f21-5eec-5e5d-b716-c1ad0bbb1ea7"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Check Existing Exceptions -> Existing Exceptions",
-              "targetStep": "/api/3/workflow_steps/b0ab7661-7e40-5879-81a9-ffb65b83814a",
-              "sourceStep": "/api/3/workflow_steps/ca92b8b9-bc0a-5d30-b2dc-5ba2a9580b6b",
+              "targetStep": "/api/3/workflow_steps/5f8efe42-5be6-5492-ad31-6a0d3ce4ccc0",
+              "sourceStep": "/api/3/workflow_steps/3c607856-f155-58a8-ba15-9e746289195b",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "9fdbf86a-927d-50b3-b1a4-744a2c562840"
+              "uuid": "b006a27c-e39e-50e1-a23d-0c02ad63c25f"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Existing Exceptions -> Rule Exists Audit",
-              "targetStep": "/api/3/workflow_steps/376b10c2-f794-596c-9b86-d7566b038431",
-              "sourceStep": "/api/3/workflow_steps/b0ab7661-7e40-5879-81a9-ffb65b83814a",
+              "targetStep": "/api/3/workflow_steps/17c6191f-2e2b-59d6-a13f-9e4a7b3ac275",
+              "sourceStep": "/api/3/workflow_steps/5f8efe42-5be6-5492-ad31-6a0d3ce4ccc0",
               "label": "Rule Exists",
               "isExecuted": false,
               "group": null,
-              "uuid": "a611a85e-8839-5e76-8a11-35f30a64e8a5"
+              "uuid": "93728cb7-9554-5ff3-b8bc-e5f49df11e6b"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Existing Exceptions -> Expiry Form",
-              "targetStep": "/api/3/workflow_steps/d035914e-b7a2-5575-8f94-de791512d74a",
-              "sourceStep": "/api/3/workflow_steps/b0ab7661-7e40-5879-81a9-ffb65b83814a",
+              "targetStep": "/api/3/workflow_steps/abf27c3b-0df2-5ecd-add9-78d29889339b",
+              "sourceStep": "/api/3/workflow_steps/5f8efe42-5be6-5492-ad31-6a0d3ce4ccc0",
               "label": "Clear",
               "isExecuted": false,
               "group": null,
-              "uuid": "b07c9441-69bc-5e27-8c90-b404f87dbbe7"
+              "uuid": "baf284ba-5c4c-5eda-bb48-3e7e1407fe28"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Rule Exists Audit -> End",
-              "targetStep": "/api/3/workflow_steps/87e81634-51cf-5fb6-8bf6-5805de08437a",
-              "sourceStep": "/api/3/workflow_steps/376b10c2-f794-596c-9b86-d7566b038431",
+              "targetStep": "/api/3/workflow_steps/c3af6b01-3a51-5a45-933b-c7eeb70afb8a",
+              "sourceStep": "/api/3/workflow_steps/17c6191f-2e2b-59d6-a13f-9e4a7b3ac275",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "18290575-2fb5-5566-98ae-78878f2aaa48"
+              "uuid": "afbb6eaf-90ec-5b7a-8efb-ae7fd6c10a6b"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Expiry Form -> Compute Expiry",
-              "targetStep": "/api/3/workflow_steps/4bd8c421-4f1a-5d16-89df-a0951f3aae81",
-              "sourceStep": "/api/3/workflow_steps/d035914e-b7a2-5575-8f94-de791512d74a",
+              "targetStep": "/api/3/workflow_steps/1ee7fbd0-7790-5bbb-ab18-5556669d2130",
+              "sourceStep": "/api/3/workflow_steps/abf27c3b-0df2-5ecd-add9-78d29889339b",
               "label": "Create Exception",
               "isExecuted": false,
               "group": null,
-              "uuid": "e30f77c9-dc81-5365-819f-90aae7cc6b2b"
+              "uuid": "a277b925-0cb2-58a7-b142-d3e01b510185"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Expiry Form -> Cancelled",
-              "targetStep": "/api/3/workflow_steps/e812ce51-b534-5ab1-9e04-f5b6c2d93c53",
-              "sourceStep": "/api/3/workflow_steps/d035914e-b7a2-5575-8f94-de791512d74a",
+              "targetStep": "/api/3/workflow_steps/3f3cbcba-843d-54a3-9996-d3150692a096",
+              "sourceStep": "/api/3/workflow_steps/abf27c3b-0df2-5ecd-add9-78d29889339b",
               "label": "Cancel",
               "isExecuted": false,
               "group": null,
-              "uuid": "b7c75d4d-4589-54f5-ab1e-247fa95e3c21"
+              "uuid": "0e990033-ac7e-52ee-bec7-e02fb66b48ee"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Compute Expiry -> Create Exception",
-              "targetStep": "/api/3/workflow_steps/6f30a98d-eb4f-5101-945b-ec4806561380",
-              "sourceStep": "/api/3/workflow_steps/4bd8c421-4f1a-5d16-89df-a0951f3aae81",
+              "targetStep": "/api/3/workflow_steps/5c7aba08-f499-531e-9210-ab3c17818d4b",
+              "sourceStep": "/api/3/workflow_steps/1ee7fbd0-7790-5bbb-ab18-5556669d2130",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "68769167-3208-52b5-94dc-65161f6ed021"
+              "uuid": "341ecefb-da4d-5f7f-af49-1dd95f2a6bc8"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Create Exception -> Exception Audit",
-              "targetStep": "/api/3/workflow_steps/56ebc10a-f4e5-5434-b83c-f05985e306c9",
-              "sourceStep": "/api/3/workflow_steps/6f30a98d-eb4f-5101-945b-ec4806561380",
+              "targetStep": "/api/3/workflow_steps/4bbfa440-9fe5-54b1-bc2b-7246fa9a5b3d",
+              "sourceStep": "/api/3/workflow_steps/5c7aba08-f499-531e-9210-ab3c17818d4b",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "2418f969-105a-5620-9de4-c9c3fa2e3689"
+              "uuid": "c0b4b242-941c-5678-9893-5f4e42ec14a8"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Exception Audit -> End",
-              "targetStep": "/api/3/workflow_steps/87e81634-51cf-5fb6-8bf6-5805de08437a",
-              "sourceStep": "/api/3/workflow_steps/56ebc10a-f4e5-5434-b83c-f05985e306c9",
+              "targetStep": "/api/3/workflow_steps/c3af6b01-3a51-5a45-933b-c7eeb70afb8a",
+              "sourceStep": "/api/3/workflow_steps/4bbfa440-9fe5-54b1-bc2b-7246fa9a5b3d",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "d1a2373b-85e2-5a18-a087-bd2a2ba531ec"
+              "uuid": "1eaaaf3b-1dff-5c24-9f64-406a459d104a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Cancelled -> End",
-              "targetStep": "/api/3/workflow_steps/87e81634-51cf-5fb6-8bf6-5805de08437a",
-              "sourceStep": "/api/3/workflow_steps/e812ce51-b534-5ab1-9e04-f5b6c2d93c53",
+              "targetStep": "/api/3/workflow_steps/c3af6b01-3a51-5a45-933b-c7eeb70afb8a",
+              "sourceStep": "/api/3/workflow_steps/3f3cbcba-843d-54a3-9996-d3150692a096",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "c3826f60-4ce7-557f-85ae-276e14fcbfff"
+              "uuid": "e3ed4070-04ee-57e7-9216-ca2273fb625f"
             }
           ],
           "groups": [
@@ -2970,7 +2978,7 @@
               "left": "1560",
               "height": "182",
               "width": "440",
-              "uuid": "cefcff6b-6eaf-5220-ace6-8e979db48e7f",
+              "uuid": "b299db68-dec9-5e58-bf18-5d94f4e64c10",
               "recordTags": []
             },
             {
@@ -2987,13 +2995,13 @@
               "left": "1560",
               "height": "270",
               "width": "440",
-              "uuid": "56c4240a-a788-538f-8ee9-216029756732",
+              "uuid": "2bcbdb1c-cc49-5a31-bc26-7a9ec1e81737",
               "recordTags": []
             },
             {
               "@type": "WorkflowGroup",
               "name": "Note: Create Exception",
-              "description": "The allow-the-event form of the create call: collector groups and\ndestinations open, exactly the shipped connector's semantics for\n\"this event qualifies everywhere\". A narrower scope belongs to a\nhand-built console rule, which this playbook deliberately never\nguesses on the operator's behalf.\n",
+              "description": "The allow-the-event form of the create call: collector groups and\ndestinations open, exactly the shipped connector's semantics for\n\"this event qualifies everywhere\" -- within the event's own\norganization. allOrganizations stays False (the live-proven wire:\na non-Admin API user is refused a cross-organization rule with\n\"Only a user with an Admin role can create/modify exceptions for\nall organizations\"), so a cross-org exception remains an Admin's\nconsole action, which this playbook never does on the operator's\nbehalf.\n",
               "type": "note",
               "isCollapsed": false,
               "hasTriggerStep": false,
@@ -3002,16 +3010,16 @@
               "reusable": false,
               "top": "1320",
               "left": "880",
-              "height": "248",
+              "height": "360",
               "width": "440",
-              "uuid": "9f393a64-2820-5f6b-bf17-81282dab0939",
+              "uuid": "49e46625-386d-5180-a01c-4a7c648f2968",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "0012f439-ec76-5573-95f0-1ec21ba2bfac",
+          "uuid": "0d75ae61-92eb-5879-ab00-5bcb4ba53014",
           "owners": [],
           "isPrivate": false
         },
@@ -3032,10 +3040,10 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/12ac4843-559b-5c90-a850-10ab526418da",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/ebcf2d77-dd77-5d8c-adfa-23bd04e21e71",
+          "triggerStep": "/api/3/workflow_steps/3cd13a3f-098a-56ee-8907-611f02be86e6",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -3053,7 +3061,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/b348f017-9a94-471f-87f8-ce88b6a7ad62",
               "group": null,
-              "uuid": "ebcf2d77-dd77-5d8c-adfa-23bd04e21e71"
+              "uuid": "3cd13a3f-098a-56ee-8907-611f02be86e6"
             },
             {
               "@type": "WorkflowStep",
@@ -3068,7 +3076,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "e5ad5335-0712-5d47-b435-2df47b2171f1"
+              "uuid": "76799a37-2735-57a6-9b4b-97cb9ae4eed5"
             },
             {
               "@type": "WorkflowStep",
@@ -3078,7 +3086,7 @@
                 "connector": "fortinet-fortiedrv2",
                 "operation": "list_exception",
                 "config": "",
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Exception List",
                 "step_variables": [],
@@ -3089,7 +3097,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "cfe957d6-f118-5ec3-9a56-548ddc286146"
+              "uuid": "d1c996fa-5944-5f0b-acb3-23ddee5919e1"
             },
             {
               "@type": "WorkflowStep",
@@ -3104,14 +3112,14 @@
                 "params": {
                   "python_function": "comments = {{ vars.steps.List_Exceptions.data | map(attribute='comment') | list | tojson }}\nids = {{ vars.steps.List_Exceptions.data | map(attribute='exceptionId') | list | tojson }}\nnow_epoch = {{ vars.now_epoch | int }}\nmarker = {{ vars.marker | tojson }}\nexpired_ids = []\nmanaged_fresh = 0\nunmanaged = 0\ni = 0\nwhile i < len(comments):\n    c = comments[i]\n    parsed = ''\n    handled = False\n    if c and marker in c:\n        rest = c[c.index(marker) + len(marker):]\n        for ch in rest:\n            if ch.isdigit():\n                parsed = parsed + ch\n            else:\n                break\n        if parsed == '' or int(parsed) >= now_epoch:\n            managed_fresh = managed_fresh + 1\n        else:\n            expired_ids.append(str(ids[i]))\n        handled = True\n    if not handled:\n        unmanaged = unmanaged + 1\n    i = i + 1\nprint({'expiredIdsCsv': ','.join(expired_ids),\n       'expiredCount': len(expired_ids),\n       'managedFreshCount': managed_fresh,\n       'unmanagedCount': unmanaged})\n"
                 },
-                "config": "3cb67838-5fca-4d3b-9197-f4bbb29659a6"
+                "config": ""
               },
               "status": null,
               "top": "510",
               "left": "200",
               "stepType": "/api/3/workflow_step_types/1fdd14cc-d6b4-4335-a3af-ab49c8ed2fd8",
               "group": null,
-              "uuid": "d7e57cff-5e35-5632-9ef8-e98de05582f5"
+              "uuid": "28d7c292-310d-5ce9-acaa-b5d32dd47176"
             },
             {
               "@type": "WorkflowStep",
@@ -3121,14 +3129,14 @@
                 "conditions": [
                   {
                     "option": "Expired Rules Present",
-                    "condition": "{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv | default('', true) }}",
-                    "step_iri": "/api/3/workflow_steps/9dff1036-0e6c-59d2-a7d4-151134b4b5dc",
+                    "condition": "{{ (vars.steps.Find_Expired.data.code_output.expiredIdsCsv | default('', true) | string) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/e14d1ef7-6158-55b2-b7cb-21cb73ebc6fb",
                     "step_name": "Delete Expired"
                   },
                   {
                     "option": "Nothing To Delete",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/ed1250fb-3750-5824-ad7e-e5a77636e513",
+                    "step_iri": "/api/3/workflow_steps/e562d4cc-b383-5774-ba42-8a4efaa707d6",
                     "step_name": "Sweep Summary"
                   }
                 ]
@@ -3138,7 +3146,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "37049c7e-58f6-5f96-949f-cc00c9316629"
+              "uuid": "177e585e-d7a6-5daa-bf02-b2a14c0540ec"
             },
             {
               "@type": "WorkflowStep",
@@ -3151,7 +3159,7 @@
                 "params": {
                   "exceptionIds": "{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Delete Exception",
                 "step_variables": [],
@@ -3162,7 +3170,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "9dff1036-0e6c-59d2-a7d4-151134b4b5dc"
+              "uuid": "e14d1ef7-6158-55b2-b7cb-21cb73ebc6fb"
             },
             {
               "@type": "WorkflowStep",
@@ -3179,79 +3187,79 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "ed1250fb-3750-5824-ad7e-e5a77636e513"
+              "uuid": "e562d4cc-b383-5774-ba42-8a4efaa707d6"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Sweep Window",
-              "targetStep": "/api/3/workflow_steps/e5ad5335-0712-5d47-b435-2df47b2171f1",
-              "sourceStep": "/api/3/workflow_steps/ebcf2d77-dd77-5d8c-adfa-23bd04e21e71",
+              "targetStep": "/api/3/workflow_steps/76799a37-2735-57a6-9b4b-97cb9ae4eed5",
+              "sourceStep": "/api/3/workflow_steps/3cd13a3f-098a-56ee-8907-611f02be86e6",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "d0c0ddb5-2c3a-579c-8a9c-3da459288ef4"
+              "uuid": "156a0205-4e12-5ea4-a300-ddcce9f49d53"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Sweep Window -> List Exceptions",
-              "targetStep": "/api/3/workflow_steps/cfe957d6-f118-5ec3-9a56-548ddc286146",
-              "sourceStep": "/api/3/workflow_steps/e5ad5335-0712-5d47-b435-2df47b2171f1",
+              "targetStep": "/api/3/workflow_steps/d1c996fa-5944-5f0b-acb3-23ddee5919e1",
+              "sourceStep": "/api/3/workflow_steps/76799a37-2735-57a6-9b4b-97cb9ae4eed5",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "e3be6673-9b2c-5bac-92eb-f65a1c40d7a2"
+              "uuid": "854a9d78-4ae7-58f3-af4a-739ed8e3a678"
             },
             {
               "@type": "WorkflowRoute",
               "name": "List Exceptions -> Find Expired",
-              "targetStep": "/api/3/workflow_steps/d7e57cff-5e35-5632-9ef8-e98de05582f5",
-              "sourceStep": "/api/3/workflow_steps/cfe957d6-f118-5ec3-9a56-548ddc286146",
+              "targetStep": "/api/3/workflow_steps/28d7c292-310d-5ce9-acaa-b5d32dd47176",
+              "sourceStep": "/api/3/workflow_steps/d1c996fa-5944-5f0b-acb3-23ddee5919e1",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "c1d0efe3-49bc-5595-82e8-8e21ba75e530"
+              "uuid": "35f08823-799b-5ebd-b690-47e742433262"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Find Expired -> Expired Found",
-              "targetStep": "/api/3/workflow_steps/37049c7e-58f6-5f96-949f-cc00c9316629",
-              "sourceStep": "/api/3/workflow_steps/d7e57cff-5e35-5632-9ef8-e98de05582f5",
+              "targetStep": "/api/3/workflow_steps/177e585e-d7a6-5daa-bf02-b2a14c0540ec",
+              "sourceStep": "/api/3/workflow_steps/28d7c292-310d-5ce9-acaa-b5d32dd47176",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "625fdedb-1b9c-5c25-ae55-e86ae78ab453"
+              "uuid": "6eb29aad-bffc-592b-940a-8debb77fa21a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Expired Found -> Delete Expired",
-              "targetStep": "/api/3/workflow_steps/9dff1036-0e6c-59d2-a7d4-151134b4b5dc",
-              "sourceStep": "/api/3/workflow_steps/37049c7e-58f6-5f96-949f-cc00c9316629",
+              "targetStep": "/api/3/workflow_steps/e14d1ef7-6158-55b2-b7cb-21cb73ebc6fb",
+              "sourceStep": "/api/3/workflow_steps/177e585e-d7a6-5daa-bf02-b2a14c0540ec",
               "label": "Expired Rules Present",
               "isExecuted": false,
               "group": null,
-              "uuid": "a12343b3-1bdf-5179-8d69-da7013371142"
+              "uuid": "77ec07d7-6cb0-5a34-aa1c-65a4ea9c519f"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Expired Found -> Sweep Summary",
-              "targetStep": "/api/3/workflow_steps/ed1250fb-3750-5824-ad7e-e5a77636e513",
-              "sourceStep": "/api/3/workflow_steps/37049c7e-58f6-5f96-949f-cc00c9316629",
+              "targetStep": "/api/3/workflow_steps/e562d4cc-b383-5774-ba42-8a4efaa707d6",
+              "sourceStep": "/api/3/workflow_steps/177e585e-d7a6-5daa-bf02-b2a14c0540ec",
               "label": "Nothing To Delete",
               "isExecuted": false,
               "group": null,
-              "uuid": "3f4ed42a-aa49-587c-b6c0-7e48c250e82a"
+              "uuid": "99905824-a477-54bc-ad33-db3bc13f473e"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Delete Expired -> Sweep Summary",
-              "targetStep": "/api/3/workflow_steps/ed1250fb-3750-5824-ad7e-e5a77636e513",
-              "sourceStep": "/api/3/workflow_steps/9dff1036-0e6c-59d2-a7d4-151134b4b5dc",
+              "targetStep": "/api/3/workflow_steps/e562d4cc-b383-5774-ba42-8a4efaa707d6",
+              "sourceStep": "/api/3/workflow_steps/e14d1ef7-6158-55b2-b7cb-21cb73ebc6fb",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "af991ef5-571e-500f-b20f-f2fada82074c"
+              "uuid": "33d52144-47a0-504f-9bd2-1f7da7c8d818"
             }
           ],
           "groups": [
@@ -3269,7 +3277,7 @@
               "left": "540",
               "height": "138",
               "width": "440",
-              "uuid": "a6f98a16-37b1-55d4-87c1-d51f148b7f57",
+              "uuid": "f14eb8c5-159f-5b64-921b-9d43c07f6ca3",
               "recordTags": []
             },
             {
@@ -3286,7 +3294,7 @@
               "left": "540",
               "height": "248",
               "width": "440",
-              "uuid": "9f5bc097-aaa0-52fe-8793-7c059c56ed9c",
+              "uuid": "d55ce70d-9d28-5448-b40f-f6d9d07240a0",
               "recordTags": []
             },
             {
@@ -3303,7 +3311,7 @@
               "left": "880",
               "height": "248",
               "width": "440",
-              "uuid": "cb612980-ad9f-564a-83fb-628a2dc8d110",
+              "uuid": "62474f62-9433-57e7-9bd3-dadca9213d84",
               "recordTags": []
             },
             {
@@ -3320,7 +3328,7 @@
               "left": "880",
               "height": "292",
               "width": "440",
-              "uuid": "63fcc8d5-688b-5d23-9855-281191d8df0b",
+              "uuid": "9ce69cda-5982-5c60-b294-f515942b2f51",
               "recordTags": []
             },
             {
@@ -3337,14 +3345,14 @@
               "left": "880",
               "height": "116",
               "width": "440",
-              "uuid": "84ae4fa5-0c47-5ad4-8903-0787dac30c64",
+              "uuid": "3a3b4ec5-9d32-5b58-9694-6fbb90e1c3c2",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "9da8a301-b5bc-520e-ac1b-d279e6be7810",
+          "uuid": "b603d50d-08de-5553-ae7a-580f4ba547ea",
           "owners": [],
           "isPrivate": false
         },
@@ -3365,10 +3373,10 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/12ac4843-559b-5c90-a850-10ab526418da",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/e6cd9c86-57bf-5199-9981-d99468b16ab3",
+          "triggerStep": "/api/3/workflow_steps/b614f6c8-7b74-5bdb-97ae-d782c12a4626",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -3386,7 +3394,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/b348f017-9a94-471f-87f8-ce88b6a7ad62",
               "group": null,
-              "uuid": "e6cd9c86-57bf-5199-9981-d99468b16ab3"
+              "uuid": "b614f6c8-7b74-5bdb-97ae-d782c12a4626"
             },
             {
               "@type": "WorkflowStep",
@@ -3401,7 +3409,7 @@
                   "status_filter": "Unhandled",
                   "type_filter": "SecurityEvents"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Incidents",
                 "step_variables": [],
@@ -3412,7 +3420,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "2fda2f08-acf2-5a2b-aca6-ed188df54aae"
+              "uuid": "03a14ae7-cc90-5860-85c5-79fcea78e439"
             },
             {
               "@type": "WorkflowStep",
@@ -3427,14 +3435,14 @@
                 "params": {
                   "python_function": "counts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='eventsNum') | list | tojson }}\nnames = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='name') | list | tojson }}\nids = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='id') | list | tojson }}\nfirsts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='firstSeen') | list | tojson }}\nlasts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='lastSeen') | list | tojson }}\ntotal = len(counts)\nrows = []\ni = 0\nwhile i < total:\n    n = counts[i]\n    if n is None:\n        n = 0\n    rows.append((int(n), str(names[i]), str(ids[i]), str(firsts[i]), str(lasts[i])))\n    i = i + 1\nrows.sort(reverse=True)\nhtml = '<table class=\"table\" border=\"1\" style=\"border-collapse:collapse;\">'\nhtml = html + '<tr><th style=\"text-align:left;padding:4px 10px;\">Incident</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Detections</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">First seen</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Last seen</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Id</th></tr>'\ni = 0\nwhile i < len(rows):\n    r = rows[i]\n    tone = ' style=\"padding:4px 10px;\"'\n    if i < 5:\n        tone = ' style=\"padding:4px 10px;background:rgba(229,72,77,.12);\"'\n    html = html + '<tr><td' + tone + '>' + r[1] + '</td><td' + tone + '>' + str(r[0]) + '</td><td' + tone + '>' + r[3] + '</td><td' + tone + '>' + r[4] + '</td><td' + tone + '>' + r[2] + '</td></tr>'\n    i = i + 1\nhtml = html + '</table>'\ntop5 = 0\nif len(rows) > 5:\n    top5 = 5\nelse:\n    top5 = len(rows)\nprint({'digest_html': html, 'incident_count': total,\n       'top5_events': (rows[0][0] if rows else 0), 'top5_name': (rows[0][1] if rows else '')})\n"
                 },
-                "config": "3cb67838-5fca-4d3b-9197-f4bbb29659a6"
+                "config": ""
               },
               "status": null,
               "top": "380",
               "left": "200",
               "stepType": "/api/3/workflow_step_types/1fdd14cc-d6b4-4335-a3af-ab49c8ed2fd8",
               "group": null,
-              "uuid": "12fdef07-10ec-5e0c-acb3-b3a30ac1c1a4"
+              "uuid": "8c39d4d2-c8a8-582e-bf20-f76fdf8f86d1"
             },
             {
               "@type": "WorkflowStep",
@@ -3443,18 +3451,16 @@
               "arguments": {
                 "resource": {
                   "name": "FortiEDR re-detection digest -- {{ vars.steps.Rank_Incidents.data.code_output.incident_count }} unhandled incidents",
-                  "status": "Open",
-                  "priority": "Low",
                   "description": "{{ vars.steps.Rank_Incidents.data.code_output.digest_html }}"
                 },
-                "collection": "tasks"
+                "collection": "/api/3/tasks"
               },
               "status": null,
               "top": "510",
               "left": "200",
-              "stepType": "/api/3/workflow_step_types/dc6ac63d-c5a5-472f-9eb4-6b18473a98b8",
+              "stepType": "/api/3/workflow_step_types/2597053c-e718-44b4-8394-4d40fe26d357",
               "group": null,
-              "uuid": "4a615c07-529d-59cc-81d8-ac30040e3d94"
+              "uuid": "4369580a-cf54-53bb-933d-a180182d4323"
             },
             {
               "@type": "WorkflowStep",
@@ -3476,49 +3482,49 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "d53623e2-9904-57a3-a949-db896342cea2"
+              "uuid": "2be4541e-fe9f-51e6-8610-4e91540b7526"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Get Incidents",
-              "targetStep": "/api/3/workflow_steps/2fda2f08-acf2-5a2b-aca6-ed188df54aae",
-              "sourceStep": "/api/3/workflow_steps/e6cd9c86-57bf-5199-9981-d99468b16ab3",
+              "targetStep": "/api/3/workflow_steps/03a14ae7-cc90-5860-85c5-79fcea78e439",
+              "sourceStep": "/api/3/workflow_steps/b614f6c8-7b74-5bdb-97ae-d782c12a4626",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "a6008a4c-7ba3-5a3c-b24c-758e084b1c1c"
+              "uuid": "40a8e472-c196-580c-b6bf-ca585ab11d41"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Incidents -> Rank Incidents",
-              "targetStep": "/api/3/workflow_steps/12fdef07-10ec-5e0c-acb3-b3a30ac1c1a4",
-              "sourceStep": "/api/3/workflow_steps/2fda2f08-acf2-5a2b-aca6-ed188df54aae",
+              "targetStep": "/api/3/workflow_steps/8c39d4d2-c8a8-582e-bf20-f76fdf8f86d1",
+              "sourceStep": "/api/3/workflow_steps/03a14ae7-cc90-5860-85c5-79fcea78e439",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "fd82375c-d353-51e1-8e61-0bc042404269"
+              "uuid": "11e8c8e5-97cd-5d11-bbda-67c37091250b"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Rank Incidents -> Digest Task",
-              "targetStep": "/api/3/workflow_steps/4a615c07-529d-59cc-81d8-ac30040e3d94",
-              "sourceStep": "/api/3/workflow_steps/12fdef07-10ec-5e0c-acb3-b3a30ac1c1a4",
+              "targetStep": "/api/3/workflow_steps/4369580a-cf54-53bb-933d-a180182d4323",
+              "sourceStep": "/api/3/workflow_steps/8c39d4d2-c8a8-582e-bf20-f76fdf8f86d1",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "a379d258-02f5-5f67-aabb-86a2cf5618e9"
+              "uuid": "b0ea6d92-baa5-5f7d-836b-5d7bbb238c6a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Digest Task -> End",
-              "targetStep": "/api/3/workflow_steps/d53623e2-9904-57a3-a949-db896342cea2",
-              "sourceStep": "/api/3/workflow_steps/4a615c07-529d-59cc-81d8-ac30040e3d94",
+              "targetStep": "/api/3/workflow_steps/2be4541e-fe9f-51e6-8610-4e91540b7526",
+              "sourceStep": "/api/3/workflow_steps/4369580a-cf54-53bb-933d-a180182d4323",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "5ddef83b-d920-536c-bcb1-055a7c3c4ad7"
+              "uuid": "c138e697-eb80-53e5-b19a-7a31269f212d"
             }
           ],
           "groups": [
@@ -3536,13 +3542,13 @@
               "left": "540",
               "height": "204",
               "width": "440",
-              "uuid": "a20fe3d0-c37e-5eea-9737-6cf6fe476c09",
+              "uuid": "3cc7d6d9-af43-5ebc-a2ce-61320b6da474",
               "recordTags": []
             },
             {
               "@type": "WorkflowGroup",
               "name": "Note: Digest Task",
-              "description": "A task is the queueable artifact on a box without a mail relay: it\nlands in the SOC's task view with the digest as its description and\nthe operator's follow-up goes through the task's own close loop.\n",
+              "description": "A task is the queueable artifact on a box without a mail relay: it\nlands in the SOC's task view with the digest as its description and\nthe operator's follow-up goes through the task's own close loop.\nThis is a create_record insert, NOT a create_task: the ManualTask\nengine step parks the whole run awaiting a human completing the\ntask, while filing-the-task-and-ending is the same InsertData\nsemantics the ingestion chain writes alerts with. Only the\nappliance-neutral fields are pinned: status/priority are picklist\nreferences the engine resolves by item IRI/uuid, never by label, so\na bare 'Open'/'Low' is refused with FSR_CH_0000001 even on an\nappliance whose picklists carry those items -- and the per-item\nIRIs published playbooks ship are appliance uuids this bundle\nnever carries. The SOC's own task workflow owns the state.\n",
               "type": "note",
               "isCollapsed": false,
               "hasTriggerStep": false,
@@ -3551,16 +3557,16 @@
               "reusable": false,
               "top": "604",
               "left": "540",
-              "height": "182",
+              "height": "360",
               "width": "440",
-              "uuid": "de5340b1-0e7b-50c4-a2fd-a7305b7d7aa0",
+              "uuid": "66ba69b2-d18a-591c-a5bb-cac47da9e0d8",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "d3e1debc-34f1-5ba3-af61-a1513c109fd8",
+          "uuid": "652de024-7b1b-5f03-a9e3-d1f1dc628f2f",
           "owners": [],
           "isPrivate": false
         },
@@ -3583,10 +3589,10 @@
             "file_hash"
           ],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/12ac4843-559b-5c90-a850-10ab526418da",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/93cf4876-f3fe-58d4-98f3-426e8a1e6bf4",
+          "triggerStep": "/api/3/workflow_steps/2585cd39-603a-548c-9bc8-fcc2c2d2e747",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -3642,7 +3648,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
               "group": null,
-              "uuid": "93cf4876-f3fe-58d4-98f3-426e8a1e6bf4"
+              "uuid": "2585cd39-603a-548c-9bc8-fcc2c2d2e747"
             },
             {
               "@type": "WorkflowStep",
@@ -3652,14 +3658,14 @@
                 "conditions": [
                   {
                     "option": "Hash Present",
-                    "condition": "{{ vars.input.params.file_hash | default('', true) }}",
-                    "step_iri": "/api/3/workflow_steps/37041a24-c0e1-54ad-9b07-f68dfd2a146e",
+                    "condition": "{{ (vars.input.params.file_hash | default('', true) | string) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/8e663bb3-6ac9-5cd4-b362-9dde96c86b51",
                     "step_name": "Hunt Hash"
                   },
                   {
                     "option": "No Hash",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/3f0a26a0-4f1d-56e3-b44d-feeb05a6c148",
+                    "step_iri": "/api/3/workflow_steps/bb0900b8-e4d8-5ba2-a15b-e199970f1edc",
                     "step_name": "No Hash"
                   }
                 ]
@@ -3669,7 +3675,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "ffd46679-4d61-5c39-a61c-de91b6cb2ef4"
+              "uuid": "2c1f9679-34e1-5f00-9cde-72019c505a0e"
             },
             {
               "@type": "WorkflowStep",
@@ -3682,7 +3688,7 @@
                 "params": {
                   "fileHashes": "{{ vars.input.params.file_hash }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Search Filehash",
                 "step_variables": [],
@@ -3693,7 +3699,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "37041a24-c0e1-54ad-9b07-f68dfd2a146e"
+              "uuid": "8e663bb3-6ac9-5cd4-b362-9dde96c86b51"
             },
             {
               "@type": "WorkflowStep",
@@ -3704,13 +3710,13 @@
                   {
                     "option": "Have Hits",
                     "condition": "{{ vars.steps.Hunt_Hash.data[0].eventIds | default([]) | length > 0 }}",
-                    "step_iri": "/api/3/workflow_steps/bd6ed60e-7421-577d-9635-5069c9c67ab6",
+                    "step_iri": "/api/3/workflow_steps/31f5a98a-ce7d-5f01-9ed5-dde338950b1a",
                     "step_name": "Get Hunt Events"
                   },
                   {
                     "option": "No Hits",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/42cca2c7-657c-5b7a-b05a-b604226e9a02",
+                    "step_iri": "/api/3/workflow_steps/1ea73d1c-1529-5b1b-af3d-eeb4f3c7a57c",
                     "step_name": "Hunt Summary"
                   }
                 ]
@@ -3720,7 +3726,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "0943bf7a-b653-5ba9-978e-ab74093a3469"
+              "uuid": "ca0dd4e3-5ecb-5b7b-b968-d4b7959b96fd"
             },
             {
               "@type": "WorkflowStep",
@@ -3733,7 +3739,7 @@
                 "params": {
                   "eventIds": "{{ vars.steps.Hunt_Hash.data[0].eventIds | join(',') }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Events",
                 "step_variables": [],
@@ -3744,7 +3750,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "bd6ed60e-7421-577d-9635-5069c9c67ab6"
+              "uuid": "31f5a98a-ce7d-5f01-9ed5-dde338950b1a"
             },
             {
               "@type": "WorkflowStep",
@@ -3778,7 +3784,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/2597053c-e718-44b4-8394-4d40fe26d357",
               "group": null,
-              "uuid": "cd90b32e-789f-5ed4-8dfd-11bc9efe3881"
+              "uuid": "3771e703-ee60-5db2-8d54-9fc41aebdc91"
             },
             {
               "@type": "WorkflowStep",
@@ -3794,7 +3800,7 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "42cca2c7-657c-5b7a-b05a-b604226e9a02"
+              "uuid": "1ea73d1c-1529-5b1b-af3d-eeb4f3c7a57c"
             },
             {
               "@type": "WorkflowStep",
@@ -3810,89 +3816,89 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "3f0a26a0-4f1d-56e3-b44d-feeb05a6c148"
+              "uuid": "bb0900b8-e4d8-5ba2-a15b-e199970f1edc"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Validate Input",
-              "targetStep": "/api/3/workflow_steps/ffd46679-4d61-5c39-a61c-de91b6cb2ef4",
-              "sourceStep": "/api/3/workflow_steps/93cf4876-f3fe-58d4-98f3-426e8a1e6bf4",
+              "targetStep": "/api/3/workflow_steps/2c1f9679-34e1-5f00-9cde-72019c505a0e",
+              "sourceStep": "/api/3/workflow_steps/2585cd39-603a-548c-9bc8-fcc2c2d2e747",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "4bd5575e-20c6-5fe6-9553-d063e411987c"
+              "uuid": "2148186f-4080-51e2-973d-bc3ff89df28f"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Validate Input -> Hunt Hash",
-              "targetStep": "/api/3/workflow_steps/37041a24-c0e1-54ad-9b07-f68dfd2a146e",
-              "sourceStep": "/api/3/workflow_steps/ffd46679-4d61-5c39-a61c-de91b6cb2ef4",
+              "targetStep": "/api/3/workflow_steps/8e663bb3-6ac9-5cd4-b362-9dde96c86b51",
+              "sourceStep": "/api/3/workflow_steps/2c1f9679-34e1-5f00-9cde-72019c505a0e",
               "label": "Hash Present",
               "isExecuted": false,
               "group": null,
-              "uuid": "135d67b8-7be7-5745-9cff-5a29c6f281c8"
+              "uuid": "97790155-73bc-54c2-83ec-4586a5c8fb13"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Validate Input -> No Hash",
-              "targetStep": "/api/3/workflow_steps/3f0a26a0-4f1d-56e3-b44d-feeb05a6c148",
-              "sourceStep": "/api/3/workflow_steps/ffd46679-4d61-5c39-a61c-de91b6cb2ef4",
+              "targetStep": "/api/3/workflow_steps/bb0900b8-e4d8-5ba2-a15b-e199970f1edc",
+              "sourceStep": "/api/3/workflow_steps/2c1f9679-34e1-5f00-9cde-72019c505a0e",
               "label": "No Hash",
               "isExecuted": false,
               "group": null,
-              "uuid": "2a6b4ef8-aa17-53b6-a319-dec0eeab2330"
+              "uuid": "d5337ebc-dc83-552e-9e23-557568f4766e"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Hunt Hash -> Hits",
-              "targetStep": "/api/3/workflow_steps/0943bf7a-b653-5ba9-978e-ab74093a3469",
-              "sourceStep": "/api/3/workflow_steps/37041a24-c0e1-54ad-9b07-f68dfd2a146e",
+              "targetStep": "/api/3/workflow_steps/ca0dd4e3-5ecb-5b7b-b968-d4b7959b96fd",
+              "sourceStep": "/api/3/workflow_steps/8e663bb3-6ac9-5cd4-b362-9dde96c86b51",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "7f04c429-d1ab-5ccc-a432-ca860b8ae7a9"
+              "uuid": "4edfed48-72bb-5931-959b-dbaa9229ed1b"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Hits -> Get Hunt Events",
-              "targetStep": "/api/3/workflow_steps/bd6ed60e-7421-577d-9635-5069c9c67ab6",
-              "sourceStep": "/api/3/workflow_steps/0943bf7a-b653-5ba9-978e-ab74093a3469",
+              "targetStep": "/api/3/workflow_steps/31f5a98a-ce7d-5f01-9ed5-dde338950b1a",
+              "sourceStep": "/api/3/workflow_steps/ca0dd4e3-5ecb-5b7b-b968-d4b7959b96fd",
               "label": "Have Hits",
               "isExecuted": false,
               "group": null,
-              "uuid": "d12b9817-337b-529b-9c8f-37a6cfd427f0"
+              "uuid": "67e530d8-71c1-5bac-aef0-830e60a22c63"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Hits -> Hunt Summary",
-              "targetStep": "/api/3/workflow_steps/42cca2c7-657c-5b7a-b05a-b604226e9a02",
-              "sourceStep": "/api/3/workflow_steps/0943bf7a-b653-5ba9-978e-ab74093a3469",
+              "targetStep": "/api/3/workflow_steps/1ea73d1c-1529-5b1b-af3d-eeb4f3c7a57c",
+              "sourceStep": "/api/3/workflow_steps/ca0dd4e3-5ecb-5b7b-b968-d4b7959b96fd",
               "label": "No Hits",
               "isExecuted": false,
               "group": null,
-              "uuid": "7c15a5da-9080-5da3-b0ac-4f61017ac8fb"
+              "uuid": "9cae2a91-16d1-5403-95c7-c7e59eefc60a"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Hunt Events -> Create Hunt Alerts",
-              "targetStep": "/api/3/workflow_steps/cd90b32e-789f-5ed4-8dfd-11bc9efe3881",
-              "sourceStep": "/api/3/workflow_steps/bd6ed60e-7421-577d-9635-5069c9c67ab6",
+              "targetStep": "/api/3/workflow_steps/3771e703-ee60-5db2-8d54-9fc41aebdc91",
+              "sourceStep": "/api/3/workflow_steps/31f5a98a-ce7d-5f01-9ed5-dde338950b1a",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "dedc653c-f7e8-5c61-8cc4-171aab63d60e"
+              "uuid": "e194ff34-e299-5d4f-be56-7d09b17b4f5b"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Create Hunt Alerts -> Hunt Summary",
-              "targetStep": "/api/3/workflow_steps/42cca2c7-657c-5b7a-b05a-b604226e9a02",
-              "sourceStep": "/api/3/workflow_steps/cd90b32e-789f-5ed4-8dfd-11bc9efe3881",
+              "targetStep": "/api/3/workflow_steps/1ea73d1c-1529-5b1b-af3d-eeb4f3c7a57c",
+              "sourceStep": "/api/3/workflow_steps/3771e703-ee60-5db2-8d54-9fc41aebdc91",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "1cb71e7a-9448-5243-b78d-6a1ddc022176"
+              "uuid": "10448ae0-3ab0-5990-8313-661b00d69e6d"
             }
           ],
           "groups": [
@@ -3910,7 +3916,7 @@
               "left": "880",
               "height": "160",
               "width": "440",
-              "uuid": "248b1501-5ed5-56c0-8ddd-e56c761bc7ba",
+              "uuid": "6ccf06cc-7e1d-5945-92e8-f41259664dff",
               "recordTags": []
             },
             {
@@ -3927,7 +3933,7 @@
               "left": "880",
               "height": "204",
               "width": "440",
-              "uuid": "3c1ce7ac-51e9-5192-ab42-dca02385ea00",
+              "uuid": "ab479ccc-831c-5b21-a258-71890366b8f9",
               "recordTags": []
             },
             {
@@ -3944,7 +3950,7 @@
               "left": "880",
               "height": "292",
               "width": "440",
-              "uuid": "12746958-79d6-50dd-a451-fe20cd52da6b",
+              "uuid": "4307b068-9f80-50f1-a40e-dcc1eb83ef69",
               "recordTags": []
             },
             {
@@ -3961,7 +3967,7 @@
               "left": "880",
               "height": "116",
               "width": "440",
-              "uuid": "72c4411a-20b1-54bd-8b69-aa69558d5502",
+              "uuid": "dfd2bf14-e0eb-5cc8-9eb7-077fb23dbc71",
               "recordTags": []
             },
             {
@@ -3978,14 +3984,14 @@
               "left": "880",
               "height": "160",
               "width": "440",
-              "uuid": "d490f9bb-0b13-5eb2-b250-ebf6084cbb92",
+              "uuid": "e1075a4e-bffc-556a-8534-d507f88deb47",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "18588f35-c804-5b70-b877-ad4651f8cabc",
+          "uuid": "749317a4-5ffb-532f-98e2-8f9d4d0a34e2",
           "owners": [],
           "isPrivate": false
         },
@@ -4006,10 +4012,10 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793713231.2585819,
-          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "lastModifyDate": 1793742974.0244718,
+          "collection": "/api/3/workflow_collections/12ac4843-559b-5c90-a850-10ab526418da",
           "versions": [],
-          "triggerStep": "/api/3/workflow_steps/1976d954-6767-56a0-b103-0136b92adb17",
+          "triggerStep": "/api/3/workflow_steps/dae3f473-5965-55a9-ae52-24c488197317",
           "steps": [
             {
               "@type": "WorkflowStep",
@@ -4027,7 +4033,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/b348f017-9a94-471f-87f8-ce88b6a7ad62",
               "group": null,
-              "uuid": "1976d954-6767-56a0-b103-0136b92adb17"
+              "uuid": "dae3f473-5965-55a9-ae52-24c488197317"
             },
             {
               "@type": "WorkflowStep",
@@ -4037,7 +4043,7 @@
                 "connector": "fortinet-fortiedrv2",
                 "operation": "get_collector_list",
                 "config": "",
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Collector List",
                 "step_variables": [],
@@ -4048,7 +4054,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "227a17f1-9a07-5635-bcd1-a101626e7ee7"
+              "uuid": "4ecf669c-4445-5a3e-9a40-1717ddb11a28"
             },
             {
               "@type": "WorkflowStep",
@@ -4061,7 +4067,7 @@
                 "params": {
                   "organization": ""
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Get Collector Installers",
                 "step_variables": [],
@@ -4072,7 +4078,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "14c0135d-a69f-5518-8efe-0a7efd713d0f"
+              "uuid": "3dbb4f1b-24e4-5d10-b43e-187e45107d29"
             },
             {
               "@type": "WorkflowStep",
@@ -4087,14 +4093,14 @@
                 "params": {
                   "python_function": "names = {{ vars.steps.Get_Fleet.data | map(attribute='name') | list | tojson }}\nversions = {{ vars.steps.Get_Fleet.data | map(attribute='version') | list | tojson }}\nstates = {{ vars.steps.Get_Fleet.data | map(attribute='state') | list | tojson }}\nstates_adtl = {{ vars.steps.Get_Fleet.data | map(attribute='stateAdditionalInfo') | list | tojson }}\nos_families = {{ vars.steps.Get_Fleet.data | map(attribute='osFamily') | list | tojson }}\nlast_seens = {{ vars.steps.Get_Fleet.data | map(attribute='lastSeenTime') | list | tojson }}\ninst_os = {{ vars.steps.Get_Installers.data.availableCollectorInstallers | map(attribute='osFamily') | list | tojson }}\ninst_ver = {{ vars.steps.Get_Installers.data.availableCollectorInstallers | map(attribute='version') | list | tojson }}\nlatest = {}\nj = 0\nwhile j < len(inst_os):\n    fam = inst_os[j]\n    if fam in latest:\n        if inst_ver[j] > latest[fam]:\n            latest[fam] = inst_ver[j]\n    else:\n        latest[fam] = inst_ver[j]\n    j = j + 1\nrows = []\nhealthy = 0\noutdated = 0\noffline = 0\ni = 0\nwhile i < len(names):\n    fam = os_families[i]\n    ver = str(versions[i])\n    state = str(states[i])\n    flag = 'ok'\n    if state != 'Running':\n        flag = 'state:' + state\n        offline = offline + 1\n    else:\n        if fam in latest and ver != str(latest[fam]):\n            flag = 'outdated (available ' + str(latest[fam]) + ')'\n            outdated = outdated + 1\n        else:\n            healthy = healthy + 1\n    rows.append((flag, str(names[i]), ver, state,\n                 str(states_adtl[i]), str(last_seens[i])))\n    i = i + 1\nhtml = '<table class=\"table\" border=\"1\" style=\"border-collapse:collapse;\">'\nhtml = html + '<tr><th style=\"text-align:left;padding:4px 10px;\">Collector</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Version</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">State</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Last seen</th></tr>'\ni = 0\nwhile i < len(rows):\n    r = rows[i]\n    tone = ' style=\"padding:4px 10px;\"'\n    if not r[0].startswith('ok'):\n        tone = ' style=\"padding:4px 10px;background:rgba(247,107,21,.12);\"'\n    html = html + '<tr><td' + tone + '>' + r[1] + '</td><td' + tone + '>' + r[2] + '</td><td' + tone + '>' + r[3] + '</td><td' + tone + '>' + r[5] + '</td></tr>'\n    i = i + 1\nhtml = html + '</table>'\nprint({'fleet_html': html, 'fleet_size': len(names), 'healthy': healthy,\n       'outdated': outdated, 'not_running': offline,\n       'latest_windows': (latest['Windows'] if 'Windows' in latest else '')})\n"
                 },
-                "config": "3cb67838-5fca-4d3b-9197-f4bbb29659a6"
+                "config": ""
               },
               "status": null,
               "top": "510",
               "left": "200",
               "stepType": "/api/3/workflow_step_types/1fdd14cc-d6b4-4335-a3af-ab49c8ed2fd8",
               "group": null,
-              "uuid": "f30d67c9-fc7d-52c9-9158-e9a7b4d475cd"
+              "uuid": "a086515f-65b4-587b-8203-2f42c38292ef"
             },
             {
               "@type": "WorkflowStep",
@@ -4103,18 +4109,16 @@
               "arguments": {
                 "resource": {
                   "name": "FortiEDR fleet compliance -- {{ vars.steps.Audit_Fleet.data.code_output.fleet_size }} collectors, {{ vars.steps.Audit_Fleet.data.code_output.outdated }} outdated, {{ vars.steps.Audit_Fleet.data.code_output.not_running }} not running",
-                  "status": "Open",
-                  "priority": "Low",
                   "description": "{{ vars.steps.Audit_Fleet.data.code_output.fleet_html }}"
                 },
-                "collection": "tasks"
+                "collection": "/api/3/tasks"
               },
               "status": null,
               "top": "640",
               "left": "200",
-              "stepType": "/api/3/workflow_step_types/dc6ac63d-c5a5-472f-9eb4-6b18473a98b8",
+              "stepType": "/api/3/workflow_step_types/2597053c-e718-44b4-8394-4d40fe26d357",
               "group": null,
-              "uuid": "1b487be3-6fff-593f-96dd-7ca440d253ac"
+              "uuid": "8657bf47-c8f6-5274-98c0-30340806f591"
             },
             {
               "@type": "WorkflowStep",
@@ -4125,13 +4129,13 @@
                   {
                     "option": "Fleet Lags",
                     "condition": "{{ (vars.steps.Audit_Fleet.data.code_output.outdated | int) > 0 }}",
-                    "step_iri": "/api/3/workflow_steps/1ebc6123-fa5b-5fef-aae1-2dbc2f9db927",
+                    "step_iri": "/api/3/workflow_steps/24fd256e-e5ce-56eb-ab18-f6c9056ef8f7",
                     "step_name": "Upgrade Approval"
                   },
                   {
                     "option": "Nothing To Stage",
                     "default": true,
-                    "step_iri": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858",
+                    "step_iri": "/api/3/workflow_steps/6f0f600e-29ab-53e0-ad66-7b9a9b043801",
                     "step_name": "Audit Summary"
                   }
                 ]
@@ -4141,7 +4145,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
               "group": null,
-              "uuid": "f301c580-3433-5955-bae4-f62e78016b5b"
+              "uuid": "e8cd2aa8-fdd8-5668-bfcb-e6cb69bb3608"
             },
             {
               "@type": "WorkflowStep",
@@ -4268,11 +4272,11 @@
                     {
                       "option": "Stage Update",
                       "primary": true,
-                      "step_iri": "/api/3/workflow_steps/e208545c-950c-5c70-93bd-68fa094e1641"
+                      "step_iri": "/api/3/workflow_steps/1d8e2337-ef41-5c94-b73a-ad0d4d582e36"
                     },
                     {
                       "option": "Skip",
-                      "step_iri": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858"
+                      "step_iri": "/api/3/workflow_steps/6f0f600e-29ab-53e0-ad66-7b9a9b043801"
                     }
                   ],
                   "duplicateOption": false,
@@ -4291,7 +4295,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/a19333c2-c822-11ed-afa1-0242ac120002",
               "group": null,
-              "uuid": "1ebc6123-fa5b-5fef-aae1-2dbc2f9db927"
+              "uuid": "24fd256e-e5ce-56eb-ab18-f6c9056ef8f7"
             },
             {
               "@type": "WorkflowStep",
@@ -4306,7 +4310,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "e208545c-950c-5c70-93bd-68fa094e1641"
+              "uuid": "1d8e2337-ef41-5c94-b73a-ad0d4d582e36"
             },
             {
               "@type": "WorkflowStep",
@@ -4320,7 +4324,7 @@
                   "updateVersions": "{{ vars.update_versions }}",
                   "collectorGroups": "{{ vars.collector_groups }}"
                 },
-                "version": "1.1.0",
+                "version": "1.1.3",
                 "name": "Fortinet FortiEDR v2",
                 "operationTitle": "Update Collector Installer",
                 "step_variables": [],
@@ -4331,7 +4335,7 @@
               "left": "200",
               "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
               "group": null,
-              "uuid": "8f3d4fae-f67b-5f9e-82c2-f11279f9f9c4"
+              "uuid": "bdf00acc-de64-5ce0-839b-b3df929847c3"
             },
             {
               "@type": "WorkflowStep",
@@ -4349,119 +4353,119 @@
               "left": "540",
               "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
               "group": null,
-              "uuid": "e7242ecc-fb0b-576c-857a-cbad5f5a2858"
+              "uuid": "6f0f600e-29ab-53e0-ad66-7b9a9b043801"
             }
           ],
           "routes": [
             {
               "@type": "WorkflowRoute",
               "name": "Start -> Get Fleet",
-              "targetStep": "/api/3/workflow_steps/227a17f1-9a07-5635-bcd1-a101626e7ee7",
-              "sourceStep": "/api/3/workflow_steps/1976d954-6767-56a0-b103-0136b92adb17",
+              "targetStep": "/api/3/workflow_steps/4ecf669c-4445-5a3e-9a40-1717ddb11a28",
+              "sourceStep": "/api/3/workflow_steps/dae3f473-5965-55a9-ae52-24c488197317",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "0e017c2b-09a0-534c-b162-b78fdd9531f6"
+              "uuid": "3d3df3fd-3446-581f-9dc5-e3564d81714f"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Fleet -> Get Installers",
-              "targetStep": "/api/3/workflow_steps/14c0135d-a69f-5518-8efe-0a7efd713d0f",
-              "sourceStep": "/api/3/workflow_steps/227a17f1-9a07-5635-bcd1-a101626e7ee7",
+              "targetStep": "/api/3/workflow_steps/3dbb4f1b-24e4-5d10-b43e-187e45107d29",
+              "sourceStep": "/api/3/workflow_steps/4ecf669c-4445-5a3e-9a40-1717ddb11a28",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "3160b5f2-6ebd-5e9f-a062-ce12b6055de6"
+              "uuid": "2372d55b-ff48-53b9-82a5-f76364422b47"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Get Installers -> Audit Fleet",
-              "targetStep": "/api/3/workflow_steps/f30d67c9-fc7d-52c9-9158-e9a7b4d475cd",
-              "sourceStep": "/api/3/workflow_steps/14c0135d-a69f-5518-8efe-0a7efd713d0f",
+              "targetStep": "/api/3/workflow_steps/a086515f-65b4-587b-8203-2f42c38292ef",
+              "sourceStep": "/api/3/workflow_steps/3dbb4f1b-24e4-5d10-b43e-187e45107d29",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "0532fbaa-9bb1-5ba8-8d0c-896ce743ab14"
+              "uuid": "0f9f9e6e-5ff8-54a8-9b30-d66610518a51"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Audit Fleet -> Compliance Task",
-              "targetStep": "/api/3/workflow_steps/1b487be3-6fff-593f-96dd-7ca440d253ac",
-              "sourceStep": "/api/3/workflow_steps/f30d67c9-fc7d-52c9-9158-e9a7b4d475cd",
+              "targetStep": "/api/3/workflow_steps/8657bf47-c8f6-5274-98c0-30340806f591",
+              "sourceStep": "/api/3/workflow_steps/a086515f-65b4-587b-8203-2f42c38292ef",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "5c388e5f-e266-5aaa-9481-849666959ff7"
+              "uuid": "e5f98212-35b4-5ea2-8271-bf4f8eb8f115"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Compliance Task -> Staging Offered",
-              "targetStep": "/api/3/workflow_steps/f301c580-3433-5955-bae4-f62e78016b5b",
-              "sourceStep": "/api/3/workflow_steps/1b487be3-6fff-593f-96dd-7ca440d253ac",
+              "targetStep": "/api/3/workflow_steps/e8cd2aa8-fdd8-5668-bfcb-e6cb69bb3608",
+              "sourceStep": "/api/3/workflow_steps/8657bf47-c8f6-5274-98c0-30340806f591",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "e36a3ab1-c4bc-5e2f-9268-d996d1d2151e"
+              "uuid": "6110d90f-5b88-5106-897f-be9e478df1cb"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Staging Offered -> Upgrade Approval",
-              "targetStep": "/api/3/workflow_steps/1ebc6123-fa5b-5fef-aae1-2dbc2f9db927",
-              "sourceStep": "/api/3/workflow_steps/f301c580-3433-5955-bae4-f62e78016b5b",
+              "targetStep": "/api/3/workflow_steps/24fd256e-e5ce-56eb-ab18-f6c9056ef8f7",
+              "sourceStep": "/api/3/workflow_steps/e8cd2aa8-fdd8-5668-bfcb-e6cb69bb3608",
               "label": "Fleet Lags",
               "isExecuted": false,
               "group": null,
-              "uuid": "c0a54660-0394-5b68-aaa2-289e790982bb"
+              "uuid": "ab985ff7-aeee-5dff-985f-e1df3685b844"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Staging Offered -> Audit Summary",
-              "targetStep": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858",
-              "sourceStep": "/api/3/workflow_steps/f301c580-3433-5955-bae4-f62e78016b5b",
+              "targetStep": "/api/3/workflow_steps/6f0f600e-29ab-53e0-ad66-7b9a9b043801",
+              "sourceStep": "/api/3/workflow_steps/e8cd2aa8-fdd8-5668-bfcb-e6cb69bb3608",
               "label": "Nothing To Stage",
               "isExecuted": false,
               "group": null,
-              "uuid": "93df7344-5909-57e1-b70d-4636c4d480a1"
+              "uuid": "d9a70a47-7b71-5c00-a38c-d30b76c4517b"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Upgrade Approval -> Map Installer",
-              "targetStep": "/api/3/workflow_steps/e208545c-950c-5c70-93bd-68fa094e1641",
-              "sourceStep": "/api/3/workflow_steps/1ebc6123-fa5b-5fef-aae1-2dbc2f9db927",
+              "targetStep": "/api/3/workflow_steps/1d8e2337-ef41-5c94-b73a-ad0d4d582e36",
+              "sourceStep": "/api/3/workflow_steps/24fd256e-e5ce-56eb-ab18-f6c9056ef8f7",
               "label": "Stage Update",
               "isExecuted": false,
               "group": null,
-              "uuid": "371ed033-a318-5086-b83c-39f4e5a274b2"
+              "uuid": "52dbc656-8aa3-5096-b09a-4819e2af92e4"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Upgrade Approval -> Audit Summary",
-              "targetStep": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858",
-              "sourceStep": "/api/3/workflow_steps/1ebc6123-fa5b-5fef-aae1-2dbc2f9db927",
+              "targetStep": "/api/3/workflow_steps/6f0f600e-29ab-53e0-ad66-7b9a9b043801",
+              "sourceStep": "/api/3/workflow_steps/24fd256e-e5ce-56eb-ab18-f6c9056ef8f7",
               "label": "Skip",
               "isExecuted": false,
               "group": null,
-              "uuid": "d5c256e0-e742-50f4-a25f-8fa55c269b32"
+              "uuid": "03b53782-0688-54d3-bcbd-a0b4be6e04b7"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Map Installer -> Stage Upgrade",
-              "targetStep": "/api/3/workflow_steps/8f3d4fae-f67b-5f9e-82c2-f11279f9f9c4",
-              "sourceStep": "/api/3/workflow_steps/e208545c-950c-5c70-93bd-68fa094e1641",
+              "targetStep": "/api/3/workflow_steps/bdf00acc-de64-5ce0-839b-b3df929847c3",
+              "sourceStep": "/api/3/workflow_steps/1d8e2337-ef41-5c94-b73a-ad0d4d582e36",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "8c3bf21a-ca94-5af3-b9ee-ee8d2cfd6240"
+              "uuid": "e637b958-c2d0-5587-8524-6bb1b6743319"
             },
             {
               "@type": "WorkflowRoute",
               "name": "Stage Upgrade -> Audit Summary",
-              "targetStep": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858",
-              "sourceStep": "/api/3/workflow_steps/8f3d4fae-f67b-5f9e-82c2-f11279f9f9c4",
+              "targetStep": "/api/3/workflow_steps/6f0f600e-29ab-53e0-ad66-7b9a9b043801",
+              "sourceStep": "/api/3/workflow_steps/bdf00acc-de64-5ce0-839b-b3df929847c3",
               "label": null,
               "isExecuted": false,
               "group": null,
-              "uuid": "e8e59f20-dac2-5fb0-b9d1-9af08cc9a65d"
+              "uuid": "9eac0dfc-55b5-59eb-bd65-a90448c4a476"
             }
           ],
           "groups": [
@@ -4479,7 +4483,7 @@
               "left": "540",
               "height": "182",
               "width": "440",
-              "uuid": "627bb48b-8574-568b-8edb-ac4681678aa4",
+              "uuid": "a8a0424b-6c8f-5cb6-b31c-7653d0eb7771",
               "recordTags": []
             },
             {
@@ -4496,7 +4500,7 @@
               "left": "540",
               "height": "160",
               "width": "440",
-              "uuid": "b2791d35-b0e0-5750-9b90-d5e1edb7fde1",
+              "uuid": "19577b01-5415-56fa-9a80-46c693501855",
               "recordTags": []
             },
             {
@@ -4513,7 +4517,24 @@
               "left": "540",
               "height": "160",
               "width": "440",
-              "uuid": "7c3a18a0-0a4a-5762-ac46-4c8e1482a603",
+              "uuid": "17fc448d-a0c1-5175-b8c5-fa933cf12da1",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Compliance Task",
+              "description": "Filed the same way as the digest task: a create_record insert ends\nthe run -- the ManualTask engine step would park the run awaiting a\nhuman completing the task. Only the appliance-neutral fields are\npinned: status/priority are picklist references the engine resolves\nby item IRI/uuid, never by label -- a bare 'Open'/'Low' is refused\nwith FSR_CH_0000001 even on an appliance whose picklists carry\nthose items, and the per-item IRIs published playbooks ship are\nappliance uuids this bundle never carries. The SOC's own task\nworkflow owns the task's state.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "812",
+              "left": "880",
+              "height": "360",
+              "width": "440",
+              "uuid": "94f4d5cb-b25d-56a0-b2b4-903832f0afcc",
               "recordTags": []
             },
             {
@@ -4526,11 +4547,11 @@
               "hideInLogs": true,
               "metadata": [],
               "reusable": false,
-              "top": "812",
-              "left": "540",
+              "top": "1192",
+              "left": "880",
               "height": "116",
               "width": "440",
-              "uuid": "1024d4a5-a36a-54d5-8826-156d88c45dcc",
+              "uuid": "3031b4e1-3794-5efd-bbe0-c1787a58abe1",
               "recordTags": []
             },
             {
@@ -4543,18 +4564,18 @@
               "hideInLogs": true,
               "metadata": [],
               "reusable": false,
-              "top": "1030",
+              "top": "1328",
               "left": "880",
               "height": "204",
               "width": "440",
-              "uuid": "23f3eedd-4ad8-58ca-a476-7dbc7cba6995",
+              "uuid": "16127df1-1f13-5be1-95b7-6a940b19f13d",
               "recordTags": []
             }
           ],
           "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
           "playbookOrigin": null,
           "isEditable": true,
-          "uuid": "2ce97f49-e52f-55fd-9a94-9aa6aec86f51",
+          "uuid": "0c90b71d-e238-5f1d-b3d7-60ba7b1c831d",
           "owners": [],
           "isPrivate": false
         }

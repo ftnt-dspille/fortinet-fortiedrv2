@@ -1,7 +1,7 @@
 {
   "name": "fortinet-fortiedrv2",
   "label": "Fortinet FortiEDR v2",
-  "version": "1.1.0",
+  "version": "1.1.4",
   "description": "FortiEDR protects endpoints pre and post infection, stopping data breaches in real-time and automatically orchestrating incident investigation and response. This connector covers events, forensics, collectors, exceptions, IP sets, console incidents and scheduled ingestion keyed on event activity (lastSeen).",
   "publisher": "Fortinet",
   "cs_approved": true,
@@ -5871,7 +5871,7 @@
     {
       "operation": "ingest_events",
       "title": "Ingest Events",
-      "description": "Fetches every event whose Last Seen (or First Seen, per Time Field) falls in [From, To] and returns them already mapped to FortiSOAR alert payloads (external_id = eventId, severity clamped to the picklist). Built for the scheduled ingestion playbooks. FortiEDR links re-detections of the same process into the EXISTING event -- its firstSeen never moves -- so the default window is on Last Seen; a firstSeen window misses re-triggered events entirely. The window is count-verified rather than paged: count-events is asked first, the fetch is one list-events request sized to that count (pageNumber is never sent -- on FortiEDR 7.x a windowed list-events query carrying it answers 200 with an empty page), and an answer short of the count is re-read, then escalated by splitting the window, failing loudly rather than returning part of a window.",
+      "description": "Fetches every event whose Last Seen (or First Seen, per Time Field) falls in [From, To] and returns them already mapped to FortiSOAR alert payloads (external_id = eventId, severity clamped to the picklist). Built for the scheduled ingestion playbooks. FortiEDR links re-detections of the same process into the EXISTING event -- its firstSeen never moves -- so the default window is on Last Seen; a firstSeen window misses re-triggered events. The window is count-verified rather than paged: count-events is asked first, the fetch is one list-events request sized to that count (pageNumber is never sent; on FortiEDR 7.x it answers 200 with an empty page), and a short answer is re-read, then escalated by splitting the window, failing loudly rather than returning part of a window. Optional filters (Classifications, Severities, Device Name, Collector Groups, Organization) narrow the one query count-events and list-events share, so the count-verify holds on the filtered window.",
       "category": "investigation",
       "annotation": "ingest_events",
       "handler_method": true,
@@ -5929,7 +5929,9 @@
             "PUP",
             "Likely Safe",
             "Safe"
-          ]
+          ],
+          "description": "Optional: pull only these classifications. The pull watermark advances past non-matching events, so set the filter before the first pull and keep it stable.",
+          "tooltip": "Optional: pull only these classifications. The pull watermark advances past non-matching events, so set the filter before the first pull and keep it stable."
         },
         {
           "title": "Severities",
@@ -5943,7 +5945,31 @@
             "Critical",
             "High",
             "Medium"
-          ]
+          ],
+          "description": "Optional: pull only these severities. Same watermark note as Classifications.",
+          "tooltip": "Optional: pull only these severities. Same watermark note as Classifications."
+        },
+        {
+          "title": "Device Name",
+          "name": "device",
+          "type": "text",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": "",
+          "description": "Optional: pull only events on this device name. Blank means all devices.",
+          "tooltip": "Optional: pull only events on this device name. Blank means all devices."
+        },
+        {
+          "title": "Collector Groups",
+          "name": "collector_groups",
+          "type": "text",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": "",
+          "description": "Optional: comma-separated collector group names to pull from. Blank means all groups.",
+          "tooltip": "Optional: comma-separated collector group names to pull from. Blank means all groups."
         },
         {
           "title": "Max Events",

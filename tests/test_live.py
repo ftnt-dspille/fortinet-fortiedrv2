@@ -95,6 +95,29 @@ def test_ingest_events_round_trip(call_op):
         assert 'FortiEDR event' in alert['description'] or ' on ' in alert['description']
 
 
+def test_ingest_events_filtered_window_narrows_and_matches_its_own_count(call_op):
+    """The wizard's optional pull filters ride the one query the count
+    verifies: a filtered ingest_events must agree with count-events over
+    the SAME filtered window, return only rows the filter admits, and
+    never report more than the unfiltered window holds. Read-only: the op
+    fetches and maps; it never writes alerts or advances the watermark
+    (that is the ingest playbook's job)."""
+    window = {'from': _ago(days=45), 'to': _now()}
+    alerts = call_op('ingest_events', dict(window, classifications='Malicious'))
+    counted = call_op('count_events', {'lastSeenFrom': window['from'],
+                                       'lastSeenTo': window['to'],
+                                       'classifications': 'Malicious'})['event_count']
+    assert len(alerts) == counted, \
+        'filtered ingest_events read {0} of the {1} event(s) count-events ' \
+        'reports for the same filtered window'.format(len(alerts), counted)
+    for alert in alerts:
+        raw = alert['source_payload']
+        assert str(raw.get('classification')).strip() == 'Malicious', raw.get('classification')
+    unfiltered = call_op('count_events', {'lastSeenFrom': window['from'],
+                                          'lastSeenTo': window['to']})['event_count']
+    assert counted <= unfiltered
+
+
 def test_console_incidents_round_trip(call_op):
     result = call_op('get_incidents', {'time_filter': 'Last30days', 'page_size': 10})
     assert result['totalCount'] >= 0

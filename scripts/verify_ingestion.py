@@ -31,7 +31,7 @@ Alerts are left in place -- they are the evidence; delete them by sourceId to
 clean up. The schedule stays disabled unless --enable-schedule is passed.
 
     .venv of a pyfsr checkout: python scripts/verify_ingestion.py \\
-        --instance soar143 --config fortiedr-lab
+        --instance <alias> --config <config-name>
 
 Env (.env.live by default): EDR_DEMO_EVENT_ID (optional) is the tenant's
 long-lived event -- the pinned-firstSeen canary the chain exists to fix.
@@ -115,10 +115,7 @@ def _print_run(tree) -> None:
 
 def _read_macro(client, name: str):
     """The dynamic-variable row for `name`, or None when it does not exist."""
-    resp = client.get("/api/wf/api/dynamic-variable/",
-                      params={"format": "json", "name": name})
-    members = resp.get("hydra:member", []) if isinstance(resp, dict) else []
-    return members[0] if members else None
+    return client.wf_tools.dynamic_variable_record(name)
 
 
 def _alert_rows(client):
@@ -185,8 +182,8 @@ def main(argv=None) -> int:
     sample_uuid = conns.find_sample_ingestion_collection(NAME, version=version)
     if not sample_uuid:
         _fail("the wizard cannot find the bundled Sample collection")
-    coll = client.get(f"/api/3/workflow_collections/{sample_uuid}")
-    print(f"   sample collection: {coll.get('name')!r}")
+    coll = client.workflow_collections.get(sample_uuid)
+    print(f"   sample collection: {coll.name!r}")
     buckets = conns.ingestion_playbooks(NAME, collection=sample_uuid)
     for role in ("fetch", "ingest"):
         pb = getattr(buckets, role, None)
@@ -224,7 +221,7 @@ def main(argv=None) -> int:
     print(f"   fetch_last_minutes was {step_args.get('fetch_last_minutes')!r}, "
           f"time_field {step_args.get('time_field')!r}")
     step_args["fetch_last_minutes"] = str(args.backfill_minutes)
-    client.put(f"/api/3/workflow_steps/{step_uuid}", data={"arguments": step_args})
+    client.records("workflow_steps").update(step_uuid, {"arguments": step_args})
     check = client.playbooks.get_definition(fetch.uuid)
     now_value = next(s for s in (check.get("steps") or [])
                      if s.get("name") == "Configuration")["arguments"]["fetch_last_minutes"]
@@ -240,8 +237,7 @@ def main(argv=None) -> int:
     if args.reset_watermark and before:
         # The same PUT the playbook's Update step makes. Resets a watermark a
         # prior (broken) run advanced past events it never actually read.
-        client.put(f"/api/wf/api/dynamic-variable/{before['id']}/",
-                   data={"name": macro, "value": "0"})
+        client.wf_tools.set_dynamic_variable(macro, "0")
         before = _read_macro(client, macro)
         if str((before or {}).get("value")) != "0":
             _fail(f"--reset-watermark did not stick: {before!r}")

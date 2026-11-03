@@ -119,6 +119,12 @@ front:
 python scripts/install_to_fsr.py --instance <pyfsr-alias> --with-config
 ```
 
+The installer also ensures -- idempotently -- the two appliance settings the
+use-case playbooks' inline-Python steps need: Custom Code Execution on, and a
+default Code Snippet configuration. An appliance missing either refuses the
+sweep/digest/fleet snippet step with `INTEGRATION-12` or the Custom Code
+Execution message (live-caught on 8.0.1).
+
 `scripts/verify_ingestion.py` walks the data ingestion chain end to end with
 the same calls the Data Ingestion Wizard's Finish makes: get-or-create the
 per-configuration ingestion collection, write the Initial Backfill Range into

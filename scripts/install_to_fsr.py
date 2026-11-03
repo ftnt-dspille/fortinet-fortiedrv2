@@ -13,6 +13,14 @@ Repeatable: $replace upgrades in place (connector CONFIGURATIONS survive a
 same-name upgrade); the republish is what clears the stale in-process module
 after an upgrade -- without it uwsgi keeps serving the old code.
 
+The installer also ensures the two appliance prerequisites the use-case
+sample playbooks need for their inline-Python steps: the Custom Code
+Execution setting (a box-settings gate; with it off the step fails with
+"Custom Code Execution is disabled") and a default Code Snippet
+configuration (with none, the step fails with INTEGRATION-12 -- a snippet
+step's config resolves the appliance default at play time). Both are
+idempotent; a refusal is a warned prerequisite gap, not a failed install.
+
 NOTE: installing a connector needs a JWT (username/password) client. An
 API-key alias cannot install -- the install forwards the caller's credential
 to the integrations service as a Bearer token, and an API key is not a JWT,
@@ -25,8 +33,8 @@ credentials for the configuration come from the EDR_* environment (the same
 keys the live test suite reads; see .env.template):
 
     set -a && . .env.live && set +a
-    python scripts/install_to_fsr.py --instance soar143 --with-config
-    python scripts/install_to_fsr.py --instance soar143                # install only
+    python scripts/install_to_fsr.py --instance <alias> --with-config
+    python scripts/install_to_fsr.py --instance <alias>                # install only
 
 Needs a Python with pyfsr installed (pyfsr ships its own venv).
 """
@@ -76,7 +84,7 @@ def _config_values() -> tuple[dict, str] | None:
     None (with a printed reason) when the credentials are missing."""
     server = os.environ.get("EDR_SERVER")
     if not (server and os.environ.get("EDR_USERNAME") and os.environ.get("EDR_PASSWORD")):
-        print("[3] --with-config given but EDR_SERVER / EDR_USERNAME / EDR_PASSWORD "
+        print("[4] --with-config given but EDR_SERVER / EDR_USERNAME / EDR_PASSWORD "
               "are not all set (source .env.live); skipping")
         return None
     cfg = {
@@ -162,12 +170,31 @@ def main(argv=None) -> int:
             print(f"   WARN: worker recycle failed ({type(e).__name__}: {e}); "
                   "workers may serve stale code until the next restart")
 
+    print("[3] ensure the appliance can run the use-case playbooks' inline-Python steps")
+    try:
+        client.system_settings.set_custom_code_execution(True)
+        have_default = any(c.default for c in conns.configurations("code-snippet"))
+        if not have_default:
+            conns.upsert_configuration(
+                "code-snippet",
+                {"allow_imports": False, "restrict_imports": "json,datetime,re,time"},
+                name="Default Configuration", default=True)
+        print("   custom code execution enabled; code-snippet default config "
+              + ("already present" if have_default else "created"))
+
+    except Exception as e:  # noqa: BLE001 -- install succeeded; these are playbook prerequisites
+        print(f"   WARN: could not ensure the snippet prerequisites "
+              f"({type(e).__name__}: {e}); the sweep/digest/fleet playbooks "
+              "will refuse at their snippet step until an admin enables "
+              "Custom Code Execution and creates a default Code Snippet "
+              "configuration")
+
     if args.with_config:
         built = _config_values()
         if built is None:
             return 0
         cfg_values, desc = built
-        print(f"[3] create/refresh config {args.config_name!r} ({desc})")
+        print(f"[4] create/refresh config {args.config_name!r} ({desc})")
         try:
             cfg = conns.upsert_configuration(
                 NAME, cfg_values, name=args.config_name, version=version,
@@ -178,7 +205,7 @@ def main(argv=None) -> int:
         cid = (cfg.get("config_id") or cfg.get("id")) if hasattr(cfg, "get") else getattr(cfg, "config_id", None)
         print(f"   config_id={cid}")
         if not args.no_health:
-            print(f"[4] health check {NAME} with config {args.config_name!r}")
+            print(f"[5] health check {NAME} with config {args.config_name!r}")
             time.sleep(3)  # let the recycled workers pick the module
             try:
                 result = conns.healthcheck(NAME, config=args.config_name)

@@ -256,22 +256,44 @@ def _dedupe_rows(rows: List[dict]) -> List[dict]:
     return merged
 
 
+def _filter_value(value: Any) -> Any:
+    """One pull-filter value in the shape the events query takes.
+
+    The ingestion wizard and the action forms deliver lists and strings
+    inconsistently (a multiselect can arrive either way), the query key
+    itself is the API's comma-separated form, and a blank value means
+    "not filtering on this axis": join lists on commas, strip whitespace,
+    and let the caller drop what is left empty.
+    """
+    if isinstance(value, (list, tuple, set)):
+        value = ','.join(str(v) for v in value if str(v).strip())
+    if isinstance(value, str):
+        value = value.strip()
+    return value
+
+
 def fetch_window_events(client: FortiEDRClient, from_value, to_value: Optional[str] = None,
                         filters: Optional[Dict[str, Any]] = None,
                         cap: int = MAX_EVENTS_PER_RUN,
                         time_field: str = DEFAULT_TIME_FIELD) -> List[Event]:
-    """Fetch EVERY event with activity in [from, to], count-verified.
+    """Fetch EVERY event matching [from, to] and the optional filters, count-verified.
 
     The count is checked against the cap first (a window too big is an
     error, never a silent trim), the window is read with the count-verified
     fetch, the merged rows are deduplicated (split halves share their
     midpoint on purpose), and a fetch still short of the count is an error:
     the pull never reports a partial window.
+
+    ``filters`` merge into the ONE query both count-events and list-events
+    answer, so the count-verify holds on the filtered window. Blank filters
+    are dropped; a wizard multiselect arriving as a list joins into the
+    API's comma-separated form (``_filter_value``).
     """
     from_key, to_key = TIME_FIELD_MAP[time_field]
     query: Dict[str, Any] = {from_key: from_value, to_key: to_value}
     if filters:
-        query.update({k: v for k, v in filters.items() if v not in (None, '')})
+        query.update({k: _filter_value(v) for k, v in filters.items()
+                      if _filter_value(v) not in (None, '', False)})
 
     count = _count_window(client, query)
     if count > cap:
@@ -291,7 +313,17 @@ def fetch_window_events(client: FortiEDRClient, from_value, to_value: Optional[s
 
 
 def ingest_events(config, params) -> List[Dict[str, Any]]:
-    """Op: fetch every event in [from, to] and map them to alert payloads."""
+    """Op: fetch every event in [from, to] and map them to alert payloads.
+
+    Optional pull filters (``classifications``, ``severities``, ``device``,
+    ``collector_groups``, ``organization``) narrow the one query the count
+    and the fetch share, so the count-verify holds on the filtered window.
+    THE WATERMARK CONTRACT: a filtered pull advances past non-matching
+    events in the window on purpose -- the wizard's filter must be set
+    before the first pull and then kept stable, or events skipped by an
+    earlier filter are never re-read (ingestion filters, unlike search,
+    are forever).
+    """
     from_value = params.get('from')
     if not from_value:
         raise ConnectorError("'from' (window start) is required for ingest_events")
@@ -301,6 +333,8 @@ def ingest_events(config, params) -> List[Dict[str, Any]]:
         client, from_value, params.get('to'),
         filters={'classifications': params.get('classifications'),
                  'severities': params.get('severities'),
+                 'device': params.get('device'),
+                 'collectorGroups': params.get('collector_groups'),
                  'organization': params.get('organization'),
                  'archived': params.get('archived')},
         cap=_max_events(params), time_field=time_field)
