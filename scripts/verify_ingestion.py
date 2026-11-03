@@ -14,12 +14,19 @@ field, down to the schedule-name convention the ingestion screen matches on):
      (``--backfill-minutes``) exactly the way the wizard's Finish writes the
      form's Initial Backfill Range into the deployed playbook;
   4. Trigger Ingestion Now -- ``trigger_ingestion`` fires the ingest clone;
-     assert the run finishes clean, the watermark macro advances, and alerts
-     appear in the module;
-  5. alerts content -- every written alert carries sourceId == the FortiEDR
-     eventId, the rich-text card in its description, and the mapped payload
-     in sourcedata; the configured long-lived event proves the defect fix:
-     alert_generation_epoch (pinned firstSeen) < last_observed_epoch;
+     assert the run finishes clean with no errored steps and the watermark
+     macro advances;
+  5. run vouching -- assert MEASURED facts, never remembered shapes: the
+     run's own full step results (``get_execution`` with ``step_detail``, by
+     the run pk the tree already resolved) must show Create Record wrote
+     exactly the rows Fetch Events read, and the module must cover every
+     fetched eventId. That form passes a first-time create pass, an upsert
+     refresh on an already-ingested box, and a legitimately empty window
+     alike, so re-runs cannot premise-drift and every FAIL prints its own
+     numbers. The covered rows are then content-checked (sourceId ==
+     eventId, the rich-text card in description, sourcedata JSON,
+     alert_generation_epoch <= last_observed_epoch; the configured
+     long-lived event proves the pinned-firstSeen defect fix);
   6. dedup -- fire ingestion again: the re-read window must not duplicate or
      duplicate alerts (the upsert on sourceId), and the macro advances again;
   7. env_setup probe -- fire the ingest clone the way the wizard's mapping
@@ -130,6 +137,33 @@ def _alert_rows(client):
         if rec.get("source") == SOURCE:
             rows.append(rec)
     return rows
+
+
+def _full_steps(client, run_pk: str):
+    """A run's steps WITH their uncut results, as (name, result, status).
+
+    ``run_tree`` trims each step result to a preview on purpose, but the
+    uncut blobs ride in the same execution record -- one ``get_execution``
+    call away, by the pk the tree already resolved. Reading them at assert
+    time is the fast-fail contract: phase 5 derives its verdict from what
+    the run itself read and wrote, so a failure prints measured evidence
+    instead of a guess that needs another run to pick between.
+
+    Fast-fail note: passing a task uuid straight here 500s -- resolve it
+    first (``run_tree`` does, and returns the pk on the node).
+    """
+    full = client.playbooks.get_execution(run_pk, step_detail=True)
+    out = []
+    for s in full.get("steps") or []:
+        if not isinstance(s, dict):
+            continue
+        name = s.get("name")
+        if not name:
+            md = s.get("metadata") or {}
+            name = (md.get("metadata") or {}).get("name") or md.get("name")
+        if name:
+            out.append((name, s.get("result"), s.get("status")))
+    return out
 
 
 def main(argv=None) -> int:
@@ -245,7 +279,7 @@ def main(argv=None) -> int:
 
     # ---------------------------------------------------------------- [4] ingest 1
     print("[4] Trigger Ingestion Now (first pass, cold watermark)")
-    before_ids = {r.get("sourceId") for r in _alert_rows(client)}
+    before_ids = {str(r.get("sourceId")) for r in _alert_rows(client)}
     resp = conns.trigger_ingestion(NAME, config=args.config)
     task_id = (resp or {}).get("task_id") if isinstance(resp, dict) else None
     if not task_id:
@@ -266,19 +300,48 @@ def main(argv=None) -> int:
     if wm1 in ("", "0", "initial"):
         _fail(f"watermark not advanced by the ingest run: {wm1!r}")
 
-    # ---------------------------------------------------------------- [5] alerts content
-    print("[5] alert content (upsert on sourceId == eventId, rich-text card)")
+    # ---------------------------------------------------------------- [5] run vouching
+    print("[5] the run vouches: writes N for N read, and the module covers N")
     rows = _alert_rows(client)
-    new_rows = [r for r in rows if r.get("sourceId") not in before_ids]
-    if not new_rows:
-        _fail("the first ingest run created no alerts "
-              "(window empty or Create Record failed)")
-    print(f"   alerts from this connector: {len(rows)} total, {len(new_rows)} new")
     ids = [r.get("sourceId") for r in rows]
     if len(set(ids)) != len(ids):
         _fail("duplicate alerts for one sourceId -- upsert did not dedup")
+    by_source = {str(r.get("sourceId")): r for r in rows}
+
+    run_pk = getattr(tree, "pk", None)
+    if not run_pk:
+        _fail(f"run {task_id} did not resolve to an execution record; "
+              "its round trip cannot be audited")
+    events, written, seen = [], [], set()
+    for name, result, _status in _full_steps(client, run_pk):
+        seen.add(name)
+        if name == "Fetch Events" and isinstance(result, dict):
+            events = result.get("data") or []
+        elif name == "Create Record" and isinstance(result, list):
+            written = result
+    if not {"Fetch Events", "Create Record"} <= seen:
+        _fail(f"the run record has no Fetch Events / Create Record result to audit "
+              f"(steps seen: {sorted(seen)})")
+    fetched = {str(e.get("external_id")) for e in events if e.get("external_id")}
+    created, refreshed = fetched - before_ids, fetched & before_ids
+    note = (f"measured: {len(events)} event(s) read -> {len(written)} row(s) "
+            f"written, {len(created)} created / {len(refreshed)} upsert-refreshed")
+    if not fetched:
+        print(f"   clean no-op pass: the window held no events "
+              f"(a legitimate quiet-window pull); {note}")
+    else:
+        if len(written) != len(events):
+            _fail(f"Create Record wrote {len(written)} row(s) for the {len(events)} "
+                  f"event(s) Fetch Events returned -- a short write; {note}")
+        missing = fetched - set(by_source)
+        if missing:
+            _fail(f"{len(missing)} fetched event(s) have no alert row "
+                  f"(first missing: {sorted(missing)[:3]}) -- a short read; {note}")
+        print(f"   {note}; alert set {len(rows)} row(s), every fetched event covered")
+
+    checked = [by_source[i] for i in fetched if i in by_source]
     bad = []
-    for r in new_rows:
+    for r in checked:
         desc = r.get("description") or ""
         if "<table" not in desc or "border-collapse" not in desc:
             bad.append(f"{r.get('sourceId')}: description is not the rich-text card")
@@ -296,8 +359,9 @@ def main(argv=None) -> int:
             bad.append(f"{r.get('sourceId')}: sourcedata not JSON: {e}")
     if bad:
         _fail("; ".join(bad))
-    print("   every alert: sourceId == payload external_id, generation <= observation, "
-          "card markup in description")
+    if checked:
+        print("   every vouched alert: sourceId == payload external_id, "
+              "generation <= observation, card markup in description")
 
     import os
     demo_id = os.environ.get("EDR_DEMO_EVENT_ID")
@@ -329,6 +393,10 @@ def main(argv=None) -> int:
     if status != "finished":
         _print_run(tree)
         _fail(f"ingest-2 did not finish cleanly: status={status!r} err={err!r}")
+    errored = _collect_errors(tree)
+    if errored:
+        _print_run(tree)
+        _fail(f"ingest-2 has errored steps: {errored}")
     rows2 = _alert_rows(client)
     ids2 = [r.get("sourceId") for r in rows2]
     if len(ids2) != len(rows):
@@ -374,11 +442,10 @@ def main(argv=None) -> int:
                         outcome = ("preview branch: the action route delivers "
                                    "body keys into vars.request")
                     elif "Create Record" in names:
-                        outcome = ("REAL ingest branch (live-observed: the record-action"
-                                   " route does not deliver env keys into vars.request,"
-                                   " so only the UI wizard's own Data Mapping preview"
-                                   " exercises the sample branch; this probe's run is"
-                                   " an idempotent upsert)")
+                        outcome = ("REAL ingest branch (env keys did not reach "
+                                   "vars.request on this delivery, so the mapping "
+                                   "preview needs the UI wizard's own Data Mapping "
+                                   "page; this probe's run is an idempotent upsert)")
                     else:
                         outcome = f"unknown branch; steps ran: {names}"
                     if status != "finished":
