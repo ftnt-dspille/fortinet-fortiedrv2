@@ -225,6 +225,187 @@ def test_the_watermark_moves_only_after_the_alerts_are_written():
     assert 'Ingest Events -> Save Result' in fetch_routes
 
 
+# --------------------------------------------------------------------------- use-case contract
+
+def _use_cases():
+    """The second collection: operational use cases, no ingestion surface."""
+    return next(c for c in PLAYBOOKS['data'] if c['name'].endswith('Use Cases - ' + INFO['version']))
+
+
+def _uc_flow(name):
+    return next(w for w in _use_cases()['workflows'] if w['name'] == name)
+
+
+def _uc_step(workflow, step):
+    return next(s for s in _uc_flow(workflow)['steps'] if s['name'] == step)
+
+
+def test_two_collections_ship_and_only_the_chain_is_wizard_visible():
+    assert len(PLAYBOOKS['data']) == 2
+    use_cases = _use_cases()
+    assert use_cases['name'].endswith(INFO['version'])
+    # The wizard discovers its chain by these tags; a use-case collection
+    # carrying any of them would be offered as an ingestion configuration.
+    for tags in (use_cases['recordTags'], PLAYBOOKS['exported_tags'][6:]):
+        assert 'dataingestion' not in tags, tags
+    assert {'fetch', 'ingest', 'create'} & set(use_cases['recordTags']) == set()
+    assert use_cases['visible'] is True
+    assert [w['name'] for w in use_cases['workflows']] == [
+        'FortiEDR v2 > Triage to Isolation',
+        'FortiEDR v2 > Collect Evidence',
+        'FortiEDR v2 > Allow Event (Time-Limited)',
+        'FortiEDR v2 > Exception Expiry Sweep',
+        'FortiEDR v2 > Re-detection Digest',
+        'FortiEDR v2 > IOC Retro-Hunt',
+        'FortiEDR v2 > Fleet Compliance Audit',
+    ]
+
+
+def test_triage_refreshes_the_event_and_gates_isolation_on_a_record_action():
+    flow = _uc_flow('FortiEDR v2 > Triage to Isolation')
+    start = flow['steps'][0]
+    assert start['arguments']['resources'] == ['alerts']
+    # a per-record action: singleRecordExecution, not the no-record mass action
+    assert start['arguments']['singleRecordExecution'] is True
+    assert start['arguments']['noRecordExecution'] is False
+    # the refresh runs BEFORE any human decision, so the analyst sees current
+    # severity and the collector device, not the ingested snapshot
+    routes = {r['name'] for r in flow['routes']}
+    assert 'Get Event -> Event Resolved' in routes
+    assert 'Check Existing Exceptions -> Collect Evidence' in routes
+    assert 'Collect Evidence -> Isolation Approval' in routes
+    approval = _uc_step('FortiEDR v2 > Triage to Isolation', 'Isolation Approval')
+    assert approval['arguments']['is_approval'] is True
+    options = approval['arguments']['response_mapping']['options']
+    assert [o['option'] for o in options] == ['Isolate Device', 'Skip Isolation']
+    isolate = _uc_step('FortiEDR v2 > Triage to Isolation', 'Isolate Collector')
+    assert (isolate['arguments']['operation'] == 'isolate_collector'
+            and isolate['arguments']['params']['type'] == 'Name'
+            and isolate['arguments']['params']['devices'] == '{{ vars.device }}')
+    # both outcomes land on the alert as a comment carrying the operator's note:
+    # approve and decline are indistinguishable as audit trails otherwise
+    for step_name, fragment in (
+        ('Isolation Audit', 'isolated collector {{ vars.device }}'),
+        ('Declined', 'isolation of {{ vars.device }} declined'),
+    ):
+        content = _uc_step('FortiEDR v2 > Triage to Isolation', step_name)['arguments']['message']['content']
+        assert 'Isolation_Approval.input.decision_note' in content
+        assert fragment in content
+
+
+def test_evidence_bag_addresses_the_events_own_binary():
+    # the parent passes explicit ids; the record action falls back to the alert
+    resolve = _uc_step('FortiEDR v2 > Collect Evidence', 'Resolve Inputs')
+    rendered = resolve['arguments']['event_id']
+    assert "vars.input.params.event_id" in rendered
+    assert "vars.input.records[0].sourceId" in rendered
+    # a memory pull needs processId/ranges the events API never exposes, so
+    # the automated bag is the event's own process file
+    bag = _uc_step('FortiEDR v2 > Collect Evidence', 'Bag Context')['arguments']
+    assert 'processPath' in bag['bag_file_path']
+    collect = _uc_step('FortiEDR v2 > Collect Evidence', 'Collect File')
+    params = collect['arguments']['params']
+    assert collect['arguments']['operation'] == 'get_event_file'
+    assert params['retrieve_from'] == 'Disk'
+    assert params['filePaths'] == '{{ vars.bag_file_path }}'
+    assert collect['arguments']['ignore_errors'] is True, \
+        'an offline collector kills the parent triage otherwise'
+    link = _uc_step('FortiEDR v2 > Collect Evidence', 'Link Evidence')['arguments']
+    assert "__link" in link['resource'], 'a plain fields-write would replace existing attachments'
+    assert link['collection'] == '{{ vars.record_id }}'
+
+
+def test_allow_event_encodes_the_expiry_in_the_rule_comment():
+    compute = _uc_step('FortiEDR v2 > Allow Event (Time-Limited)', 'Compute Expiry')['arguments']
+    assert compute['exception_comment'].startswith("fortiedrv2-managed expires={{ arrow.utcnow()")
+
+    create = _uc_step('FortiEDR v2 > Allow Event (Time-Limited)', 'Create Exception')['arguments']
+    assert create['operation'] == 'create_exception'
+    assert create['params']['comment'] == '{{ vars.exception_comment }}'
+    assert create['params']['allCollectorGroups'] == 'All Collector Groups'
+    # a second allow over existing rules is how permanent exceptions multiply;
+    # the existing-exceptions branch refuses before the form is ever shown
+    routes = {r['name'] for r in _uc_flow('FortiEDR v2 > Allow Event (Time-Limited)')['routes']}
+    assert 'Existing Exceptions -> Rule Exists Audit' in routes
+    assert 'Existing Exceptions -> Expiry Form' in routes
+
+
+def test_expiry_sweep_deletes_ids_only_and_never_foreign_rules():
+    script = _uc_step('FortiEDR v2 > Exception Expiry Sweep', 'Find Expired')['arguments']['params']['python_function']
+    # the marker prefix selects this framework's rules -- a hand-built console
+    # rule must be counted, never deleted
+    assert 'marker in c' in script
+    assert "int(parsed) >= now_epoch" in script, 'rules still in their window are kept'
+    # LIVE PIN, encoded as a pin: the delete endpoint's `comment` parameter is
+    # a filter, not a note -- a delete carrying a comment deletes only rules
+    # whose comment matches it, so an audit note there deletes NOTHING. The
+    # delete therefore carries identifiers alone.
+    params = _uc_step('FortiEDR v2 > Exception Expiry Sweep', 'Delete Expired')['arguments']['params']
+    assert set(params) == {'exceptionIds'}
+    assert params['exceptionIds'] == '{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv }}'
+    # the delete never runs on an empty result
+    routes = {r['name'] for r in _uc_flow('FortiEDR v2 > Exception Expiry Sweep')['routes']}
+    assert 'Expired Found -> Delete Expired' in routes
+    assert 'Expired Found -> Sweep Summary' in routes
+
+
+def test_redetection_digest_ranks_long_runners_and_files_a_task():
+    incidents = _uc_step('FortiEDR v2 > Re-detection Digest', 'Get Incidents')['arguments']['params']
+    assert incidents['time_filter'] == 'Last30days'
+    assert incidents['status_filter'] == 'Unhandled'
+    assert incidents['type_filter'] == 'SecurityEvents'
+    script = _uc_step('FortiEDR v2 > Re-detection Digest', 'Rank Incidents')['arguments']['params']['python_function']
+    # integer-only crossing: booleans from tojson would be sandbox syntax errors
+    assert "map(attribute='eventsNum')" in script
+    assert 'rows.sort(reverse=True)' in script
+    task = _uc_step('FortiEDR v2 > Re-detection Digest', 'Digest Task')['arguments']['resource']
+    assert task['status'] == 'Open'
+    assert task['description'] == '{{ vars.steps.Rank_Incidents.data.code_output.digest_html }}'
+
+
+def test_retrohunt_upserts_alerts_without_moving_detection_date():
+    flow = _uc_flow('FortiEDR v2 > IOC Retro-Hunt')
+    start = flow['steps'][0]
+    assert [v['name'] for v in start['arguments']['inputVariables']] == ['file_hash']
+    hunt = _uc_step('FortiEDR v2 > IOC Retro-Hunt', 'Hunt Hash')['arguments']
+    assert hunt['params']['fileHashes'] == '{{ vars.input.params.file_hash }}'
+    events = _uc_step('FortiEDR v2 > IOC Retro-Hunt', 'Create Hunt Alerts')['arguments']
+    assert events['collection'] == '/api/3/upsert/alerts'
+    assert events['for_each']['__bulk'] is True
+    source = dict(events['resource'])
+    bare = {k: v for k, v in source.items() if not k.startswith('__')}
+    # THE history pin: a hunt run months later re-annotates the alert but
+    # never rewrites the incident's recorded first detection
+    assert 'alertDetectionDate' not in bare
+    assert 'alertDetectionDate' not in source['__fieldsToUpdate']
+    assert source['sourceId'] == '{{ vars.item.eventId }}'
+    assert source['source'] == 'Fortinet FortiEDR'
+    # the search answers event ids; the full rows come from one event-list
+    # call with the ids joined, not a per-hit fetch
+    fetch = _uc_step('FortiEDR v2 > IOC Retro-Hunt', 'Get Hunt Events')['arguments']['params']
+    assert fetch['eventIds'] == "{{ vars.steps.Hunt_Hash.data[0].eventIds | join(',') }}"
+
+
+def test_fleet_audit_compares_against_installers_and_gates_the_upgrade():
+    fleet = _uc_step('FortiEDR v2 > Fleet Compliance Audit', 'Get Fleet')['arguments']
+    assert 'organization' not in fleet.get('params', {}), \
+        'blank organization defaults server-side to the configured organization'
+    installers = _uc_step('FortiEDR v2 > Fleet Compliance Audit', 'Get Installers')['arguments']['params']
+    assert installers == {'organization': ''}
+    script = _uc_step('FortiEDR v2 > Fleet Compliance Audit', 'Audit Fleet')['arguments']['params']['python_function']
+    assert 'availableCollectorInstallers' in script
+    assert 'inst_ver[j] > latest[fam]' in script, 'component version comparison, string compare lies about 6.1.10 vs 6.1.9'
+    # commerce lives behind an approval with an explicit target version
+    routes = {r['name'] for r in _uc_flow('FortiEDR v2 > Fleet Compliance Audit')['routes']}
+    assert 'Staging Offered -> Upgrade Approval' in routes
+    assert 'Staging Offered -> Audit Summary' in routes
+    mapped = _uc_step('FortiEDR v2 > Fleet Compliance Audit', 'Map Installer')['arguments']['update_versions']
+    assert "allow_downgrade == 'True'" in mapped, \
+        'the selection arrives as a string; the wire needs a real boolean'
+    stage = _uc_step('FortiEDR v2 > Fleet Compliance Audit', 'Stage Upgrade')['arguments']['params']
+    assert stage['updateVersions'] == '{{ vars.update_versions }}'
+
+
 # --------------------------------------------------------------------------- transport / config
 
 def test_org_qualified_username_and_https(edr):
@@ -1086,3 +1267,21 @@ def test_files_are_latin1_safe():
         except (UnicodeEncodeError, UnicodeDecodeError):
             bad.append(rel)
     assert bad == [], f"files with non-latin-1 code points: {bad}"
+
+
+def test_playbook_sources_carry_no_tenant_specifics():
+    """The use-case playbooks were authored against a live demo tenant, and
+    the tenant is the one thing that must not leak: no hostnames or device
+    names, no event ids, no IP literals, no capture dates -- anything a
+    reader could use to identify the tenant the samples were tested on.
+    Server behaviors (parameter semantics, response shapes) are fine; the
+    tenant's identity is not."""
+    text = (REPO / 'playbooks' / 'use_cases.yaml').read_text() + json.dumps(_use_cases())
+    forbidden = [
+        r'\b\d{1,3}(\.\d{1,3}){3}\b',          # IP literals
+        r'\b(?:19|20)\d{2}-(?:0\d|1[0-2])-(?:[0-2]\d|3[01])\b',  # capture dates
+        r'\b1[45]\d{5}\b',                      # 7-digit tenant event ids
+        r'fortiedr\.com', r'\bPalm\b', r'The-Flame', r'jlocke',
+    ]
+    for pattern in forbidden:
+        assert re.search(pattern, text) is None, pattern

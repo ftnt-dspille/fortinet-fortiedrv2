@@ -14,9 +14,15 @@ is expressed natively in the YAML dialect:
      the canonical ``route``/``resources``/``displayConditions``/...
      ``noRecordExecution``/``singleRecordExecution`` shape.
 
-The only post-compile work left is deterministic housekeeping: stamping the
-sample collection name with the version from ``info.json`` and pinning
+The only post-compile work left is deterministic housekeeping: stamping every
+sample collection's name with the version from ``info.json`` and pinning
 ``lastModifyDate`` so a rebuild is byte-identical.
+
+The output lists BOTH collections FortiSOAR installs with the connector: the
+ingestion chain (playbooks.yaml) and the operational use cases
+(use_cases.yaml). Both compile, then merge -- the use-cases collection
+carries no dataingestion/fetch/ingest/create tags, so the Data Ingestion
+Wizard never mistakes it for an ingestion candidate.
 
 Usage:  python playbooks/build.py [--fsrpb /path/to/fsrpb]
 """
@@ -31,6 +37,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 YAML_IN = HERE / "playbooks.yaml"
+USE_CASES_IN = HERE / "use_cases.yaml"
 JSON_OUT = HERE / "playbooks.json"
 
 CONNECTOR = "fortinet-fortiedrv2"
@@ -50,7 +57,10 @@ def _freeze_timestamps(doc):
     reproducible-builds convention.
     """
     epoch = os.environ.get("SOURCE_DATE_EPOCH")
-    stamp = int(epoch) if epoch and epoch.isdigit() else int(YAML_IN.stat().st_mtime)
+    stamp = int(epoch) if epoch and epoch.isdigit() else max(
+        YAML_IN.stat().st_mtime,
+        USE_CASES_IN.stat().st_mtime if USE_CASES_IN.exists() else 0,
+    )
 
     def walk(node):
         if isinstance(node, dict):
@@ -91,35 +101,57 @@ def main():
     ap.add_argument("--fsrpb", default="fsrpb", help="path to the fsrpb executable")
     args = ap.parse_args()
 
-    def _compile(lax):
-        cmd = [args.fsrpb, "compile", str(YAML_IN), "-o", str(JSON_OUT)]
+    sources = [YAML_IN]
+    if USE_CASES_IN.exists():
+        sources.append(USE_CASES_IN)
+    tmp_paths = [HERE / f".build_{i}.tmp.json" for i in range(len(sources))]
+
+    def _compile(idx, lax=False):
+        cmd = [args.fsrpb, "compile", str(sources[idx]), "-o", str(tmp_paths[idx])]
         if lax:
             cmd.insert(3, "--lax")
         return subprocess.run(cmd, capture_output=True, text=True)
 
-    proc = _compile(lax=False)
-    if proc.returncode != 0 and "unknown connector" in (proc.stdout + proc.stderr):
-        # The reference store has not been told about this connector yet, so
-        # every step referencing it fails validation. Fall back to --lax so the
-        # build still works, but say how to fix it properly - under --lax a
-        # genuinely misspelled operation slips through as a warning too.
-        sys.stderr.write(
-            f"warning: the fsrpb catalog does not know {CONNECTOR!r}; compiling "
-            f"with --lax, which also demotes real typos to warnings.\n"
-            f"         fix: fsrpb provision {HERE.parent}\n",
-        )
-        proc = _compile(lax=True)
-    if proc.returncode != 0:
-        sys.stderr.write(proc.stdout + proc.stderr)
-        return proc.returncode
+    doc = None
+    for idx, yaml_in in enumerate(sources):
+        proc = _compile(idx)
+        if proc.returncode != 0 and "unknown connector" in (proc.stdout + proc.stderr):
+            # The reference store has not been told about this connector yet, so
+            # every step referencing it fails validation. Fall back to --lax so the
+            # build still works, but say how to fix it properly - under --lax a
+            # genuinely misspelled operation slips through as a warning too.
+            sys.stderr.write(
+                f"warning: the fsrpb catalog does not know {CONNECTOR!r}; compiling "
+                f"{yaml_in.name} with --lax, which also demotes real typos to warnings.\n"
+                f"         fix: fsrpb provision {HERE.parent}\n",
+            )
+            proc = _compile(idx, lax=True)
+        if proc.returncode != 0:
+            sys.stderr.write(proc.stdout + proc.stderr)
+            return proc.returncode
+        part = json.loads(tmp_paths[idx].read_text())
+        if doc is None:
+            doc = part
+        else:
+            # Merge: the appliance imports one playbook.json listing every
+            # collection. The chain stays first (it is what the Data Ingestion
+            # Wizard scans), and the exported tag union covers both.
+            doc["data"].extend(part["data"])
+            for tag in part.get("exported_tags") or []:
+                if tag not in (doc.get("exported_tags") or []):
+                    doc.setdefault("exported_tags", []).append(tag)
 
-    doc = json.loads(JSON_OUT.read_text())
+    for tmp in tmp_paths:
+        tmp.unlink(missing_ok=True)
+
     doc = _sync_collection_version(doc)
     doc = _freeze_timestamps(doc)
     JSON_OUT.write_text(json.dumps(doc, indent=2) + "\n")
 
     total = sum(len(c.get("workflows", [])) for c in doc.get("data", []))
-    print(f"wrote {JSON_OUT} ({total} playbooks, exported_tags={doc.get('exported_tags')})")
+    collections = ", ".join(c.get("name", "?") for c in doc.get("data", []))
+    print(f"wrote {JSON_OUT} ({total} playbooks in {len(doc.get('data', []))} collections: {collections})")
+    print(f"     exported_tags={doc.get('exported_tags')}")
     return 0
 
 

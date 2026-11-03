@@ -1,5 +1,82 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.0
+
+Operational use cases: **the connector now ships a second, seven-playbook
+collection -- `Sample - Fortinet FortiEDR v2 Use Cases` -- covering triage
+and response, forensics, exception governance, reporting, hunting, and
+fleet compliance.** Same authoring bar as the ingestion chain: strict-compiled
+against the pinned fsrpb catalog, offline-pinned in the suite, and every
+branch live-driven on a demo tenant before release. The collection carries
+`usecase` tags and deliberately NOT the wizard's
+`dataingestion`/`fetch`/`ingest`/`create` tags, so the wizard never offers
+it as an ingestion configuration.
+
+The playbooks:
+
+- **Triage to Isolation** (record action on an alert): re-reads the live
+  event -- severity and the collector may have moved under the static
+  ingested card -- warns about exceptions already muting the event, bags
+  the binary, then gates `isolate_collector` behind an approval whose
+  outcome (approve or decline, plus the reason) lands on the alert as a
+  comment.
+- **Collect Evidence** (record action, chained into Triage): pulls the
+  binary the event fired on (`get-event-file`, Disk mode, addressed by the
+  event's own process path and raw-event anchor), uploads it as an
+  appliance attachment, and APPENDS it to the alert with the platform's
+  `__link` primitive -- a plain fields-write would replace existing
+  attachments. A memory pull needs `processId`/`startRange`/`endRange`
+  anchors the events API never exposes (checked against the raw-data
+  export), so automatic memory dumps stay a console action; an offline
+  collector degrades to a comment instead of a dead run.
+- **Allow Event (Time-Limited)** (record action): FortiEDR's exception API
+  has no expiry -- a rule created today is permanent. This wraps
+  `create_exception` with a validity window encoded in the rule's own
+  comment (`fortiedrv2-managed expires=<epoch>`, the only ledger both the
+  console and the sweep can read), refuses to stack a second allow over
+  existing rules, and records the terms on the alert.
+- **Exception Expiry Sweep** (scheduled/manual): lists every exception,
+  keeps managed rules still in their window, counts -- never touches --
+  unmanaged rules, and deletes the expired managed ones via the v2-only
+  `delete_exception`. The delete sends exception IDs and nothing else:
+  the endpoint's `comment` parameter is a FILTER, not a note (live-observed
+  -- a delete carrying a non-matching comment deletes nothing), and the
+  organization argument narrows the request the same way.
+- **Re-detection Digest** (scheduled/manual): the ingestion defect, told as
+  a report. FortiEDR pins an event's `firstSeen` at its first detection, so
+  an incident that has been quietly live for weeks is invisible to anything
+  incremental-first-seen. This ranks console incidents by how many
+  detections each is still absorbing and files the digest as a FortiSOAR
+  task for the SOC queue.
+- **IOC Retro-Hunt** (Execute-menu action, one hash input): sweeps current
+  events, the threat-hunting repository and communicating applications via
+  the file-hash search, then upserts one alert per hit event through the
+  SAME sourceId = eventId contract the ingestion chain uses -- repeats
+  annotate, never duplicate. The hunt deliberately never writes
+  `alertDetectionDate`: a hunt that runs months later must not rewrite the
+  incident's recorded first detection.
+- **Fleet Compliance Audit** (scheduled/manual): reads the collector fleet
+  and the available installers, computes per-OS-family installed-vs-
+  available (component-wise, 6.1.10 over 6.1.9), files a digest task, and
+  when the fleet lags offers an approval-gated `update_collector_installer`
+  staging step with an explicit target version and scope.
+
+Schema corrections riding along (both live-observed):
+
+- `get_collector_installers`' organization is no longer marked required --
+  the server lists the connector configuration's own organization when it
+  is blank, which is exactly what the sample fleet playbook relies on; the
+  declared requiredness uncompilable-blank only made failure harder to read.
+- The organization SELECT VALUE `"All organizations"` is rejected
+  server-side as a name on the tenant-listing endpoints (collectors,
+  exceptions); the samples pass a blank or the exact organization name, and
+  the fields' descriptions now say so.
+
+Also in this release: `playbooks/build.py` compiles BOTH sample collections
+(the chain from `playbooks.yaml`, the use cases from `playbooks/use_cases.yaml`)
+and merges them into the single `playbooks.json` the appliance imports, with
+the version stamped on both collection names from `info.json`.
+
 ## 1.0.1
 
 Scheduled ingestion fix: **the window fetch no longer pages

@@ -22,7 +22,7 @@ DEFAULT_STOCK = (Path.home() / 'PycharmProjects/Miscellaneous/fortisoar/corpus_b
                  'fortisoar-rpm-extracted/fortinet-fortiedr/fortinet-fortiedr/info.json')
 
 NAME = 'fortinet-fortiedrv2'
-VERSION = '1.0.1'
+VERSION = '1.1.0'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,
@@ -263,6 +263,24 @@ def main():
             if isinstance(schema, list) and schema and isinstance(schema[0], dict):
                 schema[0].setdefault('firstSeenEpoch', 0)
                 schema[0].setdefault('lastSeenEpoch', 0)
+
+    # The stock schema marks get_collector_installers.organization required,
+    # but the server does not: a request with it blank lists installers for
+    # the connector's OWN configured organization (live-verified -- the
+    # sample fleet playbook relies on exactly that default). The declared
+    # requiredness made a blank-organization playbook uncompilable and an
+    # on-box failure harder, not easier, to understand.
+    for op in info['operations']:
+        if op['operation'] == 'get_collector_installers':
+            for field in op.get('parameters') or []:
+                if field.get('name') == 'organization' and field.get('required'):
+                    field['required'] = False
+                    field['description'] = ('Optional. Blank lists the installers of the '
+                                             'connector configuration\'s own organization; '
+                                             'fill only to read another organization. '
+                                             'The select value "All organizations" is '
+                                             'rejected by the server as a name.')
+                    field['tooltip'] = field['description']
 
     out = REPO / 'info.json'
     out.write_text(json.dumps(info, indent=2, sort_keys=False) + '\n')

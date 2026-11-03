@@ -7,12 +7,13 @@
     "dataingestion",
     "fetch",
     "create",
-    "ingest"
+    "ingest",
+    "usecase"
   ],
   "data": [
     {
       "@type": "WorkflowCollection",
-      "name": "Sample - Fortinet FortiEDR v2 - 1.0.1",
+      "name": "Sample - Fortinet FortiEDR v2 - 1.1.0",
       "description": "Sample playbooks for the \"Fortinet FortiEDR v2\" connector. If you are planning to use the sample playbooks in your environment, ensure that you clone those playbooks and move them to a different collection, since the sample playbook collection gets deleted during connector upgrade and delete.",
       "visible": true,
       "image": null,
@@ -43,7 +44,7 @@
             "overrideIfNoMatch"
           ],
           "synchronous": false,
-          "lastModifyDate": 1793664001,
+          "lastModifyDate": 1793713231.2585819,
           "collection": "/api/3/workflow_collections/feeedee1-cd25-5fa4-8ee3-0505dae3021a",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/2530eaeb-936c-5322-863a-a46118cfceab",
@@ -264,7 +265,7 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793664001,
+          "lastModifyDate": 1793713231.2585819,
           "collection": "/api/3/workflow_collections/feeedee1-cd25-5fa4-8ee3-0505dae3021a",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/5ac64f7d-02e1-53b0-b929-6b25913a9903",
@@ -385,7 +386,7 @@
                   "time_field": "{{vars.time_field}}",
                   "max_events": "{{vars.max_events}}"
                 },
-                "version": "1.0.0",
+                "version": "1.1.0",
                 "name": "Fortinet FortiEDR v2",
                 "step_variables": [],
                 "pickFromTenant": false
@@ -588,7 +589,7 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793664001,
+          "lastModifyDate": 1793713231.2585819,
           "collection": "/api/3/workflow_collections/feeedee1-cd25-5fa4-8ee3-0505dae3021a",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/71d5d326-7af3-5178-98cd-dffd3b0d50e5",
@@ -923,6 +924,3637 @@
           "playbookOrigin": null,
           "isEditable": true,
           "uuid": "0eb83917-e8f7-5c44-9f49-52f1d7de3f2f",
+          "owners": [],
+          "isPrivate": false
+        }
+      ]
+    },
+    {
+      "@type": "WorkflowCollection",
+      "name": "Sample - Fortinet FortiEDR v2 Use Cases - 1.1.0",
+      "description": "Operational use-case playbooks for the \"Fortinet FortiEDR v2\" connector: alert triage with collector isolation, evidence collection, time-limited exception governance, a re-detection digest over console incidents, a file-hash IOC retro-hunt, and a fleet compliance audit. Clone before use, like every sample collection: the connector upgrade deletes and re-imports sample collections, so local edits are lost on upgrade.",
+      "visible": true,
+      "image": null,
+      "uuid": "9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+      "recordTags": [
+        "fortinet-fortiedrv2",
+        "Fortinet",
+        "usecase"
+      ],
+      "workflows": [
+        {
+          "@type": "Workflow",
+          "name": "FortiEDR v2 > Triage to Isolation",
+          "aliasName": null,
+          "tag": "",
+          "recordTags": [
+            "fortinet-fortiedrv2",
+            "usecase",
+            "response"
+          ],
+          "description": "Record action on an ingested FortiEDR alert: refresh the event from the console, list the exceptions already muting it, collect the raw memory evidence, and -- with the analyst's approval -- isolate the collector. Approve and decline both land as comments on the alert.",
+          "isActive": true,
+          "debug": false,
+          "singleRecordExecution": false,
+          "remoteExecutableFlag": 0,
+          "parameters": [],
+          "synchronous": false,
+          "lastModifyDate": 1793713231.2585819,
+          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "versions": [],
+          "triggerStep": "/api/3/workflow_steps/265fdf9d-3234-5fad-8115-de8cc2597e50",
+          "steps": [
+            {
+              "@type": "WorkflowStep",
+              "name": "Start",
+              "description": null,
+              "arguments": {
+                "title": "FortiEDR v2 > Triage to Isolation",
+                "resources": [
+                  "alerts"
+                ],
+                "route": "11db35b7-006f-5f2c-a016-b325ae6bc7a3",
+                "inputVariables": [],
+                "step_variables": {
+                  "input": {
+                    "params": [],
+                    "records": "{{vars.input.records}}"
+                  }
+                },
+                "triggerOnSource": true,
+                "triggerOnReplicate": false,
+                "noRecordExecution": false,
+                "singleRecordExecution": true,
+                "__triggerLimit": true,
+                "executeButtonText": "Execute",
+                "showToasterMessage": {
+                  "visible": false,
+                  "messageVisible": true
+                },
+                "displayConditions": {
+                  "alerts": {
+                    "sort": [],
+                    "limit": 30,
+                    "logic": "AND",
+                    "filters": []
+                  }
+                }
+              },
+              "status": null,
+              "top": "120",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
+              "group": null,
+              "uuid": "265fdf9d-3234-5fad-8115-de8cc2597e50"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Resolve Event",
+              "description": null,
+              "arguments": {
+                "event_id": "{{ vars.input.records[0].sourceId | default('', true) }}",
+                "record_id": "{{ vars.input.records[0]['@id'] }}"
+              },
+              "status": null,
+              "top": "250",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "1b3600ae-d8ec-5814-b2e4-9489451b1696"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Get Event",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_event_by_id",
+                "config": "",
+                "when": "{{ vars.event_id }}",
+                "params": {
+                  "eventIds": "{{ vars.event_id }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Event by ID",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "380",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "350ff93f-1be1-5a20-b248-cb669300fabb"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Event Resolved",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Found",
+                    "condition": "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/ea2b6080-a8ae-5428-b724-60ff45b085e4",
+                    "step_name": "Enrich"
+                  },
+                  {
+                    "option": "Missing Event",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/31117261-de27-5ca9-85de-fcefce56477c",
+                    "step_name": "Missing Event Audit"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "510",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "cbe74c0e-ccdc-521e-82bc-24e6858db731"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Missing Event Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Triage to Isolation: no FortiEDR event found for sourceId {{ vars.event_id }} -- investigate manually; the console may have archived or pruned this event.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "640",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "31117261-de27-5ca9-85de-fcefce56477c"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Enrich",
+              "description": null,
+              "arguments": {
+                "event": "{{ vars.steps.Get_Event.data[0] }}",
+                "device": "{{ vars.steps.Get_Event.data[0].collectors[0].device | default('', true) }}",
+                "organization": "{{ vars.steps.Get_Event.data[0].organization | default('', true) }}",
+                "severity": "{{ vars.steps.Get_Event.data[0].severity | default('Medium', true) }}",
+                "process": "{{ vars.steps.Get_Event.data[0].process | default('', true) }}",
+                "first_seen": "{{ vars.steps.Get_Event.data[0].firstSeen | default('', true) }}",
+                "last_seen": "{{ vars.steps.Get_Event.data[0].lastSeen | default('', true) }}"
+              },
+              "status": null,
+              "top": "640",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "ea2b6080-a8ae-5428-b724-60ff45b085e4"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Check Existing Exceptions",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_event_exceptions",
+                "config": "",
+                "params": {
+                  "eventId": "{{ vars.event_id }}",
+                  "organization": "{{ vars.organization }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Event Exceptions",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "770",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "60e6bc44-40a6-576a-8792-578eea6a754c"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Collect Evidence",
+              "description": null,
+              "arguments": {
+                "apply_async": false,
+                "pass_parent_env": false,
+                "pass_input_record": false,
+                "arguments": {
+                  "event_id": "{{ vars.event_id }}",
+                  "record_id": "{{ vars.record_id }}",
+                  "organization": "{{ vars.organization }}"
+                },
+                "workflowReference": "/api/3/workflows/5dd89d28-c702-57ed-810f-7e01054a433f"
+              },
+              "status": null,
+              "top": "900",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/74932bdc-b8b6-4d24-88c4-1a4dfbc524f3",
+              "group": null,
+              "uuid": "d2ee07a1-7c5d-5cca-813b-1d627d1ea5c6"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Isolation Approval",
+              "description": "FortiEDR event {{ vars.event_id }} -- {{ vars.severity }}, {{ vars.process }} first seen {{ vars.first_seen }}, last seen {{ vars.last_seen }}, already carrying {{ vars.steps.Check_Existing_Exceptions.data | default([]) | length }} exception rule(s). Isolation cuts {{ vars.device }} off from the network until a \"Unisolate\" call releases it.",
+              "arguments": {
+                "is_approval": true,
+                "type": "InputBased",
+                "input": {
+                  "schema": {
+                    "title": "Approve collector isolation",
+                    "description": "FortiEDR event {{ vars.event_id }} -- {{ vars.severity }}, {{ vars.process }} first seen {{ vars.first_seen }}, last seen {{ vars.last_seen }}, already carrying {{ vars.steps.Check_Existing_Exceptions.data | default([]) | length }} exception rule(s). Isolation cuts {{ vars.device }} off from the network until a \"Unisolate\" call releases it.",
+                    "inputVariables": [
+                      {
+                        "name": "decision_note",
+                        "type": "string",
+                        "label": "Reason (becomes part of the alert's audit trail)",
+                        "title": "Text Area",
+                        "usable": true,
+                        "tooltip": "",
+                        "dataType": "text",
+                        "formType": "textarea",
+                        "required": true,
+                        "_expanded": true,
+                        "templateUrl": "app/components/form/fields/textarea.html",
+                        "defaultValue": null,
+                        "_previousName": "",
+                        "playbookField": true,
+                        "jinjaExpressionView": true,
+                        "useRecordFieldDefault": false,
+                        "requiredCondition": "required",
+                        "_addRequiredConditions": true
+                      }
+                    ]
+                  }
+                },
+                "record": "",
+                "isRecordLinked": false,
+                "owner_detail": {
+                  "isAssigned": false
+                },
+                "step_variables": [],
+                "response_mapping": {
+                  "options": [
+                    {
+                      "option": "Isolate Device",
+                      "primary": true,
+                      "step_iri": "/api/3/workflow_steps/9d98c571-0572-562e-8fa7-3e02f8c38d39"
+                    },
+                    {
+                      "option": "Skip Isolation",
+                      "step_iri": "/api/3/workflow_steps/84b28b8d-0c7d-5529-a0b3-e3356b652b6b"
+                    }
+                  ],
+                  "duplicateOption": false,
+                  "customSuccessMessage": "Awaiting Playbook resumed successfully."
+                },
+                "email_notification": {
+                  "enabled": false,
+                  "smtpParameters": []
+                },
+                "inline_channel_list": [],
+                "external_channel_list": [],
+                "unauthenticated_input": false
+              },
+              "status": null,
+              "top": "1030",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/a19333c2-c822-11ed-afa1-0242ac120002",
+              "group": null,
+              "uuid": "5661ac53-6731-536f-b601-1b45b8088996"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Isolate Collector",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "isolate_collector",
+                "config": "",
+                "params": {
+                  "type": "Name",
+                  "devices": "{{ vars.device }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Isolate Collector",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "1160",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "9d98c571-0572-562e-8fa7-3e02f8c38d39"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Isolation Audit",
+              "description": null,
+              "arguments": {
+                "isolation_result": "{{ vars.steps.Isolate_Collector.data | toJSON }}",
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Triage to Isolation: isolated collector {{ vars.device }} for event {{ vars.event_id }} ({{ vars.process }}, {{ vars.severity }}). Reason: {{ vars.steps.Isolation_Approval.input.decision_note }}</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "1290",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "030b99d2-fc95-5ef3-a209-8fad322c5f7c"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Declined",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Triage to Isolation: isolation of {{ vars.device }} declined for event {{ vars.event_id }}. Reason: {{ vars.steps.Isolation_Approval.input.decision_note }}</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "1160",
+              "left": "880",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "84b28b8d-0c7d-5529-a0b3-e3356b652b6b"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "End",
+              "description": null,
+              "arguments": {
+                "connector": "cyops_utilities",
+                "operation": "no_op",
+                "config": "",
+                "params": {},
+                "version": "3.7.2",
+                "name": "Utilities",
+                "operationTitle": "Utils: No Operation",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "1420",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "65aad62d-3c8b-5c5e-8d42-df5d863b7e3b"
+            }
+          ],
+          "routes": [
+            {
+              "@type": "WorkflowRoute",
+              "name": "Start -> Resolve Event",
+              "targetStep": "/api/3/workflow_steps/1b3600ae-d8ec-5814-b2e4-9489451b1696",
+              "sourceStep": "/api/3/workflow_steps/265fdf9d-3234-5fad-8115-de8cc2597e50",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "0cac38cc-ac08-5b23-b7c5-5c1284953c39"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Resolve Event -> Get Event",
+              "targetStep": "/api/3/workflow_steps/350ff93f-1be1-5a20-b248-cb669300fabb",
+              "sourceStep": "/api/3/workflow_steps/1b3600ae-d8ec-5814-b2e4-9489451b1696",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "536abb4d-ed8a-5fd3-b003-e9f83548717f"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Get Event -> Event Resolved",
+              "targetStep": "/api/3/workflow_steps/cbe74c0e-ccdc-521e-82bc-24e6858db731",
+              "sourceStep": "/api/3/workflow_steps/350ff93f-1be1-5a20-b248-cb669300fabb",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "d559a56e-4cff-5044-b029-d5406fee6b33"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Event Resolved -> Enrich",
+              "targetStep": "/api/3/workflow_steps/ea2b6080-a8ae-5428-b724-60ff45b085e4",
+              "sourceStep": "/api/3/workflow_steps/cbe74c0e-ccdc-521e-82bc-24e6858db731",
+              "label": "Found",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "f69f739a-1aaf-5571-b4a2-c1d889dbe249"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Event Resolved -> Missing Event Audit",
+              "targetStep": "/api/3/workflow_steps/31117261-de27-5ca9-85de-fcefce56477c",
+              "sourceStep": "/api/3/workflow_steps/cbe74c0e-ccdc-521e-82bc-24e6858db731",
+              "label": "Missing Event",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "07456707-b417-5399-a429-7a6f32afc17e"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Missing Event Audit -> End",
+              "targetStep": "/api/3/workflow_steps/65aad62d-3c8b-5c5e-8d42-df5d863b7e3b",
+              "sourceStep": "/api/3/workflow_steps/31117261-de27-5ca9-85de-fcefce56477c",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "a0761cde-a810-58e0-8af0-19a39590c7a9"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Enrich -> Check Existing Exceptions",
+              "targetStep": "/api/3/workflow_steps/60e6bc44-40a6-576a-8792-578eea6a754c",
+              "sourceStep": "/api/3/workflow_steps/ea2b6080-a8ae-5428-b724-60ff45b085e4",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "7ad76db0-3b99-5ac7-8698-f9bf96a1e748"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Check Existing Exceptions -> Collect Evidence",
+              "targetStep": "/api/3/workflow_steps/d2ee07a1-7c5d-5cca-813b-1d627d1ea5c6",
+              "sourceStep": "/api/3/workflow_steps/60e6bc44-40a6-576a-8792-578eea6a754c",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "dffbb272-c411-5be6-9657-cf924ab1dab9"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Collect Evidence -> Isolation Approval",
+              "targetStep": "/api/3/workflow_steps/5661ac53-6731-536f-b601-1b45b8088996",
+              "sourceStep": "/api/3/workflow_steps/d2ee07a1-7c5d-5cca-813b-1d627d1ea5c6",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "6c02821c-7e26-5bc2-ba0f-778909991c9a"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Isolation Approval -> Isolate Collector",
+              "targetStep": "/api/3/workflow_steps/9d98c571-0572-562e-8fa7-3e02f8c38d39",
+              "sourceStep": "/api/3/workflow_steps/5661ac53-6731-536f-b601-1b45b8088996",
+              "label": "Isolate Device",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "5f78872f-4b43-5531-9706-cdaa89ecdb71"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Isolation Approval -> Declined",
+              "targetStep": "/api/3/workflow_steps/84b28b8d-0c7d-5529-a0b3-e3356b652b6b",
+              "sourceStep": "/api/3/workflow_steps/5661ac53-6731-536f-b601-1b45b8088996",
+              "label": "Skip Isolation",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "ef9ffc80-5874-50e3-a538-7dc95a9d9974"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Isolate Collector -> Isolation Audit",
+              "targetStep": "/api/3/workflow_steps/030b99d2-fc95-5ef3-a209-8fad322c5f7c",
+              "sourceStep": "/api/3/workflow_steps/9d98c571-0572-562e-8fa7-3e02f8c38d39",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "5751588e-94a4-55ae-a6e8-9a8a33f2bf8a"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Isolation Audit -> End",
+              "targetStep": "/api/3/workflow_steps/65aad62d-3c8b-5c5e-8d42-df5d863b7e3b",
+              "sourceStep": "/api/3/workflow_steps/030b99d2-fc95-5ef3-a209-8fad322c5f7c",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "29eaa4e1-2882-55d7-831c-ca7b002291fe"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Declined -> End",
+              "targetStep": "/api/3/workflow_steps/65aad62d-3c8b-5c5e-8d42-df5d863b7e3b",
+              "sourceStep": "/api/3/workflow_steps/84b28b8d-0c7d-5529-a0b3-e3356b652b6b",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "4d674dae-8b5a-5444-affb-dcbec258ae98"
+            }
+          ],
+          "groups": [
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Resolve Event",
+              "description": "The alert's sourceId is the FortiEDR eventId (external_id the\ningestion chain maps), and the IRI is kept for the audit comments.\nA slow refresh (sourceId blank -- a hand-created or foreign alert)\nstops at the Missing Event step rather than calling the tenant with\na blank identifier.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "250",
+              "left": "540",
+              "height": "248",
+              "width": "440",
+              "uuid": "62d10646-bd5f-51e2-b36b-92c4ec304670",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Missing Event Audit",
+              "description": "Either the alert is not a FortiEDR alert, or the event was pruned on\nthe tenant. A comment with the sourceId asks the analyst to act on\nthe alert's own data instead of pretending the console agrees.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "640",
+              "left": "880",
+              "height": "182",
+              "width": "440",
+              "uuid": "1065ae7d-3ced-5ed3-8c94-ef1f3b6b637f",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Enrich",
+              "description": "The fresh event row, not the ingested card, decides what the analyst\nsees: severity and the collector device may both have moved since the\npull (FortiEDR correlates a re-detection into the same event and only\nmoves its lastSeen, so the event CAN have drifted under a static\nalert card).\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "842",
+              "left": "1220",
+              "height": "248",
+              "width": "440",
+              "uuid": "2ea83862-ae60-59ee-be05-13db6d8a85ef",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Collect Evidence",
+              "description": "Bags the event's binary onto the alert BEFORE the approval, so\nthe analyst deciding on isolation has the artifacts in the same\nrecord. Fails soft inside the child (an offline or decommissioned\ncollector leaves a comment, not a dead run).\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1110",
+              "left": "1220",
+              "height": "204",
+              "width": "440",
+              "uuid": "8886d0fb-4bba-5486-8ff9-5855504e0e13",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Isolate Collector",
+              "description": "`type: Name` + the event's collector device, the pair the tenant\nanswered for both isolate and unisolate. The unisolate reverse call\nuses the same arguments, so releasing the endpoint later is the same\nrecord action away through the connector operation.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1334",
+              "left": "880",
+              "height": "204",
+              "width": "440",
+              "uuid": "2d5f5a51-be5a-5714-bf0d-9f922b827887",
+              "recordTags": []
+            }
+          ],
+          "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
+          "playbookOrigin": null,
+          "isEditable": true,
+          "uuid": "6d2d3a83-bb8e-56df-a21f-96b106a2d9da",
+          "owners": [],
+          "isPrivate": false
+        },
+        {
+          "@type": "Workflow",
+          "name": "FortiEDR v2 > Collect Evidence",
+          "aliasName": null,
+          "tag": "",
+          "recordTags": [
+            "fortinet-fortiedrv2",
+            "usecase",
+            "forensics"
+          ],
+          "description": "Pulls the binary the alert fired on -- the event's process file, by its raw-event anchor -- uploads it as a FortiSOAR attachment through the connector, and links it to the alert. Degrades to a comment when the collector is offline.",
+          "isActive": true,
+          "debug": false,
+          "singleRecordExecution": false,
+          "remoteExecutableFlag": 0,
+          "parameters": [
+            "event_id",
+            "record_id",
+            "organization"
+          ],
+          "synchronous": false,
+          "lastModifyDate": 1793713231.2585819,
+          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "versions": [],
+          "triggerStep": "/api/3/workflow_steps/0d3c4e61-8134-54ea-98fb-656024ac7d23",
+          "steps": [
+            {
+              "@type": "WorkflowStep",
+              "name": "Start",
+              "description": null,
+              "arguments": {
+                "title": "FortiEDR v2 > Collect Evidence",
+                "resources": [
+                  "alerts"
+                ],
+                "route": "94fa5609-b4d0-51ec-845c-bd8778c82c92",
+                "inputVariables": [],
+                "step_variables": {
+                  "input": {
+                    "params": [],
+                    "records": "{{vars.input.records}}"
+                  }
+                },
+                "triggerOnSource": true,
+                "triggerOnReplicate": false,
+                "noRecordExecution": false,
+                "singleRecordExecution": true,
+                "__triggerLimit": true,
+                "executeButtonText": "Execute",
+                "showToasterMessage": {
+                  "visible": false,
+                  "messageVisible": true
+                },
+                "displayConditions": {
+                  "alerts": {
+                    "sort": [],
+                    "limit": 30,
+                    "logic": "AND",
+                    "filters": []
+                  }
+                }
+              },
+              "status": null,
+              "top": "120",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
+              "group": null,
+              "uuid": "0d3c4e61-8134-54ea-98fb-656024ac7d23"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Resolve Inputs",
+              "description": null,
+              "arguments": {
+                "event_id": "{% if vars.input.params.event_id | default('', true) %} {{ vars.input.params.event_id }} {% else %} {{ vars.input.records[0].sourceId | default('', true) }} {% endif %}",
+                "record_id": "{% if vars.input.params.record_id | default('', true) %} {{ vars.input.params.record_id }} {% else %} {{ vars.input.records[0]['@id'] }} {% endif %}",
+                "organization": "{{ vars.input.params.organization | default('', true) }}"
+              },
+              "status": null,
+              "top": "250",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "5f092351-5913-5f07-a7c4-9b960155fd1d"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "No Event",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Have Event",
+                    "condition": "{{ vars.event_id }}",
+                    "step_iri": "/api/3/workflow_steps/8075eee9-a313-5328-a708-4d8abafd8195",
+                    "step_name": "Get Event"
+                  },
+                  {
+                    "option": "No FortiEDR Event",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/8a2fa9d6-195e-56a2-a051-46869bdff126",
+                    "step_name": "No Event Audit"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "380",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "c7aff810-9126-5506-886b-f2aea6f6b232"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "No Event Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Collect Evidence: this alert carries no FortiEDR sourceId; nothing to bag.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "510",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "8a2fa9d6-195e-56a2-a051-46869bdff126"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Get Event",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_event_by_id",
+                "config": "",
+                "params": {
+                  "eventIds": "{{ vars.event_id }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Event by ID",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "510",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "8075eee9-a313-5328-a708-4d8abafd8195"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Event Resolved",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Found",
+                    "condition": "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/5ad1f9dc-efea-538c-aaac-910de705ceb0",
+                    "step_name": "Bag Context"
+                  },
+                  {
+                    "option": "Missing Event",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/5c919195-f998-50e2-852b-57fb3c1ac284",
+                    "step_name": "Missing Event Audit"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "640",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "f4fc7160-862a-5a77-af2b-bb4741d06efa"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Missing Event Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Collect Evidence: no FortiEDR event found for sourceId {{ vars.event_id }} (archived or pruned on the tenant); nothing to bag.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "770",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "5c919195-f998-50e2-852b-57fb3c1ac284"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Bag Context",
+              "description": null,
+              "arguments": {
+                "bag_file_path": "{{ vars.steps.Get_Event.data[0].processPath | default('', true) }}",
+                "bag_device": "{{ vars.steps.Get_Event.data[0].collectors[0].device | default('', true) }}",
+                "bag_organization": "{{ vars.steps.Get_Event.data[0].organization | default(vars.organization, true) }}"
+              },
+              "status": null,
+              "top": "770",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "5ad1f9dc-efea-538c-aaac-910de705ceb0"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Bag Path Resolved",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Have Path",
+                    "condition": "{{ vars.bag_file_path }}",
+                    "step_iri": "/api/3/workflow_steps/f30995ed-e853-536d-b190-5a7ec36dbdf8",
+                    "step_name": "Get Raw Data Items"
+                  },
+                  {
+                    "option": "No File Path",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/6f68e812-c435-5544-ad04-19cd77724cf2",
+                    "step_name": "No Path Audit"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "900",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "cd62bb62-07b3-5b5b-83d5-c682be053781"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "No Path Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Collect Evidence: FortiEDR event {{ vars.event_id }} carries no process file path; nothing disk- retrievable to bag.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "1030",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "6f68e812-c435-5544-ad04-19cd77724cf2"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Get Raw Data Items",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_raw_data_items",
+                "config": "",
+                "params": {
+                  "eventId": "{{ vars.event_id }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Raw Data Items",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "1030",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "f30995ed-e853-536d-b190-5a7ec36dbdf8"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Raw Data Available",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Have Raw Data",
+                    "condition": "{{ vars.steps.Get_Raw_Data_Items.data | default([]) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/cfd77110-fbea-52b2-9e48-5a40f29be938",
+                    "step_name": "Collect File"
+                  },
+                  {
+                    "option": "No Raw Data",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/1081299d-df54-532e-8fcc-af501d3dcc8d",
+                    "step_name": "No Raw Data Audit"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "1160",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "51e4f220-c47f-599c-837d-9c7ae5ffe4a7"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "No Raw Data Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Collect Evidence: event {{ vars.event_id }} has no raw data items on the tenant (the collection window may have expired); nothing to bag.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "1290",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "1081299d-df54-532e-8fcc-af501d3dcc8d"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Collect File",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_event_file",
+                "config": "",
+                "ignore_errors": true,
+                "params": {
+                  "rawEventId": "{{ vars.steps.Get_Raw_Data_Items.data[0].rawEventId }}",
+                  "retrieve_from": "Disk",
+                  "filePaths": "{{ vars.bag_file_path }}",
+                  "organization": "{{ vars.bag_organization }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Retrieve File or Memory",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "1290",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "cfd77110-fbea-52b2-9e48-5a40f29be938"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "File Collected",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Attachment Ready",
+                    "condition": "{{ (vars.steps.Collect_File.data['@id'] | default('', true)) is not empty }}",
+                    "step_iri": "/api/3/workflow_steps/20d7ed2f-697f-518c-b577-f2582f331329",
+                    "step_name": "Link Evidence"
+                  },
+                  {
+                    "option": "Collection Failed",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/05a88871-d652-5b82-984a-a68c49d1e919",
+                    "step_name": "Collection Failed Audit"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "1420",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "101dabab-cbea-52f5-9a1e-57fc344dc338"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Link Evidence",
+              "description": null,
+              "arguments": {
+                "resource": {
+                  "__link": {
+                    "attachments": [
+                      "{{ vars.steps.Collect_File.data['@id'].split('/') | last }}"
+                    ]
+                  }
+                },
+                "collectionType": "/api/3/alerts",
+                "collection": "{{ vars.record_id }}"
+              },
+              "status": null,
+              "top": "1550",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/b593663d-7d13-40ce-a3a3-96dece928722",
+              "group": null,
+              "uuid": "20d7ed2f-697f-518c-b577-f2582f331329"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Evidence Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Collect Evidence: {{ vars.steps.Collect_File.data['name'] }} attached -- the {{ vars.bag_file_path }} binary of FortiEDR event {{ vars.event_id }} off collector {{ vars.bag_device }} (raw event {{ vars.steps.Get_Raw_Data_Items.data[0].rawEventId }}).</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "1680",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "2219c4c8-3cf4-57a7-bb83-fd767002fed0"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Collection Failed Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Collect Evidence: the retrieval of {{ vars.bag_file_path }} from {{ vars.bag_device }} failed -- the tenant rejects forensics pulls from offline or decommissioned collectors; retry from the alert once the endpoint is back.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "1550",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "05a88871-d652-5b82-984a-a68c49d1e919"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "End",
+              "description": null,
+              "arguments": {
+                "connector": "cyops_utilities",
+                "operation": "no_op",
+                "config": "",
+                "params": {},
+                "version": "3.7.2",
+                "name": "Utilities",
+                "operationTitle": "Utils: No Operation",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "1810",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "ea1d8efb-9eaf-5276-8228-bf36c84674ca"
+            }
+          ],
+          "routes": [
+            {
+              "@type": "WorkflowRoute",
+              "name": "Start -> Resolve Inputs",
+              "targetStep": "/api/3/workflow_steps/5f092351-5913-5f07-a7c4-9b960155fd1d",
+              "sourceStep": "/api/3/workflow_steps/0d3c4e61-8134-54ea-98fb-656024ac7d23",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "401b4979-4299-5930-81c4-a31588780412"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Resolve Inputs -> No Event",
+              "targetStep": "/api/3/workflow_steps/c7aff810-9126-5506-886b-f2aea6f6b232",
+              "sourceStep": "/api/3/workflow_steps/5f092351-5913-5f07-a7c4-9b960155fd1d",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "bece07f2-5b58-5c6b-9afb-5080c45e217f"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "No Event -> Get Event",
+              "targetStep": "/api/3/workflow_steps/8075eee9-a313-5328-a708-4d8abafd8195",
+              "sourceStep": "/api/3/workflow_steps/c7aff810-9126-5506-886b-f2aea6f6b232",
+              "label": "Have Event",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "9c36efa5-3f69-5283-a1ff-973a43dc9783"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "No Event -> No Event Audit",
+              "targetStep": "/api/3/workflow_steps/8a2fa9d6-195e-56a2-a051-46869bdff126",
+              "sourceStep": "/api/3/workflow_steps/c7aff810-9126-5506-886b-f2aea6f6b232",
+              "label": "No FortiEDR Event",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "766be1ff-aeb4-5714-9232-7259a6d16346"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "No Event Audit -> End",
+              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
+              "sourceStep": "/api/3/workflow_steps/8a2fa9d6-195e-56a2-a051-46869bdff126",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "4f7a8bce-a0b2-502b-9d96-754b34c62671"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Get Event -> Event Resolved",
+              "targetStep": "/api/3/workflow_steps/f4fc7160-862a-5a77-af2b-bb4741d06efa",
+              "sourceStep": "/api/3/workflow_steps/8075eee9-a313-5328-a708-4d8abafd8195",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "697ae6a7-caa5-59d3-84aa-b37c3b944012"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Event Resolved -> Bag Context",
+              "targetStep": "/api/3/workflow_steps/5ad1f9dc-efea-538c-aaac-910de705ceb0",
+              "sourceStep": "/api/3/workflow_steps/f4fc7160-862a-5a77-af2b-bb4741d06efa",
+              "label": "Found",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "dfe8dde0-e680-575f-b7c4-4d5f1b57dafb"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Event Resolved -> Missing Event Audit",
+              "targetStep": "/api/3/workflow_steps/5c919195-f998-50e2-852b-57fb3c1ac284",
+              "sourceStep": "/api/3/workflow_steps/f4fc7160-862a-5a77-af2b-bb4741d06efa",
+              "label": "Missing Event",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "c0712ed1-3fa3-520b-b712-1ccec1bec90b"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Missing Event Audit -> End",
+              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
+              "sourceStep": "/api/3/workflow_steps/5c919195-f998-50e2-852b-57fb3c1ac284",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "5bd39a36-0fa5-5be3-ae07-464466b24bc5"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Bag Context -> Bag Path Resolved",
+              "targetStep": "/api/3/workflow_steps/cd62bb62-07b3-5b5b-83d5-c682be053781",
+              "sourceStep": "/api/3/workflow_steps/5ad1f9dc-efea-538c-aaac-910de705ceb0",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "4a646980-4085-56db-a45f-b581708d2879"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Bag Path Resolved -> Get Raw Data Items",
+              "targetStep": "/api/3/workflow_steps/f30995ed-e853-536d-b190-5a7ec36dbdf8",
+              "sourceStep": "/api/3/workflow_steps/cd62bb62-07b3-5b5b-83d5-c682be053781",
+              "label": "Have Path",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "7ea5700b-464b-5b33-ad32-aa1aaae2c5ff"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Bag Path Resolved -> No Path Audit",
+              "targetStep": "/api/3/workflow_steps/6f68e812-c435-5544-ad04-19cd77724cf2",
+              "sourceStep": "/api/3/workflow_steps/cd62bb62-07b3-5b5b-83d5-c682be053781",
+              "label": "No File Path",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "49f8fc9c-8146-5d07-874a-c4daaf6cacba"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "No Path Audit -> End",
+              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
+              "sourceStep": "/api/3/workflow_steps/6f68e812-c435-5544-ad04-19cd77724cf2",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "8026b494-cc4e-5d6f-95a1-7d3001e032a5"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Get Raw Data Items -> Raw Data Available",
+              "targetStep": "/api/3/workflow_steps/51e4f220-c47f-599c-837d-9c7ae5ffe4a7",
+              "sourceStep": "/api/3/workflow_steps/f30995ed-e853-536d-b190-5a7ec36dbdf8",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "eeb15243-6603-5737-b82c-3e9445460584"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Raw Data Available -> Collect File",
+              "targetStep": "/api/3/workflow_steps/cfd77110-fbea-52b2-9e48-5a40f29be938",
+              "sourceStep": "/api/3/workflow_steps/51e4f220-c47f-599c-837d-9c7ae5ffe4a7",
+              "label": "Have Raw Data",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "1caec406-0f81-5419-8539-5da495d2c006"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Raw Data Available -> No Raw Data Audit",
+              "targetStep": "/api/3/workflow_steps/1081299d-df54-532e-8fcc-af501d3dcc8d",
+              "sourceStep": "/api/3/workflow_steps/51e4f220-c47f-599c-837d-9c7ae5ffe4a7",
+              "label": "No Raw Data",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "1c97370d-b139-555f-bbd6-a0e1acf17bb1"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "No Raw Data Audit -> End",
+              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
+              "sourceStep": "/api/3/workflow_steps/1081299d-df54-532e-8fcc-af501d3dcc8d",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "e3ddf117-551f-50bf-98e6-6b83499931d7"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Collect File -> File Collected",
+              "targetStep": "/api/3/workflow_steps/101dabab-cbea-52f5-9a1e-57fc344dc338",
+              "sourceStep": "/api/3/workflow_steps/cfd77110-fbea-52b2-9e48-5a40f29be938",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "0ff01949-3f57-58c0-ae8c-acf276febaaa"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "File Collected -> Link Evidence",
+              "targetStep": "/api/3/workflow_steps/20d7ed2f-697f-518c-b577-f2582f331329",
+              "sourceStep": "/api/3/workflow_steps/101dabab-cbea-52f5-9a1e-57fc344dc338",
+              "label": "Attachment Ready",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "8a447f2e-6a9c-5fcc-bdff-2e1a4959ccbc"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "File Collected -> Collection Failed Audit",
+              "targetStep": "/api/3/workflow_steps/05a88871-d652-5b82-984a-a68c49d1e919",
+              "sourceStep": "/api/3/workflow_steps/101dabab-cbea-52f5-9a1e-57fc344dc338",
+              "label": "Collection Failed",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "2335b39b-e449-5e67-8463-4e00973aac2a"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Link Evidence -> Evidence Audit",
+              "targetStep": "/api/3/workflow_steps/2219c4c8-3cf4-57a7-bb83-fd767002fed0",
+              "sourceStep": "/api/3/workflow_steps/20d7ed2f-697f-518c-b577-f2582f331329",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "6110cad2-df8d-52a5-b76a-bdb40ee01bbe"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Evidence Audit -> End",
+              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
+              "sourceStep": "/api/3/workflow_steps/2219c4c8-3cf4-57a7-bb83-fd767002fed0",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "ee639e55-011f-5683-88b0-37db3120bc56"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Collection Failed Audit -> End",
+              "targetStep": "/api/3/workflow_steps/ea1d8efb-9eaf-5276-8228-bf36c84674ca",
+              "sourceStep": "/api/3/workflow_steps/05a88871-d652-5b82-984a-a68c49d1e919",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "ea19b6e9-b3e3-58b2-9412-3ed52615abc5"
+            }
+          ],
+          "groups": [
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Resolve Inputs",
+              "description": "Two entry modes share one resolve: called from a parent playbook the\nexplicit params win; run as a record action the alert itself carries\nsourceId (the FortiEDR eventId) and the record IRI.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "250",
+              "left": "880",
+              "height": "160",
+              "width": "440",
+              "uuid": "851b865a-87df-5319-9de7-638beba422cf",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Bag Context",
+              "description": "The file to bag is the event's own process path, plus the anchor\npieces: the raw-event repository keeps the retrieval id, and the\ncollector's device and the event's organization scope the call.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "770",
+              "left": "880",
+              "height": "182",
+              "width": "440",
+              "uuid": "d4932199-9c35-5999-bb54-95a6e468ae33",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Bag Path Resolved",
+              "description": "An event without a file path (pure log-policy events) has no\ndisk-evidence bag; the retrieval API needs a path to pull.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "972",
+              "left": "880",
+              "height": "138",
+              "width": "440",
+              "uuid": "b858a5aa-018d-5ccf-b40a-61195f946aa9",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Collect File",
+              "description": "Disk-mode retrieval of the event's binary, anchored to the earliest\nraw item. ignore_errors: the tenant rejects the pull from an offline\nor decommissioned collector, and that rejection is an outcome the\nalert should record, not a reason to kill the parent triage.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1290",
+              "left": "880",
+              "height": "226",
+              "width": "440",
+              "uuid": "3d5233d0-7fb4-5a9e-b180-2116a25a688a",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Link Evidence",
+              "description": "`link:` (the __link primitive the platform's own escalation uses)\nAPPENDS the attachment; a plain fields-write to the attachments\nrelationship would replace whatever the record already carried.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1550",
+              "left": "880",
+              "height": "182",
+              "width": "440",
+              "uuid": "35f9b90f-44f1-5872-8e34-cf231b52b0d0",
+              "recordTags": []
+            }
+          ],
+          "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
+          "playbookOrigin": null,
+          "isEditable": true,
+          "uuid": "5dd89d28-c702-57ed-810f-7e01054a433f",
+          "owners": [],
+          "isPrivate": false
+        },
+        {
+          "@type": "Workflow",
+          "name": "FortiEDR v2 > Allow Event (Time-Limited)",
+          "aliasName": null,
+          "tag": "",
+          "recordTags": [
+            "fortinet-fortiedrv2",
+            "usecase",
+            "governance"
+          ],
+          "description": "Record action on an ingested FortiEDR alert: creates a FortiEDR exception rule for the event with an expiry encoded in the rule's comment, and records the terms on the alert. The Exception Expiry Sweep deletes the rule when it expires.",
+          "isActive": true,
+          "debug": false,
+          "singleRecordExecution": false,
+          "remoteExecutableFlag": 0,
+          "parameters": [],
+          "synchronous": false,
+          "lastModifyDate": 1793713231.2585819,
+          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "versions": [],
+          "triggerStep": "/api/3/workflow_steps/857dcef9-494f-5441-9051-48814d0f145f",
+          "steps": [
+            {
+              "@type": "WorkflowStep",
+              "name": "Start",
+              "description": null,
+              "arguments": {
+                "title": "FortiEDR v2 > Allow Event (Time-Limited)",
+                "resources": [
+                  "alerts"
+                ],
+                "route": "be42b0b6-1483-56b1-9953-b8151f28f51e",
+                "inputVariables": [],
+                "step_variables": {
+                  "input": {
+                    "params": [],
+                    "records": "{{vars.input.records}}"
+                  }
+                },
+                "triggerOnSource": true,
+                "triggerOnReplicate": false,
+                "noRecordExecution": false,
+                "singleRecordExecution": true,
+                "__triggerLimit": true,
+                "executeButtonText": "Execute",
+                "showToasterMessage": {
+                  "visible": false,
+                  "messageVisible": true
+                },
+                "displayConditions": {
+                  "alerts": {
+                    "sort": [],
+                    "limit": 30,
+                    "logic": "AND",
+                    "filters": []
+                  }
+                }
+              },
+              "status": null,
+              "top": "120",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
+              "group": null,
+              "uuid": "857dcef9-494f-5441-9051-48814d0f145f"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Resolve Event",
+              "description": null,
+              "arguments": {
+                "event_id": "{{ vars.input.records[0].sourceId | default('', true) }}"
+              },
+              "status": null,
+              "top": "250",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "facd22da-2826-55c8-8048-e814fe9d791e"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Get Event",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_event_by_id",
+                "config": "",
+                "when": "{{ vars.event_id }}",
+                "params": {
+                  "eventIds": "{{ vars.event_id }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Event by ID",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "380",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "e7fad3a8-8404-505b-824f-42fd148d0981"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Event Resolved",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Found",
+                    "condition": "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/ca92b8b9-bc0a-5d30-b2dc-5ba2a9580b6b",
+                    "step_name": "Check Existing Exceptions"
+                  },
+                  {
+                    "option": "Missing Event",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/dcaf5b9a-5d0c-5fc3-a07a-8dd542939081",
+                    "step_name": "Missing Event Audit"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "510",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "df2733c2-656b-53dc-a307-9e359c87502a"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Missing Event Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Allow Event: no FortiEDR event found for sourceId {{ vars.event_id }}; no exception will be created.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "640",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "dcaf5b9a-5d0c-5fc3-a07a-8dd542939081"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Check Existing Exceptions",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_event_exceptions",
+                "config": "",
+                "params": {
+                  "eventId": "{{ vars.event_id }}",
+                  "organization": "{{ vars.steps.Get_Event.data[0].organization }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Event Exceptions",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "640",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "ca92b8b9-bc0a-5d30-b2dc-5ba2a9580b6b"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Existing Exceptions",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Rule Exists",
+                    "condition": "{{ vars.steps.Check_Existing_Exceptions.data | default([]) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/376b10c2-f794-596c-9b86-d7566b038431",
+                    "step_name": "Rule Exists Audit"
+                  },
+                  {
+                    "option": "Clear",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/d035914e-b7a2-5575-8f94-de791512d74a",
+                    "step_name": "Expiry Form"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "770",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "b0ab7661-7e40-5879-81a9-ffb65b83814a"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Rule Exists Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Allow Event: refused -- event {{ vars.event_id }} already carries {{ vars.steps.Check_Existing_Exceptions.data | length }} exception rule(s). Clean them up on the console or through the sweep first.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "900",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "376b10c2-f794-596c-9b86-d7566b038431"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Expiry Form",
+              "description": "Creates a FortiEDR exception rule for event {{ vars.event_id }} ({{ vars.steps.Get_Event.data[0].severity }}, {{ vars.steps.Get_Event.data[0].process }}) and encodes the expiry in the rule's comment. The Exception Expiry Sweep deletes the rule once the expiry passes; without it FortiEDR keeps the rule forever.",
+              "arguments": {
+                "is_approval": false,
+                "type": "InputBased",
+                "input": {
+                  "schema": {
+                    "title": "Time-limited exception",
+                    "description": "Creates a FortiEDR exception rule for event {{ vars.event_id }} ({{ vars.steps.Get_Event.data[0].severity }}, {{ vars.steps.Get_Event.data[0].process }}) and encodes the expiry in the rule's comment. The Exception Expiry Sweep deletes the rule once the expiry passes; without it FortiEDR keeps the rule forever.",
+                    "inputVariables": [
+                      {
+                        "name": "expiry_days",
+                        "type": "array",
+                        "label": "Expires after (days)",
+                        "title": "Dynamic List",
+                        "usable": true,
+                        "tooltip": "",
+                        "dataType": "dynamicList",
+                        "formType": "dynamicList",
+                        "required": true,
+                        "_expanded": true,
+                        "templateUrl": "app/components/form/fields/dynamicList.html",
+                        "defaultValue": "30",
+                        "_previousName": "",
+                        "playbookField": true,
+                        "jinjaExpressionView": true,
+                        "useRecordFieldDefault": false,
+                        "requiredCondition": "required",
+                        "_addRequiredConditions": true,
+                        "options": [
+                          "7",
+                          "14",
+                          "30",
+                          "60",
+                          "90"
+                        ],
+                        "collection": false,
+                        "searchable": false,
+                        "mmdUpdate": true,
+                        "lengthConstraint": true,
+                        "allowedGridColumn": false
+                      },
+                      {
+                        "name": "analyst_reason",
+                        "type": "string",
+                        "label": "Why this event is allowed (stored with the rule and on the alert)",
+                        "title": "Text Area",
+                        "usable": true,
+                        "tooltip": "",
+                        "dataType": "text",
+                        "formType": "textarea",
+                        "required": true,
+                        "_expanded": true,
+                        "templateUrl": "app/components/form/fields/textarea.html",
+                        "defaultValue": null,
+                        "_previousName": "",
+                        "playbookField": true,
+                        "jinjaExpressionView": true,
+                        "useRecordFieldDefault": false,
+                        "requiredCondition": "required",
+                        "_addRequiredConditions": true
+                      }
+                    ]
+                  }
+                },
+                "record": "",
+                "isRecordLinked": false,
+                "owner_detail": {
+                  "isAssigned": false
+                },
+                "step_variables": [],
+                "response_mapping": {
+                  "options": [
+                    {
+                      "option": "Create Exception",
+                      "primary": true,
+                      "step_iri": "/api/3/workflow_steps/4bd8c421-4f1a-5d16-89df-a0951f3aae81"
+                    },
+                    {
+                      "option": "Cancel",
+                      "step_iri": "/api/3/workflow_steps/e812ce51-b534-5ab1-9e04-f5b6c2d93c53"
+                    }
+                  ],
+                  "duplicateOption": false,
+                  "customSuccessMessage": "Awaiting Playbook resumed successfully."
+                },
+                "email_notification": {
+                  "enabled": false,
+                  "smtpParameters": []
+                },
+                "inline_channel_list": [],
+                "external_channel_list": [],
+                "unauthenticated_input": false
+              },
+              "status": null,
+              "top": "900",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/fc04082a-d7dc-4299-96fb-6837b1baa0fe",
+              "group": null,
+              "uuid": "d035914e-b7a2-5575-8f94-de791512d74a"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Compute Expiry",
+              "description": null,
+              "arguments": {
+                "expires_epoch": "{{ arrow.utcnow().shift(days=(vars.steps.Expiry_Form.input.expiry_days | int)).format('X') }}",
+                "exception_comment": "fortiedrv2-managed expires={{ arrow.utcnow().shift(days=(vars.steps.Expiry_Form.input.expiry_days | int)).format('X') }} :: {{ vars.steps.Expiry_Form.input.analyst_reason }}"
+              },
+              "status": null,
+              "top": "1030",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "4bd8c421-4f1a-5d16-89df-a0951f3aae81"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Create Exception",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "create_exception",
+                "config": "",
+                "params": {
+                  "eventId": "{{ vars.event_id }}",
+                  "allCollectorGroups": "All Collector Groups",
+                  "allOrganizations": "True",
+                  "allDestinations": "All Destinations",
+                  "comment": "{{ vars.exception_comment }}",
+                  "forceCreate": "False"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Create Exception",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "1160",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "6f30a98d-eb4f-5101-945b-ec4806561380"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Exception Audit",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Allow Event: time-limited exception created for event {{ vars.event_id }}, expires at epoch {{ vars.expires_epoch }} ({{ vars.steps.Expiry_Form.input.expiry_days }} days). Reason: {{ vars.steps.Expiry_Form.input.analyst_reason }}. The Exception Expiry Sweep will delete the rule when it expires.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "1290",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "56ebc10a-f4e5-5434-b83c-f05985e306c9"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Cancelled",
+              "description": null,
+              "arguments": {
+                "message": {
+                  "tags": [],
+                  "type": "/api/3/picklists/ff599189-3eeb-4c86-acb0-a7915e85ac3b",
+                  "thread": false,
+                  "content": "<p>Allow Event: cancelled for event {{ vars.event_id }}; no exception was created.</p>",
+                  "records": ""
+                }
+              },
+              "status": null,
+              "top": "1030",
+              "left": "1220",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "e812ce51-b534-5ab1-9e04-f5b6c2d93c53"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "End",
+              "description": null,
+              "arguments": {
+                "connector": "cyops_utilities",
+                "operation": "no_op",
+                "config": "",
+                "params": {},
+                "version": "3.7.2",
+                "name": "Utilities",
+                "operationTitle": "Utils: No Operation",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "1420",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "87e81634-51cf-5fb6-8bf6-5805de08437a"
+            }
+          ],
+          "routes": [
+            {
+              "@type": "WorkflowRoute",
+              "name": "Start -> Resolve Event",
+              "targetStep": "/api/3/workflow_steps/facd22da-2826-55c8-8048-e814fe9d791e",
+              "sourceStep": "/api/3/workflow_steps/857dcef9-494f-5441-9051-48814d0f145f",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "8d1e31dd-2462-5164-82e8-a2accf8ba220"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Resolve Event -> Get Event",
+              "targetStep": "/api/3/workflow_steps/e7fad3a8-8404-505b-824f-42fd148d0981",
+              "sourceStep": "/api/3/workflow_steps/facd22da-2826-55c8-8048-e814fe9d791e",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "cf48493f-d367-516a-8102-17645516cb1d"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Get Event -> Event Resolved",
+              "targetStep": "/api/3/workflow_steps/df2733c2-656b-53dc-a307-9e359c87502a",
+              "sourceStep": "/api/3/workflow_steps/e7fad3a8-8404-505b-824f-42fd148d0981",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "1274b3cd-b0be-550a-99ab-3d305c2c6acc"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Event Resolved -> Check Existing Exceptions",
+              "targetStep": "/api/3/workflow_steps/ca92b8b9-bc0a-5d30-b2dc-5ba2a9580b6b",
+              "sourceStep": "/api/3/workflow_steps/df2733c2-656b-53dc-a307-9e359c87502a",
+              "label": "Found",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "55b77869-4b25-5c66-ab32-87856979c0ab"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Event Resolved -> Missing Event Audit",
+              "targetStep": "/api/3/workflow_steps/dcaf5b9a-5d0c-5fc3-a07a-8dd542939081",
+              "sourceStep": "/api/3/workflow_steps/df2733c2-656b-53dc-a307-9e359c87502a",
+              "label": "Missing Event",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "13f944a1-4eae-52dd-b8cb-91bed917082d"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Missing Event Audit -> End",
+              "targetStep": "/api/3/workflow_steps/87e81634-51cf-5fb6-8bf6-5805de08437a",
+              "sourceStep": "/api/3/workflow_steps/dcaf5b9a-5d0c-5fc3-a07a-8dd542939081",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "8a8eb8a3-c140-586d-adf5-ba086845b3c5"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Check Existing Exceptions -> Existing Exceptions",
+              "targetStep": "/api/3/workflow_steps/b0ab7661-7e40-5879-81a9-ffb65b83814a",
+              "sourceStep": "/api/3/workflow_steps/ca92b8b9-bc0a-5d30-b2dc-5ba2a9580b6b",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "9fdbf86a-927d-50b3-b1a4-744a2c562840"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Existing Exceptions -> Rule Exists Audit",
+              "targetStep": "/api/3/workflow_steps/376b10c2-f794-596c-9b86-d7566b038431",
+              "sourceStep": "/api/3/workflow_steps/b0ab7661-7e40-5879-81a9-ffb65b83814a",
+              "label": "Rule Exists",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "a611a85e-8839-5e76-8a11-35f30a64e8a5"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Existing Exceptions -> Expiry Form",
+              "targetStep": "/api/3/workflow_steps/d035914e-b7a2-5575-8f94-de791512d74a",
+              "sourceStep": "/api/3/workflow_steps/b0ab7661-7e40-5879-81a9-ffb65b83814a",
+              "label": "Clear",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "b07c9441-69bc-5e27-8c90-b404f87dbbe7"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Rule Exists Audit -> End",
+              "targetStep": "/api/3/workflow_steps/87e81634-51cf-5fb6-8bf6-5805de08437a",
+              "sourceStep": "/api/3/workflow_steps/376b10c2-f794-596c-9b86-d7566b038431",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "18290575-2fb5-5566-98ae-78878f2aaa48"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Expiry Form -> Compute Expiry",
+              "targetStep": "/api/3/workflow_steps/4bd8c421-4f1a-5d16-89df-a0951f3aae81",
+              "sourceStep": "/api/3/workflow_steps/d035914e-b7a2-5575-8f94-de791512d74a",
+              "label": "Create Exception",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "e30f77c9-dc81-5365-819f-90aae7cc6b2b"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Expiry Form -> Cancelled",
+              "targetStep": "/api/3/workflow_steps/e812ce51-b534-5ab1-9e04-f5b6c2d93c53",
+              "sourceStep": "/api/3/workflow_steps/d035914e-b7a2-5575-8f94-de791512d74a",
+              "label": "Cancel",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "b7c75d4d-4589-54f5-ab1e-247fa95e3c21"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Compute Expiry -> Create Exception",
+              "targetStep": "/api/3/workflow_steps/6f30a98d-eb4f-5101-945b-ec4806561380",
+              "sourceStep": "/api/3/workflow_steps/4bd8c421-4f1a-5d16-89df-a0951f3aae81",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "68769167-3208-52b5-94dc-65161f6ed021"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Create Exception -> Exception Audit",
+              "targetStep": "/api/3/workflow_steps/56ebc10a-f4e5-5434-b83c-f05985e306c9",
+              "sourceStep": "/api/3/workflow_steps/6f30a98d-eb4f-5101-945b-ec4806561380",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "2418f969-105a-5620-9de4-c9c3fa2e3689"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Exception Audit -> End",
+              "targetStep": "/api/3/workflow_steps/87e81634-51cf-5fb6-8bf6-5805de08437a",
+              "sourceStep": "/api/3/workflow_steps/56ebc10a-f4e5-5434-b83c-f05985e306c9",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "d1a2373b-85e2-5a18-a087-bd2a2ba531ec"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Cancelled -> End",
+              "targetStep": "/api/3/workflow_steps/87e81634-51cf-5fb6-8bf6-5805de08437a",
+              "sourceStep": "/api/3/workflow_steps/e812ce51-b534-5ab1-9e04-f5b6c2d93c53",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "c3826f60-4ce7-557f-85ae-276e14fcbfff"
+            }
+          ],
+          "groups": [
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Existing Exceptions",
+              "description": "The event already carries at least one rule (FortiEDR keeps rules\nfrom deleted exceptions too). A second overlapping allow is how\npermanent exceptions multiply unnoticed, so this stops at the audit.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "770",
+              "left": "1560",
+              "height": "182",
+              "width": "440",
+              "uuid": "cefcff6b-6eaf-5220-ace6-8e979db48e7f",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Compute Expiry",
+              "description": "The marker is the sweep's whole contract:\n`fortiedrv2-managed expires=<unix epoch> :: <analyst reason>`. The\nsweep matches the prefix and parses the epoch; everything after the\nseparator is the human record. FortiEDR's own Created At field carries\nonly minute precision in the server's local timezone, so the epoch is\nthe only clock the sweep trusts.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1030",
+              "left": "1560",
+              "height": "270",
+              "width": "440",
+              "uuid": "56c4240a-a788-538f-8ee9-216029756732",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Create Exception",
+              "description": "The allow-the-event form of the create call: collector groups and\ndestinations open, exactly the shipped connector's semantics for\n\"this event qualifies everywhere\". A narrower scope belongs to a\nhand-built console rule, which this playbook deliberately never\nguesses on the operator's behalf.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1320",
+              "left": "880",
+              "height": "248",
+              "width": "440",
+              "uuid": "9f393a64-2820-5f6b-bf17-81282dab0939",
+              "recordTags": []
+            }
+          ],
+          "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
+          "playbookOrigin": null,
+          "isEditable": true,
+          "uuid": "0012f439-ec76-5573-95f0-1ec21ba2bfac",
+          "owners": [],
+          "isPrivate": false
+        },
+        {
+          "@type": "Workflow",
+          "name": "FortiEDR v2 > Exception Expiry Sweep",
+          "aliasName": null,
+          "tag": "",
+          "recordTags": [
+            "fortinet-fortiedrv2",
+            "usecase",
+            "governance"
+          ],
+          "description": "Deletes FortiEDR exception rules created by the Allow Event playbook whose encoded expiry has passed. Managed rules still in their window are reported and left in place; unmanaged rules are counted and never touched.",
+          "isActive": true,
+          "debug": false,
+          "singleRecordExecution": false,
+          "remoteExecutableFlag": 0,
+          "parameters": [],
+          "synchronous": false,
+          "lastModifyDate": 1793713231.2585819,
+          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "versions": [],
+          "triggerStep": "/api/3/workflow_steps/ebcf2d77-dd77-5d8c-adfa-23bd04e21e71",
+          "steps": [
+            {
+              "@type": "WorkflowStep",
+              "name": "Start",
+              "description": null,
+              "arguments": {
+                "step_variables": {
+                  "input": {
+                    "params": []
+                  }
+                }
+              },
+              "status": null,
+              "top": "120",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/b348f017-9a94-471f-87f8-ce88b6a7ad62",
+              "group": null,
+              "uuid": "ebcf2d77-dd77-5d8c-adfa-23bd04e21e71"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Sweep Window",
+              "description": null,
+              "arguments": {
+                "now_epoch": "{{ arrow.utcnow().format('X') }}",
+                "marker": "fortiedrv2-managed expires="
+              },
+              "status": null,
+              "top": "250",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "e5ad5335-0712-5d47-b435-2df47b2171f1"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "List Exceptions",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "list_exception",
+                "config": "",
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Exception List",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "380",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "cfe957d6-f118-5ec3-9a56-548ddc286146"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Find Expired",
+              "description": null,
+              "arguments": {
+                "connector": "code-snippet",
+                "operation": "python_inline_code_editor",
+                "operationTitle": "Execute Python Code",
+                "version": "2.1.4",
+                "step_variables": [],
+                "params": {
+                  "python_function": "comments = {{ vars.steps.List_Exceptions.data | map(attribute='comment') | list | tojson }}\nids = {{ vars.steps.List_Exceptions.data | map(attribute='exceptionId') | list | tojson }}\nnow_epoch = {{ vars.now_epoch | int }}\nmarker = {{ vars.marker | tojson }}\nexpired_ids = []\nmanaged_fresh = 0\nunmanaged = 0\ni = 0\nwhile i < len(comments):\n    c = comments[i]\n    parsed = ''\n    handled = False\n    if c and marker in c:\n        rest = c[c.index(marker) + len(marker):]\n        for ch in rest:\n            if ch.isdigit():\n                parsed = parsed + ch\n            else:\n                break\n        if parsed == '' or int(parsed) >= now_epoch:\n            managed_fresh = managed_fresh + 1\n        else:\n            expired_ids.append(str(ids[i]))\n        handled = True\n    if not handled:\n        unmanaged = unmanaged + 1\n    i = i + 1\nprint({'expiredIdsCsv': ','.join(expired_ids),\n       'expiredCount': len(expired_ids),\n       'managedFreshCount': managed_fresh,\n       'unmanagedCount': unmanaged})\n"
+                },
+                "config": "3cb67838-5fca-4d3b-9197-f4bbb29659a6"
+              },
+              "status": null,
+              "top": "510",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/1fdd14cc-d6b4-4335-a3af-ab49c8ed2fd8",
+              "group": null,
+              "uuid": "d7e57cff-5e35-5632-9ef8-e98de05582f5"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Expired Found",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Expired Rules Present",
+                    "condition": "{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv | default('', true) }}",
+                    "step_iri": "/api/3/workflow_steps/9dff1036-0e6c-59d2-a7d4-151134b4b5dc",
+                    "step_name": "Delete Expired"
+                  },
+                  {
+                    "option": "Nothing To Delete",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/ed1250fb-3750-5824-ad7e-e5a77636e513",
+                    "step_name": "Sweep Summary"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "640",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "37049c7e-58f6-5f96-949f-cc00c9316629"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Delete Expired",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "delete_exception",
+                "config": "",
+                "params": {
+                  "exceptionIds": "{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Delete Exception",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "770",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "9dff1036-0e6c-59d2-a7d4-151134b4b5dc"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Sweep Summary",
+              "description": null,
+              "arguments": {
+                "deleted_ids_csv": "{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv | default('', true) }}",
+                "deleted_count": "{{ vars.steps.Find_Expired.data.code_output.expiredCount | default(0) }}",
+                "managed_fresh_count": "{{ vars.steps.Find_Expired.data.code_output.managedFreshCount | default(0) }}",
+                "unmanaged_count": "{{ vars.steps.Find_Expired.data.code_output.unmanagedCount | default(0) }}"
+              },
+              "status": null,
+              "top": "900",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "ed1250fb-3750-5824-ad7e-e5a77636e513"
+            }
+          ],
+          "routes": [
+            {
+              "@type": "WorkflowRoute",
+              "name": "Start -> Sweep Window",
+              "targetStep": "/api/3/workflow_steps/e5ad5335-0712-5d47-b435-2df47b2171f1",
+              "sourceStep": "/api/3/workflow_steps/ebcf2d77-dd77-5d8c-adfa-23bd04e21e71",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "d0c0ddb5-2c3a-579c-8a9c-3da459288ef4"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Sweep Window -> List Exceptions",
+              "targetStep": "/api/3/workflow_steps/cfe957d6-f118-5ec3-9a56-548ddc286146",
+              "sourceStep": "/api/3/workflow_steps/e5ad5335-0712-5d47-b435-2df47b2171f1",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "e3be6673-9b2c-5bac-92eb-f65a1c40d7a2"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "List Exceptions -> Find Expired",
+              "targetStep": "/api/3/workflow_steps/d7e57cff-5e35-5632-9ef8-e98de05582f5",
+              "sourceStep": "/api/3/workflow_steps/cfe957d6-f118-5ec3-9a56-548ddc286146",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "c1d0efe3-49bc-5595-82e8-8e21ba75e530"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Find Expired -> Expired Found",
+              "targetStep": "/api/3/workflow_steps/37049c7e-58f6-5f96-949f-cc00c9316629",
+              "sourceStep": "/api/3/workflow_steps/d7e57cff-5e35-5632-9ef8-e98de05582f5",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "625fdedb-1b9c-5c25-ae55-e86ae78ab453"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Expired Found -> Delete Expired",
+              "targetStep": "/api/3/workflow_steps/9dff1036-0e6c-59d2-a7d4-151134b4b5dc",
+              "sourceStep": "/api/3/workflow_steps/37049c7e-58f6-5f96-949f-cc00c9316629",
+              "label": "Expired Rules Present",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "a12343b3-1bdf-5179-8d69-da7013371142"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Expired Found -> Sweep Summary",
+              "targetStep": "/api/3/workflow_steps/ed1250fb-3750-5824-ad7e-e5a77636e513",
+              "sourceStep": "/api/3/workflow_steps/37049c7e-58f6-5f96-949f-cc00c9316629",
+              "label": "Nothing To Delete",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "3f4ed42a-aa49-587c-b6c0-7e48c250e82a"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Delete Expired -> Sweep Summary",
+              "targetStep": "/api/3/workflow_steps/ed1250fb-3750-5824-ad7e-e5a77636e513",
+              "sourceStep": "/api/3/workflow_steps/9dff1036-0e6c-59d2-a7d4-151134b4b5dc",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "af991ef5-571e-500f-b20f-f2fada82074c"
+            }
+          ],
+          "groups": [
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Sweep Window",
+              "description": "A plain `start` (no module) is the shape the scheduled ingest\nfetchers use, so this playbook drops straight into a cron entry.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "250",
+              "left": "540",
+              "height": "138",
+              "width": "440",
+              "uuid": "a6f98a16-37b1-55d4-87c1-d51f148b7f57",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: List Exceptions",
+              "description": "No comment filter is passed: filtering by comment on this endpoint\nwas not verifiably honored, and the sweep must see every rule to\ncount the unmanaged ones anyway. Keep the organization blank -- the\ntenant then lists the configured organization, while the literal\nselect value \"All organizations\" is rejected server-side.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "408",
+              "left": "540",
+              "height": "248",
+              "width": "440",
+              "uuid": "9f5bc097-aaa0-52fe-8793-7c059c56ed9c",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Find Expired",
+              "description": "Defensive parse per rule: the marker prefix selects OUR rules, the\ndigits after it are the expiry epoch, and anything else on the\ncomment line is left alone. Rows without the marker are counted as\nunmanaged and skipped -- the sweep must never delete a hand-built\nconsole rule.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "676",
+              "left": "880",
+              "height": "248",
+              "width": "440",
+              "uuid": "cb612980-ad9f-564a-83fb-628a2dc8d110",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Delete Expired",
+              "description": "Exception IDs and NOTHING else. The comment parameter on this\nendpoint is a FILTER, not a note (live-observed): a delete carrying\na comment deletes only the rules whose comment matches it, so an\naudit note passed as `comment` here would silently delete nothing.\nThe organization is omitted for the same filtering reason -- IDs\nalone address the rules exactly.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "944",
+              "left": "880",
+              "height": "292",
+              "width": "440",
+              "uuid": "63fcc8d5-688b-5d23-9855-281191d8df0b",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Sweep Summary",
+              "description": "The run's report is this step's result -- the scheduled-task view\nand any parent playbook read it from here.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1256",
+              "left": "880",
+              "height": "116",
+              "width": "440",
+              "uuid": "84ae4fa5-0c47-5ad4-8903-0787dac30c64",
+              "recordTags": []
+            }
+          ],
+          "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
+          "playbookOrigin": null,
+          "isEditable": true,
+          "uuid": "9da8a301-b5bc-520e-ac1b-d279e6be7810",
+          "owners": [],
+          "isPrivate": false
+        },
+        {
+          "@type": "Workflow",
+          "name": "FortiEDR v2 > Re-detection Digest",
+          "aliasName": null,
+          "tag": "",
+          "recordTags": [
+            "fortinet-fortiedrv2",
+            "usecase",
+            "reporting"
+          ],
+          "description": "Builds a digest task of the console incidents still absorbing re-detections, ranked by event count (the long-running compromises first) and posts it as a FortiSOAR task for the SOC queue.",
+          "isActive": true,
+          "debug": false,
+          "singleRecordExecution": false,
+          "remoteExecutableFlag": 0,
+          "parameters": [],
+          "synchronous": false,
+          "lastModifyDate": 1793713231.2585819,
+          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "versions": [],
+          "triggerStep": "/api/3/workflow_steps/e6cd9c86-57bf-5199-9981-d99468b16ab3",
+          "steps": [
+            {
+              "@type": "WorkflowStep",
+              "name": "Start",
+              "description": null,
+              "arguments": {
+                "step_variables": {
+                  "input": {
+                    "params": []
+                  }
+                }
+              },
+              "status": null,
+              "top": "120",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/b348f017-9a94-471f-87f8-ce88b6a7ad62",
+              "group": null,
+              "uuid": "e6cd9c86-57bf-5199-9981-d99468b16ab3"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Get Incidents",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_incidents",
+                "config": "",
+                "params": {
+                  "time_filter": "Last30days",
+                  "status_filter": "Unhandled",
+                  "type_filter": "SecurityEvents"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Incidents",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "250",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "2fda2f08-acf2-5a2b-aca6-ed188df54aae"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Rank Incidents",
+              "description": null,
+              "arguments": {
+                "connector": "code-snippet",
+                "operation": "python_inline_code_editor",
+                "operationTitle": "Execute Python Code",
+                "version": "2.1.4",
+                "step_variables": [],
+                "params": {
+                  "python_function": "counts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='eventsNum') | list | tojson }}\nnames = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='name') | list | tojson }}\nids = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='id') | list | tojson }}\nfirsts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='firstSeen') | list | tojson }}\nlasts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='lastSeen') | list | tojson }}\ntotal = len(counts)\nrows = []\ni = 0\nwhile i < total:\n    n = counts[i]\n    if n is None:\n        n = 0\n    rows.append((int(n), str(names[i]), str(ids[i]), str(firsts[i]), str(lasts[i])))\n    i = i + 1\nrows.sort(reverse=True)\nhtml = '<table class=\"table\" border=\"1\" style=\"border-collapse:collapse;\">'\nhtml = html + '<tr><th style=\"text-align:left;padding:4px 10px;\">Incident</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Detections</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">First seen</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Last seen</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Id</th></tr>'\ni = 0\nwhile i < len(rows):\n    r = rows[i]\n    tone = ' style=\"padding:4px 10px;\"'\n    if i < 5:\n        tone = ' style=\"padding:4px 10px;background:rgba(229,72,77,.12);\"'\n    html = html + '<tr><td' + tone + '>' + r[1] + '</td><td' + tone + '>' + str(r[0]) + '</td><td' + tone + '>' + r[3] + '</td><td' + tone + '>' + r[4] + '</td><td' + tone + '>' + r[2] + '</td></tr>'\n    i = i + 1\nhtml = html + '</table>'\ntop5 = 0\nif len(rows) > 5:\n    top5 = 5\nelse:\n    top5 = len(rows)\nprint({'digest_html': html, 'incident_count': total,\n       'top5_events': (rows[0][0] if rows else 0), 'top5_name': (rows[0][1] if rows else '')})\n"
+                },
+                "config": "3cb67838-5fca-4d3b-9197-f4bbb29659a6"
+              },
+              "status": null,
+              "top": "380",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/1fdd14cc-d6b4-4335-a3af-ab49c8ed2fd8",
+              "group": null,
+              "uuid": "12fdef07-10ec-5e0c-acb3-b3a30ac1c1a4"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Digest Task",
+              "description": null,
+              "arguments": {
+                "resource": {
+                  "name": "FortiEDR re-detection digest -- {{ vars.steps.Rank_Incidents.data.code_output.incident_count }} unhandled incidents",
+                  "status": "Open",
+                  "priority": "Low",
+                  "description": "{{ vars.steps.Rank_Incidents.data.code_output.digest_html }}"
+                },
+                "collection": "tasks"
+              },
+              "status": null,
+              "top": "510",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/dc6ac63d-c5a5-472f-9eb4-6b18473a98b8",
+              "group": null,
+              "uuid": "4a615c07-529d-59cc-81d8-ac30040e3d94"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "End",
+              "description": null,
+              "arguments": {
+                "connector": "cyops_utilities",
+                "operation": "no_op",
+                "config": "",
+                "params": {},
+                "version": "3.7.2",
+                "name": "Utilities",
+                "operationTitle": "Utils: No Operation",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "640",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "d53623e2-9904-57a3-a949-db896342cea2"
+            }
+          ],
+          "routes": [
+            {
+              "@type": "WorkflowRoute",
+              "name": "Start -> Get Incidents",
+              "targetStep": "/api/3/workflow_steps/2fda2f08-acf2-5a2b-aca6-ed188df54aae",
+              "sourceStep": "/api/3/workflow_steps/e6cd9c86-57bf-5199-9981-d99468b16ab3",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "a6008a4c-7ba3-5a3c-b24c-758e084b1c1c"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Get Incidents -> Rank Incidents",
+              "targetStep": "/api/3/workflow_steps/12fdef07-10ec-5e0c-acb3-b3a30ac1c1a4",
+              "sourceStep": "/api/3/workflow_steps/2fda2f08-acf2-5a2b-aca6-ed188df54aae",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "fd82375c-d353-51e1-8e61-0bc042404269"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Rank Incidents -> Digest Task",
+              "targetStep": "/api/3/workflow_steps/4a615c07-529d-59cc-81d8-ac30040e3d94",
+              "sourceStep": "/api/3/workflow_steps/12fdef07-10ec-5e0c-acb3-b3a30ac1c1a4",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "a379d258-02f5-5f67-aabb-86a2cf5618e9"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Digest Task -> End",
+              "targetStep": "/api/3/workflow_steps/d53623e2-9904-57a3-a949-db896342cea2",
+              "sourceStep": "/api/3/workflow_steps/4a615c07-529d-59cc-81d8-ac30040e3d94",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "5ddef83b-d920-536c-bcb1-055a7c3c4ad7"
+            }
+          ],
+          "groups": [
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Rank Incidents",
+              "description": "Ranks on eventIdsNum only -- one list per incident row, integers\nonly, so nothing typed ever crosses the sandbox. The digest itself\nis built into the snippet: row separator + inline-styled table, the\nhouse card recipe that survives both SOAR themes.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "380",
+              "left": "540",
+              "height": "204",
+              "width": "440",
+              "uuid": "a20fe3d0-c37e-5eea-9737-6cf6fe476c09",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Digest Task",
+              "description": "A task is the queueable artifact on a box without a mail relay: it\nlands in the SOC's task view with the digest as its description and\nthe operator's follow-up goes through the task's own close loop.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "604",
+              "left": "540",
+              "height": "182",
+              "width": "440",
+              "uuid": "de5340b1-0e7b-50c4-a2fd-a7305b7d7aa0",
+              "recordTags": []
+            }
+          ],
+          "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
+          "playbookOrigin": null,
+          "isEditable": true,
+          "uuid": "d3e1debc-34f1-5ba3-af61-a1513c109fd8",
+          "owners": [],
+          "isPrivate": false
+        },
+        {
+          "@type": "Workflow",
+          "name": "FortiEDR v2 > IOC Retro-Hunt",
+          "aliasName": null,
+          "tag": "",
+          "recordTags": [
+            "fortinet-fortiedrv2",
+            "usecase",
+            "hunting"
+          ],
+          "description": "Execute-menu action: takes a file hash, sweeps the whole FortiEDR estate for the events that harbor it, and upserts one alert per hit event (severity and device from the live event). Re-running the same hunt updates its findings without duplicating them.",
+          "isActive": true,
+          "debug": false,
+          "singleRecordExecution": false,
+          "remoteExecutableFlag": 0,
+          "parameters": [
+            "file_hash"
+          ],
+          "synchronous": false,
+          "lastModifyDate": 1793713231.2585819,
+          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "versions": [],
+          "triggerStep": "/api/3/workflow_steps/93cf4876-f3fe-58d4-98f3-426e8a1e6bf4",
+          "steps": [
+            {
+              "@type": "WorkflowStep",
+              "name": "Start",
+              "description": null,
+              "arguments": {
+                "inputVariables": [
+                  {
+                    "title": "File Hash",
+                    "name": "file_hash",
+                    "required": true,
+                    "editable": true,
+                    "visible": true,
+                    "type": "text",
+                    "value": "",
+                    "tooltip": "MD5/SHA-1/SHA-256 of the file to hunt for. The search covers every event the tenant still holds, the threat-hunting repository, and communicating applications."
+                  }
+                ],
+                "title": "FortiEDR v2 > IOC Retro-Hunt",
+                "resources": [
+                  "alerts"
+                ],
+                "route": "41d819f2-483f-54b5-8351-b3bcba08e9ac",
+                "step_variables": {
+                  "input": {
+                    "params": {
+                      "file_hash": "{{vars.request.data[\"file_hash\"]}}"
+                    },
+                    "records": "{{vars.input.records}}"
+                  }
+                },
+                "triggerOnSource": true,
+                "triggerOnReplicate": false,
+                "noRecordExecution": true,
+                "singleRecordExecution": false,
+                "__triggerLimit": true,
+                "executeButtonText": "Execute",
+                "showToasterMessage": {
+                  "visible": false,
+                  "messageVisible": true
+                },
+                "displayConditions": {
+                  "alerts": {
+                    "sort": [],
+                    "limit": 30,
+                    "logic": "AND",
+                    "filters": []
+                  }
+                }
+              },
+              "status": null,
+              "top": "120",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
+              "group": null,
+              "uuid": "93cf4876-f3fe-58d4-98f3-426e8a1e6bf4"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Validate Input",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Hash Present",
+                    "condition": "{{ vars.input.params.file_hash | default('', true) }}",
+                    "step_iri": "/api/3/workflow_steps/37041a24-c0e1-54ad-9b07-f68dfd2a146e",
+                    "step_name": "Hunt Hash"
+                  },
+                  {
+                    "option": "No Hash",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/3f0a26a0-4f1d-56e3-b44d-feeb05a6c148",
+                    "step_name": "No Hash"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "250",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "ffd46679-4d61-5c39-a61c-de91b6cb2ef4"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Hunt Hash",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "search",
+                "config": "",
+                "params": {
+                  "fileHashes": "{{ vars.input.params.file_hash }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Search Filehash",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "380",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "37041a24-c0e1-54ad-9b07-f68dfd2a146e"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Hits",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Have Hits",
+                    "condition": "{{ vars.steps.Hunt_Hash.data[0].eventIds | default([]) | length > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/bd6ed60e-7421-577d-9635-5069c9c67ab6",
+                    "step_name": "Get Hunt Events"
+                  },
+                  {
+                    "option": "No Hits",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/42cca2c7-657c-5b7a-b05a-b604226e9a02",
+                    "step_name": "Hunt Summary"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "510",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "0943bf7a-b653-5ba9-978e-ab74093a3469"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Get Hunt Events",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_event_list",
+                "config": "",
+                "params": {
+                  "eventIds": "{{ vars.steps.Hunt_Hash.data[0].eventIds | join(',') }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Events",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "640",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "bd6ed60e-7421-577d-9635-5069c9c67ab6"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Create Hunt Alerts",
+              "description": null,
+              "arguments": {
+                "operation": "Overwrite",
+                "resource": {
+                  "name": "{{ ('FortiEDR retro-hunt: ' ~ vars.input.params.file_hash ~ ' seen on ' ~ vars.item.collectors[0].device ~ ' (' ~ vars.item.process ~ ')') | truncate(200) }}",
+                  "source": "Fortinet FortiEDR",
+                  "sourceId": "{{ vars.item.eventId }}",
+                  "severity": "{{ \"Severity\" | picklist(vars.item.severity | default(\"Medium\")) }}",
+                  "alertType": "{{ \"AlertType\" | picklist(\"Malware\") }}",
+                  "userName": "{{ vars.item.loggedUsers | default(\"\") | join(\",\") }}",
+                  "processName": "{{ vars.item.process | default(\"\") }}",
+                  "description": "{{ 'Retro-hunt finding: file hash <code>' ~ vars.input.params.file_hash ~ '</code> is harbored by FortiEDR event ' ~ vars.item.eventId ~ ' on <code>' ~ vars.item.collectors[0].device ~ '</code> (' ~ vars.item.severity ~ ', ' ~ vars.item.classification ~ '), first seen ' ~ vars.item.firstSeen ~ ', last seen ' ~ vars.item.lastSeen ~ '.' }}",
+                  "sourcedata": "{{ vars.item | toJSON }}",
+                  "__replace": "true",
+                  "__fieldsToUpdate": "{{ ['name', 'source', 'sourceId', 'severity', 'alertType', 'userName', 'processName', 'description', 'sourcedata'] }}"
+                },
+                "collection": "/api/3/upsert/alerts",
+                "for_each": {
+                  "item": "{{ vars.steps.Get_Hunt_Events.data }}",
+                  "condition": "",
+                  "__bulk": true,
+                  "batch_size": 100
+                }
+              },
+              "status": null,
+              "top": "770",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/2597053c-e718-44b4-8394-4d40fe26d357",
+              "group": null,
+              "uuid": "cd90b32e-789f-5ed4-8dfd-11bc9efe3881"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Hunt Summary",
+              "description": null,
+              "arguments": {
+                "hunt_hash": "{{ vars.input.params.file_hash | default('', true) }}",
+                "finding_count": "{{ vars.steps.Hunt_Hash.data[0].eventIds | default([]) | length }}",
+                "hunt_event_rows": "{{ vars.steps.Get_Hunt_Events.data | default([]) | length | int }}"
+              },
+              "status": null,
+              "top": "900",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "42cca2c7-657c-5b7a-b05a-b604226e9a02"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "No Hash",
+              "description": null,
+              "arguments": {
+                "hunt_hash": "",
+                "finding_count": 0,
+                "hunt_event_rows": 0
+              },
+              "status": null,
+              "top": "380",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "3f0a26a0-4f1d-56e3-b44d-feeb05a6c148"
+            }
+          ],
+          "routes": [
+            {
+              "@type": "WorkflowRoute",
+              "name": "Start -> Validate Input",
+              "targetStep": "/api/3/workflow_steps/ffd46679-4d61-5c39-a61c-de91b6cb2ef4",
+              "sourceStep": "/api/3/workflow_steps/93cf4876-f3fe-58d4-98f3-426e8a1e6bf4",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "4bd5575e-20c6-5fe6-9553-d063e411987c"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Validate Input -> Hunt Hash",
+              "targetStep": "/api/3/workflow_steps/37041a24-c0e1-54ad-9b07-f68dfd2a146e",
+              "sourceStep": "/api/3/workflow_steps/ffd46679-4d61-5c39-a61c-de91b6cb2ef4",
+              "label": "Hash Present",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "135d67b8-7be7-5745-9cff-5a29c6f281c8"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Validate Input -> No Hash",
+              "targetStep": "/api/3/workflow_steps/3f0a26a0-4f1d-56e3-b44d-feeb05a6c148",
+              "sourceStep": "/api/3/workflow_steps/ffd46679-4d61-5c39-a61c-de91b6cb2ef4",
+              "label": "No Hash",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "2a6b4ef8-aa17-53b6-a319-dec0eeab2330"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Hunt Hash -> Hits",
+              "targetStep": "/api/3/workflow_steps/0943bf7a-b653-5ba9-978e-ab74093a3469",
+              "sourceStep": "/api/3/workflow_steps/37041a24-c0e1-54ad-9b07-f68dfd2a146e",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "7f04c429-d1ab-5ccc-a432-ca860b8ae7a9"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Hits -> Get Hunt Events",
+              "targetStep": "/api/3/workflow_steps/bd6ed60e-7421-577d-9635-5069c9c67ab6",
+              "sourceStep": "/api/3/workflow_steps/0943bf7a-b653-5ba9-978e-ab74093a3469",
+              "label": "Have Hits",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "d12b9817-337b-529b-9c8f-37a6cfd427f0"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Hits -> Hunt Summary",
+              "targetStep": "/api/3/workflow_steps/42cca2c7-657c-5b7a-b05a-b604226e9a02",
+              "sourceStep": "/api/3/workflow_steps/0943bf7a-b653-5ba9-978e-ab74093a3469",
+              "label": "No Hits",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "7c15a5da-9080-5da3-b0ac-4f61017ac8fb"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Get Hunt Events -> Create Hunt Alerts",
+              "targetStep": "/api/3/workflow_steps/cd90b32e-789f-5ed4-8dfd-11bc9efe3881",
+              "sourceStep": "/api/3/workflow_steps/bd6ed60e-7421-577d-9635-5069c9c67ab6",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "dedc653c-f7e8-5c61-8cc4-171aab63d60e"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Create Hunt Alerts -> Hunt Summary",
+              "targetStep": "/api/3/workflow_steps/42cca2c7-657c-5b7a-b05a-b604226e9a02",
+              "sourceStep": "/api/3/workflow_steps/cd90b32e-789f-5ed4-8dfd-11bc9efe3881",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "1cb71e7a-9448-5243-b78d-6a1ddc022176"
+            }
+          ],
+          "groups": [
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Validate Input",
+              "description": "The Execute dialog requires the hash, but the API route can start\nthe run with a blank body -- refuse that before it reaches the\ntenant.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "250",
+              "left": "880",
+              "height": "160",
+              "width": "440",
+              "uuid": "248b1501-5ed5-56c0-8ddd-e56c761bc7ba",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Get Hunt Events",
+              "description": "The event IDs from the hash search are fetched as one comma list,\none call: get_event_list answers with the full rows (severity,\nprocess, the collector device) in the same shape the ingestion\npull reads.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "640",
+              "left": "880",
+              "height": "204",
+              "width": "440",
+              "uuid": "3c1ce7ac-51e9-5192-ab42-dca02385ea00",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Create Hunt Alerts",
+              "description": "The same upsert contract as the ingestion chain's Create Record --\nsourceId = eventId dedupes against anything the scheduled pull\nalready wrote -- with two deliberate differences. The name declares\nitself a hunt finding, and alertDetectionDate is ABSENT from the\nupdate set: a hunt that runs months later must not move the\nincident's recorded first detection.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "864",
+              "left": "880",
+              "height": "292",
+              "width": "440",
+              "uuid": "12746958-79d6-50dd-a451-fe20cd52da6b",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Hunt Summary",
+              "description": "Both terminal paths land here: the finding count is zero on the no-hit\nbranch, and the task view shows the summary either way.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1176",
+              "left": "880",
+              "height": "116",
+              "width": "440",
+              "uuid": "72c4411a-20b1-54bd-8b69-aa69558d5502",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: No Hash",
+              "description": "A blank hash never reaches the tenant; the summary says why the run\nwas a no-op instead of failing with the operation's parameter\nerror.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "430",
+              "left": "880",
+              "height": "160",
+              "width": "440",
+              "uuid": "d490f9bb-0b13-5eb2-b250-ebf6084cbb92",
+              "recordTags": []
+            }
+          ],
+          "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
+          "playbookOrigin": null,
+          "isEditable": true,
+          "uuid": "18588f35-c804-5b70-b877-ad4651f8cabc",
+          "owners": [],
+          "isPrivate": false
+        },
+        {
+          "@type": "Workflow",
+          "name": "FortiEDR v2 > Fleet Compliance Audit",
+          "aliasName": null,
+          "tag": "",
+          "recordTags": [
+            "fortinet-fortiedrv2",
+            "usecase",
+            "compliance"
+          ],
+          "description": "Audits the FortiEDR collector fleet (state, recency, version vs the available installers) and files a FortiSOAR digest task. When the fleet lags behind an available installer, an approval-gated step can stage the version rollout.",
+          "isActive": true,
+          "debug": false,
+          "singleRecordExecution": false,
+          "remoteExecutableFlag": 0,
+          "parameters": [],
+          "synchronous": false,
+          "lastModifyDate": 1793713231.2585819,
+          "collection": "/api/3/workflow_collections/9c376f8f-4880-5f33-8d0b-48d1e3edc61d",
+          "versions": [],
+          "triggerStep": "/api/3/workflow_steps/1976d954-6767-56a0-b103-0136b92adb17",
+          "steps": [
+            {
+              "@type": "WorkflowStep",
+              "name": "Start",
+              "description": null,
+              "arguments": {
+                "step_variables": {
+                  "input": {
+                    "params": []
+                  }
+                }
+              },
+              "status": null,
+              "top": "120",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/b348f017-9a94-471f-87f8-ce88b6a7ad62",
+              "group": null,
+              "uuid": "1976d954-6767-56a0-b103-0136b92adb17"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Get Fleet",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_collector_list",
+                "config": "",
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Collector List",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "250",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "227a17f1-9a07-5635-bcd1-a101626e7ee7"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Get Installers",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "get_collector_installers",
+                "config": "",
+                "params": {
+                  "organization": ""
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Get Collector Installers",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "380",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "14c0135d-a69f-5518-8efe-0a7efd713d0f"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Audit Fleet",
+              "description": null,
+              "arguments": {
+                "connector": "code-snippet",
+                "operation": "python_inline_code_editor",
+                "operationTitle": "Execute Python Code",
+                "version": "2.1.4",
+                "step_variables": [],
+                "params": {
+                  "python_function": "names = {{ vars.steps.Get_Fleet.data | map(attribute='name') | list | tojson }}\nversions = {{ vars.steps.Get_Fleet.data | map(attribute='version') | list | tojson }}\nstates = {{ vars.steps.Get_Fleet.data | map(attribute='state') | list | tojson }}\nstates_adtl = {{ vars.steps.Get_Fleet.data | map(attribute='stateAdditionalInfo') | list | tojson }}\nos_families = {{ vars.steps.Get_Fleet.data | map(attribute='osFamily') | list | tojson }}\nlast_seens = {{ vars.steps.Get_Fleet.data | map(attribute='lastSeenTime') | list | tojson }}\ninst_os = {{ vars.steps.Get_Installers.data.availableCollectorInstallers | map(attribute='osFamily') | list | tojson }}\ninst_ver = {{ vars.steps.Get_Installers.data.availableCollectorInstallers | map(attribute='version') | list | tojson }}\nlatest = {}\nj = 0\nwhile j < len(inst_os):\n    fam = inst_os[j]\n    if fam in latest:\n        if inst_ver[j] > latest[fam]:\n            latest[fam] = inst_ver[j]\n    else:\n        latest[fam] = inst_ver[j]\n    j = j + 1\nrows = []\nhealthy = 0\noutdated = 0\noffline = 0\ni = 0\nwhile i < len(names):\n    fam = os_families[i]\n    ver = str(versions[i])\n    state = str(states[i])\n    flag = 'ok'\n    if state != 'Running':\n        flag = 'state:' + state\n        offline = offline + 1\n    else:\n        if fam in latest and ver != str(latest[fam]):\n            flag = 'outdated (available ' + str(latest[fam]) + ')'\n            outdated = outdated + 1\n        else:\n            healthy = healthy + 1\n    rows.append((flag, str(names[i]), ver, state,\n                 str(states_adtl[i]), str(last_seens[i])))\n    i = i + 1\nhtml = '<table class=\"table\" border=\"1\" style=\"border-collapse:collapse;\">'\nhtml = html + '<tr><th style=\"text-align:left;padding:4px 10px;\">Collector</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Version</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">State</th>'\nhtml = html + '<th style=\"text-align:left;padding:4px 10px;\">Last seen</th></tr>'\ni = 0\nwhile i < len(rows):\n    r = rows[i]\n    tone = ' style=\"padding:4px 10px;\"'\n    if not r[0].startswith('ok'):\n        tone = ' style=\"padding:4px 10px;background:rgba(247,107,21,.12);\"'\n    html = html + '<tr><td' + tone + '>' + r[1] + '</td><td' + tone + '>' + r[2] + '</td><td' + tone + '>' + r[3] + '</td><td' + tone + '>' + r[5] + '</td></tr>'\n    i = i + 1\nhtml = html + '</table>'\nprint({'fleet_html': html, 'fleet_size': len(names), 'healthy': healthy,\n       'outdated': outdated, 'not_running': offline,\n       'latest_windows': (latest['Windows'] if 'Windows' in latest else '')})\n"
+                },
+                "config": "3cb67838-5fca-4d3b-9197-f4bbb29659a6"
+              },
+              "status": null,
+              "top": "510",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/1fdd14cc-d6b4-4335-a3af-ab49c8ed2fd8",
+              "group": null,
+              "uuid": "f30d67c9-fc7d-52c9-9158-e9a7b4d475cd"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Compliance Task",
+              "description": null,
+              "arguments": {
+                "resource": {
+                  "name": "FortiEDR fleet compliance -- {{ vars.steps.Audit_Fleet.data.code_output.fleet_size }} collectors, {{ vars.steps.Audit_Fleet.data.code_output.outdated }} outdated, {{ vars.steps.Audit_Fleet.data.code_output.not_running }} not running",
+                  "status": "Open",
+                  "priority": "Low",
+                  "description": "{{ vars.steps.Audit_Fleet.data.code_output.fleet_html }}"
+                },
+                "collection": "tasks"
+              },
+              "status": null,
+              "top": "640",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/dc6ac63d-c5a5-472f-9eb4-6b18473a98b8",
+              "group": null,
+              "uuid": "1b487be3-6fff-593f-96dd-7ca440d253ac"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Staging Offered",
+              "description": null,
+              "arguments": {
+                "conditions": [
+                  {
+                    "option": "Fleet Lags",
+                    "condition": "{{ (vars.steps.Audit_Fleet.data.code_output.outdated | int) > 0 }}",
+                    "step_iri": "/api/3/workflow_steps/1ebc6123-fa5b-5fef-aae1-2dbc2f9db927",
+                    "step_name": "Upgrade Approval"
+                  },
+                  {
+                    "option": "Nothing To Stage",
+                    "default": true,
+                    "step_iri": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858",
+                    "step_name": "Audit Summary"
+                  }
+                ]
+              },
+              "status": null,
+              "top": "770",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/12254cf5-5db7-4b1a-8cb1-3af081924b28",
+              "group": null,
+              "uuid": "f301c580-3433-5955-bae4-f62e78016b5b"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Upgrade Approval",
+              "description": "{{ vars.steps.Audit_Fleet.data.code_output.outdated }} collector(s) run behind an available installer. Staging an update rolls the chosen version to the collector group(s) -- pick them explicitly; blank means every group. Finish prose, click approve.",
+              "arguments": {
+                "is_approval": true,
+                "type": "InputBased",
+                "input": {
+                  "schema": {
+                    "title": "Stage collector installer update",
+                    "description": "{{ vars.steps.Audit_Fleet.data.code_output.outdated }} collector(s) run behind an available installer. Staging an update rolls the chosen version to the collector group(s) -- pick them explicitly; blank means every group. Finish prose, click approve.",
+                    "inputVariables": [
+                      {
+                        "name": "target_version",
+                        "type": "string",
+                        "label": "Target version (the audit reports the latest, e.g. {{ vars.steps.Audit_Fleet.data.code_output.latest_windows }})",
+                        "title": "Text",
+                        "usable": true,
+                        "tooltip": "",
+                        "dataType": "text",
+                        "formType": "text",
+                        "required": true,
+                        "_expanded": true,
+                        "templateUrl": "app/components/form/fields/input.html",
+                        "defaultValue": null,
+                        "_previousName": "",
+                        "playbookField": true,
+                        "jinjaExpressionView": true,
+                        "useRecordFieldDefault": false,
+                        "requiredCondition": "required",
+                        "_addRequiredConditions": true
+                      },
+                      {
+                        "name": "collector_groups",
+                        "type": "string",
+                        "label": "Collector groups (blank = all groups)",
+                        "title": "Text",
+                        "usable": true,
+                        "tooltip": "",
+                        "dataType": "text",
+                        "formType": "text",
+                        "required": false,
+                        "_expanded": true,
+                        "templateUrl": "app/components/form/fields/input.html",
+                        "defaultValue": null,
+                        "_previousName": "",
+                        "playbookField": true,
+                        "jinjaExpressionView": true,
+                        "useRecordFieldDefault": false,
+                        "requiredCondition": "notrequired",
+                        "_addRequiredConditions": true
+                      },
+                      {
+                        "name": "os_family",
+                        "type": "array",
+                        "label": "OS family",
+                        "title": "Dynamic List",
+                        "usable": true,
+                        "tooltip": "",
+                        "dataType": "dynamicList",
+                        "formType": "dynamicList",
+                        "required": true,
+                        "_expanded": true,
+                        "templateUrl": "app/components/form/fields/dynamicList.html",
+                        "defaultValue": "Windows",
+                        "_previousName": "",
+                        "playbookField": true,
+                        "jinjaExpressionView": true,
+                        "useRecordFieldDefault": false,
+                        "requiredCondition": "required",
+                        "_addRequiredConditions": true,
+                        "options": [
+                          "Windows",
+                          "Linux",
+                          "macOS"
+                        ],
+                        "collection": false,
+                        "searchable": false,
+                        "mmdUpdate": true,
+                        "lengthConstraint": true,
+                        "allowedGridColumn": false
+                      },
+                      {
+                        "name": "allow_downgrade",
+                        "type": "array",
+                        "label": "Allow downgrade",
+                        "title": "Dynamic List",
+                        "usable": true,
+                        "tooltip": "",
+                        "dataType": "dynamicList",
+                        "formType": "dynamicList",
+                        "required": true,
+                        "_expanded": true,
+                        "templateUrl": "app/components/form/fields/dynamicList.html",
+                        "defaultValue": "False",
+                        "_previousName": "",
+                        "playbookField": true,
+                        "jinjaExpressionView": true,
+                        "useRecordFieldDefault": false,
+                        "requiredCondition": "required",
+                        "_addRequiredConditions": true,
+                        "options": [
+                          "False",
+                          "True"
+                        ],
+                        "collection": false,
+                        "searchable": false,
+                        "mmdUpdate": true,
+                        "lengthConstraint": true,
+                        "allowedGridColumn": false
+                      }
+                    ]
+                  }
+                },
+                "record": "",
+                "isRecordLinked": false,
+                "owner_detail": {
+                  "isAssigned": false
+                },
+                "step_variables": [],
+                "response_mapping": {
+                  "options": [
+                    {
+                      "option": "Stage Update",
+                      "primary": true,
+                      "step_iri": "/api/3/workflow_steps/e208545c-950c-5c70-93bd-68fa094e1641"
+                    },
+                    {
+                      "option": "Skip",
+                      "step_iri": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858"
+                    }
+                  ],
+                  "duplicateOption": false,
+                  "customSuccessMessage": "Awaiting Playbook resumed successfully."
+                },
+                "email_notification": {
+                  "enabled": false,
+                  "smtpParameters": []
+                },
+                "inline_channel_list": [],
+                "external_channel_list": [],
+                "unauthenticated_input": false
+              },
+              "status": null,
+              "top": "900",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/a19333c2-c822-11ed-afa1-0242ac120002",
+              "group": null,
+              "uuid": "1ebc6123-fa5b-5fef-aae1-2dbc2f9db927"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Map Installer",
+              "description": null,
+              "arguments": {
+                "update_versions": "{{ [ {'allowDowngrade': (vars.steps.Upgrade_Approval.input.allow_downgrade == 'True'), 'osFamily': vars.steps.Upgrade_Approval.input.os_family, 'version': vars.steps.Upgrade_Approval.input.target_version} ] | toJSON }}",
+                "collector_groups": "{{ vars.steps.Upgrade_Approval.input.collector_groups | default('', true) }}"
+              },
+              "status": null,
+              "top": "1030",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "e208545c-950c-5c70-93bd-68fa094e1641"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Stage Upgrade",
+              "description": null,
+              "arguments": {
+                "connector": "fortinet-fortiedrv2",
+                "operation": "update_collector_installer",
+                "config": "",
+                "params": {
+                  "updateVersions": "{{ vars.update_versions }}",
+                  "collectorGroups": "{{ vars.collector_groups }}"
+                },
+                "version": "1.1.0",
+                "name": "Fortinet FortiEDR v2",
+                "operationTitle": "Update Collector Installer",
+                "step_variables": [],
+                "pickFromTenant": false
+              },
+              "status": null,
+              "top": "1160",
+              "left": "200",
+              "stepType": "/api/3/workflow_step_types/0bfed618-0316-11e7-93ae-92361f002671",
+              "group": null,
+              "uuid": "8f3d4fae-f67b-5f9e-82c2-f11279f9f9c4"
+            },
+            {
+              "@type": "WorkflowStep",
+              "name": "Audit Summary",
+              "description": null,
+              "arguments": {
+                "fleet_size": "{{ vars.steps.Audit_Fleet.data.code_output.fleet_size }}",
+                "healthy_count": "{{ vars.steps.Audit_Fleet.data.code_output.healthy }}",
+                "outdated_count": "{{ vars.steps.Audit_Fleet.data.code_output.outdated }}",
+                "not_running_count": "{{ vars.steps.Audit_Fleet.data.code_output.not_running }}",
+                "staged_version": "{{ vars.steps.Upgrade_Approval.input.target_version | default('', true) }}"
+              },
+              "status": null,
+              "top": "1290",
+              "left": "540",
+              "stepType": "/api/3/workflow_step_types/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+              "group": null,
+              "uuid": "e7242ecc-fb0b-576c-857a-cbad5f5a2858"
+            }
+          ],
+          "routes": [
+            {
+              "@type": "WorkflowRoute",
+              "name": "Start -> Get Fleet",
+              "targetStep": "/api/3/workflow_steps/227a17f1-9a07-5635-bcd1-a101626e7ee7",
+              "sourceStep": "/api/3/workflow_steps/1976d954-6767-56a0-b103-0136b92adb17",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "0e017c2b-09a0-534c-b162-b78fdd9531f6"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Get Fleet -> Get Installers",
+              "targetStep": "/api/3/workflow_steps/14c0135d-a69f-5518-8efe-0a7efd713d0f",
+              "sourceStep": "/api/3/workflow_steps/227a17f1-9a07-5635-bcd1-a101626e7ee7",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "3160b5f2-6ebd-5e9f-a062-ce12b6055de6"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Get Installers -> Audit Fleet",
+              "targetStep": "/api/3/workflow_steps/f30d67c9-fc7d-52c9-9158-e9a7b4d475cd",
+              "sourceStep": "/api/3/workflow_steps/14c0135d-a69f-5518-8efe-0a7efd713d0f",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "0532fbaa-9bb1-5ba8-8d0c-896ce743ab14"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Audit Fleet -> Compliance Task",
+              "targetStep": "/api/3/workflow_steps/1b487be3-6fff-593f-96dd-7ca440d253ac",
+              "sourceStep": "/api/3/workflow_steps/f30d67c9-fc7d-52c9-9158-e9a7b4d475cd",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "5c388e5f-e266-5aaa-9481-849666959ff7"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Compliance Task -> Staging Offered",
+              "targetStep": "/api/3/workflow_steps/f301c580-3433-5955-bae4-f62e78016b5b",
+              "sourceStep": "/api/3/workflow_steps/1b487be3-6fff-593f-96dd-7ca440d253ac",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "e36a3ab1-c4bc-5e2f-9268-d996d1d2151e"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Staging Offered -> Upgrade Approval",
+              "targetStep": "/api/3/workflow_steps/1ebc6123-fa5b-5fef-aae1-2dbc2f9db927",
+              "sourceStep": "/api/3/workflow_steps/f301c580-3433-5955-bae4-f62e78016b5b",
+              "label": "Fleet Lags",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "c0a54660-0394-5b68-aaa2-289e790982bb"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Staging Offered -> Audit Summary",
+              "targetStep": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858",
+              "sourceStep": "/api/3/workflow_steps/f301c580-3433-5955-bae4-f62e78016b5b",
+              "label": "Nothing To Stage",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "93df7344-5909-57e1-b70d-4636c4d480a1"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Upgrade Approval -> Map Installer",
+              "targetStep": "/api/3/workflow_steps/e208545c-950c-5c70-93bd-68fa094e1641",
+              "sourceStep": "/api/3/workflow_steps/1ebc6123-fa5b-5fef-aae1-2dbc2f9db927",
+              "label": "Stage Update",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "371ed033-a318-5086-b83c-39f4e5a274b2"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Upgrade Approval -> Audit Summary",
+              "targetStep": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858",
+              "sourceStep": "/api/3/workflow_steps/1ebc6123-fa5b-5fef-aae1-2dbc2f9db927",
+              "label": "Skip",
+              "isExecuted": false,
+              "group": null,
+              "uuid": "d5c256e0-e742-50f4-a25f-8fa55c269b32"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Map Installer -> Stage Upgrade",
+              "targetStep": "/api/3/workflow_steps/8f3d4fae-f67b-5f9e-82c2-f11279f9f9c4",
+              "sourceStep": "/api/3/workflow_steps/e208545c-950c-5c70-93bd-68fa094e1641",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "8c3bf21a-ca94-5af3-b9ee-ee8d2cfd6240"
+            },
+            {
+              "@type": "WorkflowRoute",
+              "name": "Stage Upgrade -> Audit Summary",
+              "targetStep": "/api/3/workflow_steps/e7242ecc-fb0b-576c-857a-cbad5f5a2858",
+              "sourceStep": "/api/3/workflow_steps/8f3d4fae-f67b-5f9e-82c2-f11279f9f9c4",
+              "label": null,
+              "isExecuted": false,
+              "group": null,
+              "uuid": "e8e59f20-dac2-5fb0-b9d1-9af08cc9a65d"
+            }
+          ],
+          "groups": [
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Get Fleet",
+              "description": "No organization argument: the tenant lists the connector's\nconfigured organization when the parameter is blank, while the\nliteral select value \"All organizations\" is rejected server-side.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "250",
+              "left": "540",
+              "height": "182",
+              "width": "440",
+              "uuid": "627bb48b-8574-568b-8edb-ac4681678aa4",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Get Installers",
+              "description": "The installer catalogue (osFamily + version) is the reference the\noutdated computation compares against. The blank organization\ndefaults to the configured organization server-side.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "452",
+              "left": "540",
+              "height": "160",
+              "width": "440",
+              "uuid": "b2791d35-b0e0-5750-9b90-d5e1edb7fde1",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Audit Fleet",
+              "description": "Pure string/int tuples only across the sandbox line. Latest-family\ncomparison is component-wise on the dotted version, not string\ncompare: 6.1.10 must rank above 6.1.9.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "632",
+              "left": "540",
+              "height": "160",
+              "width": "440",
+              "uuid": "7c3a18a0-0a4a-5762-ac46-4c8e1482a603",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Staging Offered",
+              "description": "The approval form appears only when the audit found something to\nfix; a compliant fleet goes straight to the summary.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "812",
+              "left": "540",
+              "height": "116",
+              "width": "440",
+              "uuid": "1024d4a5-a36a-54d5-8826-156d88c45dcc",
+              "recordTags": []
+            },
+            {
+              "@type": "WorkflowGroup",
+              "name": "Note: Map Installer",
+              "description": "updateVersions is the shape the operation's schema documents: a list\nof per-OS-family target rows. allow_downgrade is a real boolean on\nthe wire and the selection comes back as a string, so the equality\nconversion happens here where the reviewer can see it.\n",
+              "type": "note",
+              "isCollapsed": false,
+              "hasTriggerStep": false,
+              "hideInLogs": true,
+              "metadata": [],
+              "reusable": false,
+              "top": "1030",
+              "left": "880",
+              "height": "204",
+              "width": "440",
+              "uuid": "23f3eedd-4ad8-58ca-a476-7dbc7cba6995",
+              "recordTags": []
+            }
+          ],
+          "priority": "/api/3/picklists/9e8d41e4-8ada-4a2c-bd02-07f62c6d0a00",
+          "playbookOrigin": null,
+          "isEditable": true,
+          "uuid": "2ce97f49-e52f-55fd-9a94-9aa6aec86f51",
           "owners": [],
           "isPrivate": false
         }

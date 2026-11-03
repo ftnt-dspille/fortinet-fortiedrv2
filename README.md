@@ -138,13 +138,32 @@ resolve from `~/.pyfsr/instances.toml` and the `EDR_*` environment from
 
 ## Playbooks
 
-`playbooks/playbooks.yaml` is the source of truth; rebuild the compiled JSON
-with `python3 playbooks/build.py` (requires the fsrpb compiler). The
-collection ships the Data Ingestion Wizard chain (Init Macros / Fetch /
-Ingest) plus the sample collection the wizard discovers by its
-`dataingestion` tags. The Fetch step's window read is count-verified and
-never paged: on FortiEDR 7.x, a windowed `list-events` request carrying
-`pageNumber` answers `200` with an empty page, so the connector asks
-`count-events` first, sizes one request to the count, and fails loudly
-rather than reading part of a window (See Ingest Events in the release
-notes).
+`playbooks/playbooks.yaml` (the ingestion chain) and
+`playbooks/use_cases.yaml` (operational use cases) are the source of truth;
+rebuild the compiled JSON with `python3 playbooks/build.py` (requires the
+fsrpb compiler -- it compiles both and merges them into the single
+`playbooks.json` the appliance imports). Two collections ship:
+
+- **The Data Ingestion Wizard chain** (Init Macros / Fetch / Ingest), which
+  the wizard discovers by its `dataingestion`/`fetch`/`ingest`/`create`
+  tags. The Fetch step's window read is count-verified and never paged: on
+  FortiEDR 7.x, a windowed `list-events` request carrying `pageNumber`
+  answers `200` with an empty page, so the connector asks `count-events`
+  first, sizes one request to the count, and fails loudly rather than
+  reading part of a window (see Ingest Events in the release notes).
+- **The Use Cases collection** (`usecase` tags, never offered as an
+  ingestion configuration): Triage to Isolation (approval-gated collector
+  isolation with the event refreshed from the console and the outcome
+  commented on the alert), Collect Evidence (the event's own binary as an
+  appended appliance attachment), Allow Event / Exception Expiry Sweep
+  (governed exceptions with an expiry encoded in the rule's own comment
+  and a sweeper that deletes only the expired managed ones),
+  Re-detection Digest (incidents ranked by detections still being
+  absorbed), IOC Retro-Hunt (one hash in, one upserted alert per hit
+  event), and Fleet Compliance Audit (collector fleet vs the available
+  installers, with an approval-gated staging step).
+
+Scheduling note: the Sweep, Digest and Audit playbooks use the same plain
+trigger shape the wizard's scheduled fetchers do. Point a FortiSOAR
+scheduled task at them (Schedules > the playbook's Run) -- e.g. nightly for
+the digest and the sweep, weekly for the audit.

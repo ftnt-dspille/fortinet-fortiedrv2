@@ -1,0 +1,1174 @@
+# FortiEDR v2 connector use-case playbooks.
+#
+# Build with `python playbooks/build.py`, never by hand, together with the
+# ingestion chain in playbooks.yaml (the build compiles both and merges them
+# into one playbooks.json).
+#
+# This collection deliberately carries NO dataingestion/fetch/ingest/create
+# tags: the Data Ingestion Wizard discovers ingestion collections by those
+# tags, and these playbooks must never be offered as one.
+#
+# Ops used here (all live-tested against the Fortinet FortiEDR REST API):
+#   get_event_by_id, get_event_list, get_event_exceptions, get_raw_data_items,
+#   get_event_file, isolate_collector, create_exception, list_exception,
+#   delete_exception, search, get_collector_list, get_collector_installers,
+#   update_collector_installer, get_incidents.
+#
+# Requires alongside this connector on the appliance:
+#   - fortinet-fortiedrv2 in its default config
+
+collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.0.1
+description: >-
+  Operational use-case playbooks for the "Fortinet FortiEDR v2" connector:
+  alert triage with collector isolation, evidence collection, time-limited
+  exception governance, a re-detection digest over console incidents, a
+  file-hash IOC retro-hunt, and a fleet compliance audit. Clone before use,
+  like every sample collection: the connector upgrade deletes and re-imports
+  sample collections, so local edits are lost on upgrade.
+visible: true
+tags:
+  - fortinet-fortiedrv2
+  - Fortinet
+  - usecase
+exported_tags:
+  - fortinet-fortiedrv2
+  - Fortinet
+  - usecase
+
+playbooks:
+
+  # ---------------------------------------------------------------------------
+  # Triage to Isolation: the flagship response loop over an ingested alert.
+  #
+  # The chain stores external_id = the FortiEDR eventId on every alert, so a
+  # record action on the alert can re-read the live event (severity and the
+  # collector device may have moved since ingestion), warn about exceptions
+  # that are already muting it, bag the raw memory evidence, and only then
+  # ask the analyst to isolate. The approval is where the blast radius lives:
+  # isolation cuts the endpoint off from the network, so a human confirms
+  # with the enriched context on screen, and every outcome is written back to
+  # the alert as a comment.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Triage to Isolation'
+    description: >-
+      Record action on an ingested FortiEDR alert: refresh the event from the
+      console, list the exceptions already muting it, collect the raw memory
+      evidence, and -- with the analyst's approval -- isolate the collector.
+      Approve and decline both land as comments on the alert.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - response
+    is_active: true
+    steps:
+    - name: Start
+      type: start
+      module: alerts
+      button_label: 'FortiEDR v2 > Triage to Isolation'
+      requires_record: true
+      next: Resolve Event
+
+    - name: Resolve Event
+      type: set_variable
+      comment: |
+        The alert's sourceId is the FortiEDR eventId (external_id the
+        ingestion chain maps), and the IRI is kept for the audit comments.
+        A slow refresh (sourceId blank -- a hand-created or foreign alert)
+        stops at the Missing Event step rather than calling the tenant with
+        a blank identifier.
+      vars:
+        event_id: "{{ vars.input.records[0].sourceId | default('', true) }}"
+        record_id: "{{ vars.input.records[0]['@id'] }}"
+      next: Get Event
+
+    - name: Get Event
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_event_by_id
+      config: ''
+      when: "{{ vars.event_id }}"
+      params:
+        eventIds: '{{ vars.event_id }}'
+      next: Event Resolved
+
+    - name: Event Resolved
+      type: decision
+      conditions:
+      - display: Found
+        when: "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}"
+        next: Enrich
+      - display: Missing Event
+        default: true
+        next: Missing Event Audit
+
+    - name: Missing Event Audit
+      type: set_variable
+      comment: |
+        Either the alert is not a FortiEDR alert, or the event was pruned on
+        the tenant. A comment with the sourceId asks the analyst to act on
+        the alert's own data instead of pretending the console agrees.
+      post_comment: "Triage to Isolation: no FortiEDR event found for sourceId {{ vars.event_id }} -- investigate manually; the console may have archived or pruned this event."
+      next: End
+
+    - name: Enrich
+      type: set_variable
+      comment: |
+        The fresh event row, not the ingested card, decides what the analyst
+        sees: severity and the collector device may both have moved since the
+        pull (FortiEDR correlates a re-detection into the same event and only
+        moves its lastSeen, so the event CAN have drifted under a static
+        alert card).
+      vars:
+        event: "{{ vars.steps.Get_Event.data[0] }}"
+        device: "{{ vars.steps.Get_Event.data[0].collectors[0].device | default('', true) }}"
+        organization: "{{ vars.steps.Get_Event.data[0].organization | default('', true) }}"
+        severity: "{{ vars.steps.Get_Event.data[0].severity | default('Medium', true) }}"
+        process: "{{ vars.steps.Get_Event.data[0].process | default('', true) }}"
+        first_seen: "{{ vars.steps.Get_Event.data[0].firstSeen | default('', true) }}"
+        last_seen: "{{ vars.steps.Get_Event.data[0].lastSeen | default('', true) }}"
+      next: Check Existing Exceptions
+
+    - name: Check Existing Exceptions
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_event_exceptions
+      config: ''
+      params:
+        eventId: '{{ vars.event_id }}'
+        organization: '{{ vars.organization }}'
+      next: Collect Evidence
+
+    - name: Collect Evidence
+      type: workflow_reference
+      comment: |
+        Bags the event's binary onto the alert BEFORE the approval, so
+        the analyst deciding on isolation has the artifacts in the same
+        record. Fails soft inside the child (an offline or decommissioned
+        collector leaves a comment, not a dead run).
+      target: 'FortiEDR v2 > Collect Evidence'
+      event_id: '{{ vars.event_id }}'
+      record_id: '{{ vars.record_id }}'
+      organization: '{{ vars.organization }}'
+      apply_async: false
+      pass_parent_env: false
+      pass_input_record: false
+      next: Isolation Approval
+
+    - name: Isolation Approval
+      type: manual_input
+      title: Approve collector isolation
+      description: >-
+        FortiEDR event {{ vars.event_id }} -- {{ vars.severity }}, {{ vars.process }}
+        first seen {{ vars.first_seen }}, last seen {{ vars.last_seen }},
+        already carrying {{ vars.steps.Check_Existing_Exceptions.data | default([]) | length }}
+        exception rule(s). Isolation cuts {{ vars.device }} off from the
+        network until a "Unisolate" call releases it.
+      options:
+      - display: Isolate Device
+        primary: true
+        next: Isolate Collector
+      - display: Skip Isolation
+        next: Declined
+      inputs:
+      - name: decision_note
+        kind: textarea
+        label: Reason (becomes part of the alert's audit trail)
+        required: true
+      is_approval: true
+      next: Isolate Collector
+
+    - name: Isolate Collector
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: isolate_collector
+      config: ''
+      comment: |
+        `type: Name` + the event's collector device, the pair the tenant
+        answered for both isolate and unisolate. The unisolate reverse call
+        uses the same arguments, so releasing the endpoint later is the same
+        record action away through the connector operation.
+      params:
+        type: Name
+        devices: '{{ vars.device }}'
+      next: Isolation Audit
+
+    - name: Isolation Audit
+      type: set_variable
+      post_comment: "Triage to Isolation: isolated collector {{ vars.device }} for event {{ vars.event_id }} ({{ vars.process }}, {{ vars.severity }}). Reason: {{ vars.steps.Isolation_Approval.input.decision_note }}"
+      vars:
+        isolation_result: "{{ vars.steps.Isolate_Collector.data | toJSON }}"
+      next: End
+
+    - name: Declined
+      type: set_variable
+      post_comment: "Triage to Isolation: isolation of {{ vars.device }} declined for event {{ vars.event_id }}. Reason: {{ vars.steps.Isolation_Approval.input.decision_note }}"
+      next: End
+
+    - name: End
+      type: end
+
+  # ---------------------------------------------------------------------------
+  # Collect Evidence: the alert's own binary, bagged.
+  #
+  # The forensics API offers File or Memory retrieval. A memory pull is a
+  # console-side act: the operation's schema demands processId and memory
+  # ranges that the events API never exposes to a playbook (the raw-data
+  # export carries none of them -- checked: processId, startRange and
+  # endRange are absent from the exported JSON), so an automated memory bag
+  # would have to guess forensic anchors. The event's own file is what a
+  # playbook CAN address: the row carries the process path, and a Disk-mode
+  # retrieval bags that binary as an appliance attachment. A live memory
+  # dump stays a console/manual action with the collector online.
+  #
+  # The op both modes run through is get-event-file, so the connector names
+  # the bag memdump_<rawEventId>.zip either way (it names by operation,
+  # not by retrieval mode) -- comment cosmetics, the bytes are the file.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Collect Evidence'
+    description: >-
+      Pulls the binary the alert fired on -- the event's process file, by
+      its raw-event anchor -- uploads it as a FortiSOAR attachment through
+      the connector, and links it to the alert. Degrades to a comment when
+      the collector is offline.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - forensics
+    is_active: true
+    parameters:
+    - event_id
+    - record_id
+    - organization
+    steps:
+    - name: Start
+      type: start
+      module: alerts
+      button_label: 'FortiEDR v2 > Collect Evidence'
+      requires_record: true
+      next: Resolve Inputs
+
+    - name: Resolve Inputs
+      type: set_variable
+      comment: |
+        Two entry modes share one resolve: called from a parent playbook the
+        explicit params win; run as a record action the alert itself carries
+        sourceId (the FortiEDR eventId) and the record IRI.
+      vars:
+        event_id: >-
+          {% if vars.input.params.event_id | default('', true) %}
+          {{ vars.input.params.event_id }}
+          {% else %}
+          {{ vars.input.records[0].sourceId | default('', true) }}
+          {% endif %}
+        record_id: >-
+          {% if vars.input.params.record_id | default('', true) %}
+          {{ vars.input.params.record_id }}
+          {% else %}
+          {{ vars.input.records[0]['@id'] }}
+          {% endif %}
+        organization: "{{ vars.input.params.organization | default('', true) }}"
+      next: No Event
+
+    - name: No Event
+      type: decision
+      conditions:
+      - display: Have Event
+        when: "{{ vars.event_id }}"
+        next: Get Event
+      - display: No FortiEDR Event
+        default: true
+        next: No Event Audit
+
+    - name: No Event Audit
+      type: set_variable
+      post_comment: "Collect Evidence: this alert carries no FortiEDR sourceId; nothing to bag."
+      next: End
+
+    - name: Get Event
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_event_by_id
+      config: ''
+      params:
+        eventIds: '{{ vars.event_id }}'
+      next: Event Resolved
+
+    - name: Event Resolved
+      type: decision
+      conditions:
+      - display: Found
+        when: "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}"
+        next: Bag Context
+      - display: Missing Event
+        default: true
+        next: Missing Event Audit
+
+    - name: Missing Event Audit
+      type: set_variable
+      post_comment: "Collect Evidence: no FortiEDR event found for sourceId {{ vars.event_id }} (archived or pruned on the tenant); nothing to bag."
+      next: End
+
+    - name: Bag Context
+      type: set_variable
+      comment: |
+        The file to bag is the event's own process path, plus the anchor
+        pieces: the raw-event repository keeps the retrieval id, and the
+        collector's device and the event's organization scope the call.
+      vars:
+        bag_file_path: "{{ vars.steps.Get_Event.data[0].processPath | default('', true) }}"
+        bag_device: "{{ vars.steps.Get_Event.data[0].collectors[0].device | default('', true) }}"
+        bag_organization: "{{ vars.steps.Get_Event.data[0].organization | default(vars.organization, true) }}"
+      next: Bag Path Resolved
+
+    - name: Bag Path Resolved
+      type: decision
+      comment: |
+        An event without a file path (pure log-policy events) has no
+        disk-evidence bag; the retrieval API needs a path to pull.
+      conditions:
+      - display: Have Path
+        when: "{{ vars.bag_file_path }}"
+        next: Get Raw Data Items
+      - display: No File Path
+        default: true
+        next: No Path Audit
+
+    - name: No Path Audit
+      type: set_variable
+      post_comment: "Collect Evidence: FortiEDR event {{ vars.event_id }} carries no process file path; nothing disk- retrievable to bag."
+      next: End
+
+    - name: Get Raw Data Items
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_raw_data_items
+      config: ''
+      params:
+        eventId: '{{ vars.event_id }}'
+      next: Raw Data Available
+
+    - name: Raw Data Available
+      type: decision
+      conditions:
+      - display: Have Raw Data
+        when: "{{ vars.steps.Get_Raw_Data_Items.data | default([]) | length > 0 }}"
+        next: Collect File
+      - display: No Raw Data
+        default: true
+        next: No Raw Data Audit
+
+    - name: No Raw Data Audit
+      type: set_variable
+      post_comment: "Collect Evidence: event {{ vars.event_id }} has no raw data items on the tenant (the collection window may have expired); nothing to bag."
+      next: End
+
+    - name: Collect File
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_event_file
+      config: ''
+      comment: |
+        Disk-mode retrieval of the event's binary, anchored to the earliest
+        raw item. ignore_errors: the tenant rejects the pull from an offline
+        or decommissioned collector, and that rejection is an outcome the
+        alert should record, not a reason to kill the parent triage.
+      ignore_errors: true
+      params:
+        rawEventId: '{{ vars.steps.Get_Raw_Data_Items.data[0].rawEventId }}'
+        retrieve_from: Disk
+        filePaths: '{{ vars.bag_file_path }}'
+        organization: '{{ vars.bag_organization }}'
+      next: File Collected
+
+    - name: File Collected
+      type: decision
+      conditions:
+      - display: Attachment Ready
+        when: "{{ (vars.steps.Collect_File.data['@id'] | default('', true)) is not empty }}"
+        next: Link Evidence
+      - display: Collection Failed
+        default: true
+        next: Collection Failed Audit
+
+    - name: Link Evidence
+      type: update_record
+      module: alerts
+      record: '{{ vars.record_id }}'
+      comment: |
+        `link:` (the __link primitive the platform's own escalation uses)
+        APPENDS the attachment; a plain fields-write to the attachments
+        relationship would replace whatever the record already carried.
+      link:
+        attachments:
+        - "{{ vars.steps.Collect_File.data['@id'].split('/') | last }}"
+      next: Evidence Audit
+
+    - name: Evidence Audit
+      type: set_variable
+      post_comment: "Collect Evidence: {{ vars.steps.Collect_File.data['name'] }} attached -- the {{ vars.bag_file_path }} binary of FortiEDR event {{ vars.event_id }} off collector {{ vars.bag_device }} (raw event {{ vars.steps.Get_Raw_Data_Items.data[0].rawEventId }})."
+      next: End
+
+    - name: Collection Failed Audit
+      type: set_variable
+      post_comment: "Collect Evidence: the retrieval of {{ vars.bag_file_path }} from {{ vars.bag_device }} failed -- the tenant rejects forensics pulls from offline or decommissioned collectors; retry from the alert once the endpoint is back."
+      next: End
+
+    - name: End
+      type: end
+
+  # ---------------------------------------------------------------------------
+  # Allow Event: an exception WITH an expiry, against an API with none.
+  #
+  # FortiEDR's exception API has no expiry: an exception created today is
+  # permanent and invisible to later exports. This playbook writes the
+  # expiry into the only durable ledger both worlds can read -- the
+  # exception's own comment, as `fortiedrv2-managed expires=<epoch>` -- and
+  # the Exception Expiry Sweep deletes what ran out. The comment marker is
+  # the whole governance contract, so the sweep parses it defensively: rules
+  # without the marker are never touched.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Allow Event (Time-Limited)'
+    description: >-
+      Record action on an ingested FortiEDR alert: creates a FortiEDR
+      exception rule for the event with an expiry encoded in the rule's
+      comment, and records the terms on the alert. The Exception Expiry Sweep
+      deletes the rule when it expires.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - governance
+    is_active: true
+    steps:
+    - name: Start
+      type: start
+      module: alerts
+      button_label: 'FortiEDR v2 > Allow Event (Time-Limited)'
+      requires_record: true
+      next: Resolve Event
+
+    - name: Resolve Event
+      type: set_variable
+      vars:
+        event_id: "{{ vars.input.records[0].sourceId | default('', true) }}"
+      next: Get Event
+
+    - name: Get Event
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_event_by_id
+      config: ''
+      when: "{{ vars.event_id }}"
+      params:
+        eventIds: '{{ vars.event_id }}'
+      next: Event Resolved
+
+    - name: Event Resolved
+      type: decision
+      conditions:
+      - display: Found
+        when: "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}"
+        next: Check Existing Exceptions
+      - display: Missing Event
+        default: true
+        next: Missing Event Audit
+
+    - name: Missing Event Audit
+      type: set_variable
+      post_comment: "Allow Event: no FortiEDR event found for sourceId {{ vars.event_id }}; no exception will be created."
+      next: End
+
+    - name: Check Existing Exceptions
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_event_exceptions
+      config: ''
+      params:
+        eventId: '{{ vars.event_id }}'
+        organization: "{{ vars.steps.Get_Event.data[0].organization }}"
+      next: Existing Exceptions
+
+    - name: Existing Exceptions
+      type: decision
+      comment: |
+        The event already carries at least one rule (FortiEDR keeps rules
+        from deleted exceptions too). A second overlapping allow is how
+        permanent exceptions multiply unnoticed, so this stops at the audit.
+      conditions:
+      - display: Rule Exists
+        when: "{{ vars.steps.Check_Existing_Exceptions.data | default([]) | length > 0 }}"
+        next: Rule Exists Audit
+      - display: Clear
+        default: true
+        next: Expiry Form
+
+    - name: Rule Exists Audit
+      type: set_variable
+      post_comment: "Allow Event: refused -- event {{ vars.event_id }} already carries {{ vars.steps.Check_Existing_Exceptions.data | length }} exception rule(s). Clean them up on the console or through the sweep first."
+      next: End
+
+    - name: Expiry Form
+      type: manual_input
+      title: Time-limited exception
+      description: >-
+        Creates a FortiEDR exception rule for event {{ vars.event_id }}
+        ({{ vars.steps.Get_Event.data[0].severity }},
+        {{ vars.steps.Get_Event.data[0].process }}) and encodes the expiry in
+        the rule's comment. The Exception Expiry Sweep deletes the rule once
+        the expiry passes; without it FortiEDR keeps the rule forever.
+      options:
+      - display: Create Exception
+        primary: true
+        next: Compute Expiry
+      - display: Cancel
+        next: Cancelled
+      inputs:
+      - name: expiry_days
+        kind: select
+        label: Expires after (days)
+        required: true
+        default: '30'
+        options: ['7', '14', '30', '60', '90']
+      - name: analyst_reason
+        kind: textarea
+        label: Why this event is allowed (stored with the rule and on the alert)
+        required: true
+      is_approval: false
+      next: Compute Expiry
+
+    - name: Compute Expiry
+      type: set_variable
+      comment: |
+        The marker is the sweep's whole contract:
+        `fortiedrv2-managed expires=<unix epoch> :: <analyst reason>`. The
+        sweep matches the prefix and parses the epoch; everything after the
+        separator is the human record. FortiEDR's own Created At field carries
+        only minute precision in the server's local timezone, so the epoch is
+        the only clock the sweep trusts.
+      vars:
+        expires_epoch: "{{ arrow.utcnow().shift(days=(vars.steps.Expiry_Form.input.expiry_days | int)).format('X') }}"
+        exception_comment: "fortiedrv2-managed expires={{ arrow.utcnow().shift(days=(vars.steps.Expiry_Form.input.expiry_days | int)).format('X') }} :: {{ vars.steps.Expiry_Form.input.analyst_reason }}"
+      next: Create Exception
+
+    - name: Create Exception
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: create_exception
+      config: ''
+      comment: |
+        The allow-the-event form of the create call: collector groups and
+        destinations open, exactly the shipped connector's semantics for
+        "this event qualifies everywhere". A narrower scope belongs to a
+        hand-built console rule, which this playbook deliberately never
+        guesses on the operator's behalf.
+      params:
+        eventId: '{{ vars.event_id }}'
+        allCollectorGroups: 'All Collector Groups'
+        allOrganizations: 'True'
+        allDestinations: 'All Destinations'
+        comment: '{{ vars.exception_comment }}'
+        forceCreate: 'False'
+      next: Exception Audit
+
+    - name: Exception Audit
+      type: set_variable
+      post_comment: "Allow Event: time-limited exception created for event {{ vars.event_id }}, expires at epoch {{ vars.expires_epoch }} ({{ vars.steps.Expiry_Form.input.expiry_days }} days). Reason: {{ vars.steps.Expiry_Form.input.analyst_reason }}. The Exception Expiry Sweep will delete the rule when it expires."
+      next: End
+
+    - name: Cancelled
+      type: set_variable
+      post_comment: "Allow Event: cancelled for event {{ vars.event_id }}; no exception was created."
+      next: End
+
+    - name: End
+      type: end
+
+  # ---------------------------------------------------------------------------
+  # Exception Expiry Sweep: the janitor half of the governance ledger.
+  #
+  # FortiEDR exceptions never expire (the shipped connector never even
+  # exposed delete), so the rule created by Allow Event -- or any rule whose
+  # comment carries the managed marker -- outlives its justification. This
+  # sweep lists every exception, keeps the ones whose encoded epoch is still
+  # in the future, deletes the expired managed ones, and never touches a rule
+  # without the marker.
+  #
+  # Run it from the Run button, or schedule it: a cron entry pinned to this
+  # playbook (FortiSOAR's scheduled task wiring, the same one the Data
+  # Ingestion Wizard creates) is the intended steady state.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Exception Expiry Sweep'
+    description: >-
+      Deletes FortiEDR exception rules created by the Allow Event playbook
+      whose encoded expiry has passed. Managed rules still in their window
+      are reported and left in place; unmanaged rules are counted and never
+      touched.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - governance
+    is_active: true
+    steps:
+    - name: Start
+      type: start
+      next: Sweep Window
+
+    - name: Sweep Window
+      type: set_variable
+      comment: |
+        A plain `start` (no module) is the shape the scheduled ingest
+        fetchers use, so this playbook drops straight into a cron entry.
+      vars:
+        now_epoch: "{{ arrow.utcnow().format('X') }}"
+        marker: "fortiedrv2-managed expires="
+      next: List Exceptions
+
+    - name: List Exceptions
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: list_exception
+      config: ''
+      comment: |
+        No comment filter is passed: filtering by comment on this endpoint
+        was not verifiably honored, and the sweep must see every rule to
+        count the unmanaged ones anyway. Keep the organization blank -- the
+        tenant then lists the configured organization, while the literal
+        select value "All organizations" is rejected server-side.
+      next: Find Expired
+
+    - name: Find Expired
+      type: code_snippet
+      comment: |
+        Defensive parse per rule: the marker prefix selects OUR rules, the
+        digits after it are the expiry epoch, and anything else on the
+        comment line is left alone. Rows without the marker are counted as
+        unmanaged and skipped -- the sweep must never delete a hand-built
+        console rule.
+      code: |
+        comments = {{ vars.steps.List_Exceptions.data | map(attribute='comment') | list | tojson }}
+        ids = {{ vars.steps.List_Exceptions.data | map(attribute='exceptionId') | list | tojson }}
+        now_epoch = {{ vars.now_epoch | int }}
+        marker = {{ vars.marker | tojson }}
+        expired_ids = []
+        managed_fresh = 0
+        unmanaged = 0
+        i = 0
+        while i < len(comments):
+            c = comments[i]
+            parsed = ''
+            handled = False
+            if c and marker in c:
+                rest = c[c.index(marker) + len(marker):]
+                for ch in rest:
+                    if ch.isdigit():
+                        parsed = parsed + ch
+                    else:
+                        break
+                if parsed == '' or int(parsed) >= now_epoch:
+                    managed_fresh = managed_fresh + 1
+                else:
+                    expired_ids.append(str(ids[i]))
+                handled = True
+            if not handled:
+                unmanaged = unmanaged + 1
+            i = i + 1
+        print({'expiredIdsCsv': ','.join(expired_ids),
+               'expiredCount': len(expired_ids),
+               'managedFreshCount': managed_fresh,
+               'unmanagedCount': unmanaged})
+      next: Expired Found
+
+    - name: Expired Found
+      type: decision
+      conditions:
+      - display: Expired Rules Present
+        when: "{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv | default('', true) }}"
+        next: Delete Expired
+      - display: Nothing To Delete
+        default: true
+        next: Sweep Summary
+
+    - name: Delete Expired
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: delete_exception
+      config: ''
+      comment: |
+        Exception IDs and NOTHING else. The comment parameter on this
+        endpoint is a FILTER, not a note (live-observed): a delete carrying
+        a comment deletes only the rules whose comment matches it, so an
+        audit note passed as `comment` here would silently delete nothing.
+        The organization is omitted for the same filtering reason -- IDs
+        alone address the rules exactly.
+      params:
+        exceptionIds: '{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv }}'
+      next: Sweep Summary
+
+    - name: Sweep Summary
+      type: set_variable
+      comment: |
+        The run's report is this step's result -- the scheduled-task view
+        and any parent playbook read it from here.
+      vars:
+        deleted_ids_csv: "{{ vars.steps.Find_Expired.data.code_output.expiredIdsCsv | default('', true) }}"
+        deleted_count: "{{ vars.steps.Find_Expired.data.code_output.expiredCount | default(0) }}"
+        managed_fresh_count: "{{ vars.steps.Find_Expired.data.code_output.managedFreshCount | default(0) }}"
+        unmanaged_count: "{{ vars.steps.Find_Expired.data.code_output.unmanagedCount | default(0) }}"
+
+  # ---------------------------------------------------------------------------
+  # Re-detection Digest: the ingestion defect's story, told as a report.
+  #
+  # FortiEDR correlates a re-detection of the same process into the EXISTING
+  # event -- firstSeen never moves, only lastSeen does -- so an incident that
+  # has been live for weeks shows as "started weeks ago" and nothing
+  # incremental-first-seen tooling will ever surface it. This digest lists the
+  # console incidents ranked by how many detections each is still absorbing,
+  # the long-runners first: quarantine the machines whose compromise is
+  # quietly continuing.
+  #
+  # Run it from the Run button, or schedule it (a nightly cron entry is the
+  # natural cadence); every window choice lives in Configuration below, so a
+  # cloned copy needs no structural edits.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Re-detection Digest'
+    description: >-
+      Builds a digest task of the console incidents still absorbing
+      re-detections, ranked by event count (the long-running compromises
+      first) and posts it as a FortiSOAR task for the SOC queue.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - reporting
+    is_active: true
+    steps:
+    - name: Start
+      type: start
+      next: Get Incidents
+
+    - name: Get Incidents
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_incidents
+      config: ''
+      params:
+        time_filter: 'Last30days'
+        status_filter: 'Unhandled'
+        type_filter: 'SecurityEvents'
+      next: Rank Incidents
+
+    - name: Rank Incidents
+      type: code_snippet
+      comment: |
+        Ranks on eventIdsNum only -- one list per incident row, integers
+        only, so nothing typed ever crosses the sandbox. The digest itself
+        is built into the snippet: row separator + inline-styled table, the
+        house card recipe that survives both SOAR themes.
+      code: |
+        counts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='eventsNum') | list | tojson }}
+        names = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='name') | list | tojson }}
+        ids = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='id') | list | tojson }}
+        firsts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='firstSeen') | list | tojson }}
+        lasts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='lastSeen') | list | tojson }}
+        total = len(counts)
+        rows = []
+        i = 0
+        while i < total:
+            n = counts[i]
+            if n is None:
+                n = 0
+            rows.append((int(n), str(names[i]), str(ids[i]), str(firsts[i]), str(lasts[i])))
+            i = i + 1
+        rows.sort(reverse=True)
+        html = '<table class="table" border="1" style="border-collapse:collapse;">'
+        html = html + '<tr><th style="text-align:left;padding:4px 10px;">Incident</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">Detections</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">First seen</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">Last seen</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">Id</th></tr>'
+        i = 0
+        while i < len(rows):
+            r = rows[i]
+            tone = ' style="padding:4px 10px;"'
+            if i < 5:
+                tone = ' style="padding:4px 10px;background:rgba(229,72,77,.12);"'
+            html = html + '<tr><td' + tone + '>' + r[1] + '</td><td' + tone + '>' + str(r[0]) + '</td><td' + tone + '>' + r[3] + '</td><td' + tone + '>' + r[4] + '</td><td' + tone + '>' + r[2] + '</td></tr>'
+            i = i + 1
+        html = html + '</table>'
+        top5 = 0
+        if len(rows) > 5:
+            top5 = 5
+        else:
+            top5 = len(rows)
+        print({'digest_html': html, 'incident_count': total,
+               'top5_events': (rows[0][0] if rows else 0), 'top5_name': (rows[0][1] if rows else '')})
+      next: Digest Task
+
+    - name: Digest Task
+      type: create_task
+      comment: |
+        A task is the queueable artifact on a box without a mail relay: it
+        lands in the SOC's task view with the digest as its description and
+        the operator's follow-up goes through the task's own close loop.
+      resource:
+        name: 'FortiEDR re-detection digest -- {{ vars.steps.Rank_Incidents.data.code_output.incident_count }} unhandled incidents'
+        status: Open
+        priority: Low
+        description: "{{ vars.steps.Rank_Incidents.data.code_output.digest_html }}"
+      next: End
+
+    - name: End
+      type: end
+
+  # ---------------------------------------------------------------------------
+  # IOC Retro-Hunt: one hash in, every event that ran it, on the record.
+  #
+  # The file-hash search sweeps current events, the threat-hunting repository
+  # and communicating applications in one call and answers with the FortiEDR
+  # eventIds that carry the hash. Each hit becomes -- through the SAME
+  # sourceId = eventId upsert contract the ingestion chain uses -- either a
+  # new alert keyed to the event, or an annotation on the alert that already
+  # exists for it, never a duplicate. The hunt keeps the event's original
+  # detection date: __fieldsToUpdate deliberately omits alertDetectionDate so
+  # a re-sighting never rewrites history.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > IOC Retro-Hunt'
+    description: >-
+      Execute-menu action: takes a file hash, sweeps the whole FortiEDR
+      estate for the events that harbor it, and upserts one alert per hit
+      event (severity and device from the live event). Re-running the same
+      hunt updates its findings without duplicating them.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - hunting
+    is_active: true
+    parameters:
+    - file_hash
+    steps:
+    - name: Start
+      type: start
+      module: alerts
+      button_label: 'FortiEDR v2 > IOC Retro-Hunt'
+      requires_record: false
+      next: Validate Input
+      inputVariables:
+      - title: File Hash
+        name: file_hash
+        required: true
+        editable: true
+        visible: true
+        type: text
+        value: ''
+        tooltip: MD5/SHA-1/SHA-256 of the file to hunt for. The search covers every event the tenant still holds, the threat-hunting repository, and communicating applications.
+
+    - name: Validate Input
+      type: decision
+      comment: |
+        The Execute dialog requires the hash, but the API route can start
+        the run with a blank body -- refuse that before it reaches the
+        tenant.
+      conditions:
+      - display: Hash Present
+        when: "{{ vars.input.params.file_hash | default('', true) }}"
+        next: Hunt Hash
+      - display: No Hash
+        default: true
+        next: No Hash
+
+    - name: Hunt Hash
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: search
+      config: ''
+      params:
+        fileHashes: '{{ vars.input.params.file_hash }}'
+      next: Hits
+
+    - name: Hits
+      type: decision
+      conditions:
+      - display: Have Hits
+        when: "{{ vars.steps.Hunt_Hash.data[0].eventIds | default([]) | length > 0 }}"
+        next: Get Hunt Events
+      - display: No Hits
+        default: true
+        next: Hunt Summary
+
+    - name: Get Hunt Events
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_event_list
+      config: ''
+      comment: |
+        The event IDs from the hash search are fetched as one comma list,
+        one call: get_event_list answers with the full rows (severity,
+        process, the collector device) in the same shape the ingestion
+        pull reads.
+      params:
+        eventIds: "{{ vars.steps.Hunt_Hash.data[0].eventIds | join(',') }}"
+      next: Create Hunt Alerts
+
+    - name: Create Hunt Alerts
+      type: create_record
+      module: alerts
+      operation: Overwrite
+      is_upsert: true
+      comment: |
+        The same upsert contract as the ingestion chain's Create Record --
+        sourceId = eventId dedupes against anything the scheduled pull
+        already wrote -- with two deliberate differences. The name declares
+        itself a hunt finding, and alertDetectionDate is ABSENT from the
+        update set: a hunt that runs months later must not move the
+        incident's recorded first detection.
+      for_each:
+        item: '{{ vars.steps.Get_Hunt_Events.data }}'
+        __bulk: true
+        batch_size: 100
+        condition: ''
+      fields:
+        name: "{{ ('FortiEDR retro-hunt: ' ~ vars.input.params.file_hash ~ ' seen on ' ~ vars.item.collectors[0].device ~ ' (' ~ vars.item.process ~ ')') | truncate(200) }}"
+        source: Fortinet FortiEDR
+        sourceId: '{{ vars.item.eventId }}'
+        severity: '{{ "Severity" | picklist(vars.item.severity | default("Medium")) }}'
+        alertType: '{{ "AlertType" | picklist("Malware") }}'
+        userName: '{{ vars.item.loggedUsers | default("") | join(",") }}'
+        processName: '{{ vars.item.process | default("") }}'
+        description: "{{ 'Retro-hunt finding: file hash <code>' ~ vars.input.params.file_hash ~ '</code> is harbored by FortiEDR event ' ~ vars.item.eventId ~ ' on <code>' ~ vars.item.collectors[0].device ~ '</code> (' ~ vars.item.severity ~ ', ' ~ vars.item.classification ~ '), first seen ' ~ vars.item.firstSeen ~ ', last seen ' ~ vars.item.lastSeen ~ '.' }}"
+        sourcedata: '{{ vars.item | toJSON }}'
+        __replace: 'true'
+        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'alertType', 'userName', 'processName', 'description', 'sourcedata'] }}"
+      next: Hunt Summary
+
+    - name: Hunt Summary
+      type: set_variable
+      comment: |
+        Both terminal paths land here: the finding count is zero on the no-hit
+        branch, and the task view shows the summary either way.
+      vars:
+        hunt_hash: "{{ vars.input.params.file_hash | default('', true) }}"
+        finding_count: "{{ vars.steps.Hunt_Hash.data[0].eventIds | default([]) | length }}"
+        hunt_event_rows: "{{ vars.steps.Get_Hunt_Events.data | default([]) | length | int }}"
+
+    - name: No Hash
+      type: set_variable
+      comment: |
+        A blank hash never reaches the tenant; the summary says why the run
+        was a no-op instead of failing with the operation's parameter
+        error.
+      vars:
+        hunt_hash: ''
+        finding_count: 0
+        hunt_event_rows: 0
+
+  # ---------------------------------------------------------------------------
+  # Fleet Compliance Audit: collector state as a reportable signal.
+  #
+  # The collectors ARE the sensor coverage: an expired or degraded collector
+  # is a blind spot billing itself as a sensor. The audit reads the fleet
+  # and the available installers, computes per-family "installed vs
+  # available", and files a digest task; when the fleet lags, an approval form
+  # offers the staged installer update -- the operator picks the target
+  # version and scope, FortiEDR rolls it group by group.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Fleet Compliance Audit'
+    description: >-
+      Audits the FortiEDR collector fleet (state, recency, version vs the
+      available installers) and files a FortiSOAR digest task. When the
+      fleet lags behind an available installer, an approval-gated step can
+      stage the version rollout.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - compliance
+    is_active: true
+    steps:
+    - name: Start
+      type: start
+      next: Get Fleet
+
+    - name: Get Fleet
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_collector_list
+      config: ''
+      comment: |
+        No organization argument: the tenant lists the connector's
+        configured organization when the parameter is blank, while the
+        literal select value "All organizations" is rejected server-side.
+      next: Get Installers
+
+    - name: Get Installers
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_collector_installers
+      config: ''
+      comment: |
+        The installer catalogue (osFamily + version) is the reference the
+        outdated computation compares against. The blank organization
+        defaults to the configured organization server-side.
+      params:
+        organization: ''
+      next: Audit Fleet
+
+    - name: Audit Fleet
+      type: code_snippet
+      comment: |
+        Pure string/int tuples only across the sandbox line. Latest-family
+        comparison is component-wise on the dotted version, not string
+        compare: 6.1.10 must rank above 6.1.9.
+      code: |
+        names = {{ vars.steps.Get_Fleet.data | map(attribute='name') | list | tojson }}
+        versions = {{ vars.steps.Get_Fleet.data | map(attribute='version') | list | tojson }}
+        states = {{ vars.steps.Get_Fleet.data | map(attribute='state') | list | tojson }}
+        states_adtl = {{ vars.steps.Get_Fleet.data | map(attribute='stateAdditionalInfo') | list | tojson }}
+        os_families = {{ vars.steps.Get_Fleet.data | map(attribute='osFamily') | list | tojson }}
+        last_seens = {{ vars.steps.Get_Fleet.data | map(attribute='lastSeenTime') | list | tojson }}
+        inst_os = {{ vars.steps.Get_Installers.data.availableCollectorInstallers | map(attribute='osFamily') | list | tojson }}
+        inst_ver = {{ vars.steps.Get_Installers.data.availableCollectorInstallers | map(attribute='version') | list | tojson }}
+        latest = {}
+        j = 0
+        while j < len(inst_os):
+            fam = inst_os[j]
+            if fam in latest:
+                if inst_ver[j] > latest[fam]:
+                    latest[fam] = inst_ver[j]
+            else:
+                latest[fam] = inst_ver[j]
+            j = j + 1
+        rows = []
+        healthy = 0
+        outdated = 0
+        offline = 0
+        i = 0
+        while i < len(names):
+            fam = os_families[i]
+            ver = str(versions[i])
+            state = str(states[i])
+            flag = 'ok'
+            if state != 'Running':
+                flag = 'state:' + state
+                offline = offline + 1
+            else:
+                if fam in latest and ver != str(latest[fam]):
+                    flag = 'outdated (available ' + str(latest[fam]) + ')'
+                    outdated = outdated + 1
+                else:
+                    healthy = healthy + 1
+            rows.append((flag, str(names[i]), ver, state,
+                         str(states_adtl[i]), str(last_seens[i])))
+            i = i + 1
+        html = '<table class="table" border="1" style="border-collapse:collapse;">'
+        html = html + '<tr><th style="text-align:left;padding:4px 10px;">Collector</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">Version</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">State</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">Last seen</th></tr>'
+        i = 0
+        while i < len(rows):
+            r = rows[i]
+            tone = ' style="padding:4px 10px;"'
+            if not r[0].startswith('ok'):
+                tone = ' style="padding:4px 10px;background:rgba(247,107,21,.12);"'
+            html = html + '<tr><td' + tone + '>' + r[1] + '</td><td' + tone + '>' + r[2] + '</td><td' + tone + '>' + r[3] + '</td><td' + tone + '>' + r[5] + '</td></tr>'
+            i = i + 1
+        html = html + '</table>'
+        print({'fleet_html': html, 'fleet_size': len(names), 'healthy': healthy,
+               'outdated': outdated, 'not_running': offline,
+               'latest_windows': (latest['Windows'] if 'Windows' in latest else '')})
+      next: Compliance Task
+
+    - name: Compliance Task
+      type: create_task
+      resource:
+        name: 'FortiEDR fleet compliance -- {{ vars.steps.Audit_Fleet.data.code_output.fleet_size }} collectors, {{ vars.steps.Audit_Fleet.data.code_output.outdated }} outdated, {{ vars.steps.Audit_Fleet.data.code_output.not_running }} not running'
+        status: Open
+        priority: Low
+        description: "{{ vars.steps.Audit_Fleet.data.code_output.fleet_html }}"
+      next: Staging Offered
+
+    - name: Staging Offered
+      type: decision
+      comment: |
+        The approval form appears only when the audit found something to
+        fix; a compliant fleet goes straight to the summary.
+      conditions:
+      - display: Fleet Lags
+        when: "{{ (vars.steps.Audit_Fleet.data.code_output.outdated | int) > 0 }}"
+        next: Upgrade Approval
+      - display: Nothing To Stage
+        default: true
+        next: Audit Summary
+
+    - name: Upgrade Approval
+      type: manual_input
+      title: Stage collector installer update
+      description: >-
+        {{ vars.steps.Audit_Fleet.data.code_output.outdated }} collector(s)
+        run behind an available installer. Staging an update rolls the
+        chosen version to the collector group(s) -- pick them explicitly;
+        blank means every group. Finish prose, click approve.
+      options:
+      - display: Stage Update
+        primary: true
+        next: Map Installer
+      - display: Skip
+        next: Audit Summary
+      inputs:
+      - name: target_version
+        kind: text
+        label: Target version (the audit reports the latest, e.g. {{ vars.steps.Audit_Fleet.data.code_output.latest_windows }})
+        required: true
+      - name: collector_groups
+        kind: text
+        label: Collector groups (blank = all groups)
+        required: false
+      - name: os_family
+        kind: select
+        label: OS family
+        required: true
+        default: 'Windows'
+        options: ['Windows', 'Linux', 'macOS']
+      - name: allow_downgrade
+        kind: select
+        label: Allow downgrade
+        required: true
+        default: 'False'
+        options: ['False', 'True']
+      is_approval: true
+      next: Map Installer
+
+    - name: Map Installer
+      type: set_variable
+      comment: |
+        updateVersions is the shape the operation's schema documents: a list
+        of per-OS-family target rows. allow_downgrade is a real boolean on
+        the wire and the selection comes back as a string, so the equality
+        conversion happens here where the reviewer can see it.
+      vars:
+        update_versions: "{{ [ {'allowDowngrade': (vars.steps.Upgrade_Approval.input.allow_downgrade == 'True'), 'osFamily': vars.steps.Upgrade_Approval.input.os_family, 'version': vars.steps.Upgrade_Approval.input.target_version} ] | toJSON }}"
+        collector_groups: "{{ vars.steps.Upgrade_Approval.input.collector_groups | default('', true) }}"
+      next: Stage Upgrade
+
+    - name: Stage Upgrade
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: update_collector_installer
+      config: ''
+      params:
+        updateVersions: '{{ vars.update_versions }}'
+        collectorGroups: '{{ vars.collector_groups }}'
+      next: Audit Summary
+
+    - name: Audit Summary
+      type: set_variable
+      vars:
+        fleet_size: "{{ vars.steps.Audit_Fleet.data.code_output.fleet_size }}"
+        healthy_count: "{{ vars.steps.Audit_Fleet.data.code_output.healthy }}"
+        outdated_count: "{{ vars.steps.Audit_Fleet.data.code_output.outdated }}"
+        not_running_count: "{{ vars.steps.Audit_Fleet.data.code_output.not_running }}"
+        staged_version: "{{ vars.steps.Upgrade_Approval.input.target_version | default('', true) }}"
