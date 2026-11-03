@@ -367,7 +367,7 @@ def main(argv=None) -> int:
             try:
                 probe = client.playbooks.trigger_action(
                     route, module="alerts", record_uuid=record_uuid,
-                    env={"env_setup": True})
+                    playbook_uuid=ingest_clone.uuid, env={"env_setup": True})
                 probe_ids = (getattr(probe, "task_ids", None)
                              or [getattr(probe, "task_id", None)])
                 pid = next((t for t in probe_ids if t), None)
@@ -378,9 +378,11 @@ def main(argv=None) -> int:
                         outcome = ("preview branch: the action route delivers "
                                    "body keys into vars.request")
                     elif "Create Record" in names:
-                        outcome = ("REAL ingest branch: the env key does NOT reach "
-                                  "vars.request from the API; the UI wizard's own "
-                                  "preview flow is the only live test of that branch")
+                        outcome = ("REAL ingest branch (live-observed: the record-action"
+                                   " route does not deliver env keys into vars.request,"
+                                   " so only the UI wizard's own Data Mapping preview"
+                                   " exercises the sample branch; this probe's run is"
+                                   " an idempotent upsert)")
                     else:
                         outcome = f"unknown branch; steps ran: {names}"
                     if status != "finished":
