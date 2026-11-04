@@ -6,7 +6,12 @@ field, down to the schedule-name convention the ingestion screen matches on):
 
   1. preflight -- installed version matches info.json, configuration resolves,
      health is Available, the bundled Sample collection is discoverable and
-     its playbooks carry the wizard tags (fetch / ingest / create);
+     its playbooks carry the wizard tags (fetch / ingest / create); and, when
+     a configuration is already bound, the bound ingest CLONE carries the
+     shipped Create Record field set -- a clone made by an older connector
+     keeps writing the old fields after an upgrade (the schedule fires the
+     clone, never the sample), so drift here fails with the re-wizard remedy
+     before any run burns;
   2. wizard setup -- ``ensure_ingestion``: clone the sample chain into the
      per-configuration collection, stamp the config, activate, create the
      (disabled by default) periodic task, write the data-import metadata;
@@ -62,6 +67,8 @@ ROOT = Path(__file__).resolve().parent.parent
 NAME = "fortinet-fortiedrv2"
 SOURCE = "Fortinet FortiEDR"
 CONFIG_NAME = "fortiedr-lab"
+INGEST_NAME = "FortiEDR v2 > Ingest"
+UPSERT_COLLECTION = "/api/3/upsert/alerts"
 
 STEP_WAIT_TIMEOUT = 900  # a 30-day backfill fetch takes a while; be generous
 POLL = 5
@@ -96,6 +103,47 @@ def _transport_retry(fn, what, attempts=8, base=5.0):
 
 def _macro_name(fetch_uuid: str) -> str:
     return f"FortiEDRLastEventPullTime_{fetch_uuid.replace('-', '_')}"
+
+
+def _shipped_ingest_fields():
+    """The Create Record resource field set the repo's compiled bundle ships.
+
+    The schedule fires the wizard's per-configuration CLONE of this playbook,
+    never this definition -- so this set is the ground truth a live clone is
+    compared against at preflight.
+    """
+    doc = json.loads((ROOT / "playbooks" / "playbooks.json").read_text())
+    for coll in doc.get("data") or []:
+        for wf in coll.get("workflows") or []:
+            if wf.get("name") != INGEST_NAME:
+                continue
+            for step in wf.get("steps") or []:
+                s_args = step.get("arguments") or {}
+                if s_args.get("collection") == UPSERT_COLLECTION:
+                    return sorted(k for k in (s_args.get("resource") or {})
+                                  if not k.startswith("__"))
+    _fail("the compiled bundle carries no Create Record step on the ingest playbook")
+
+
+def _bound_clone_fields(client, conns, config):
+    """The bound ingest clone's Create Record field set.
+
+    Returns (uuid, fields), or (None, None) when the configuration has no
+    ingestion setup yet -- nothing bound, nothing to compare. get_definition
+    without relationships: the relationships form 414s on the appliance.
+    """
+    st = conns.ingestion_status(NAME, config=config)
+    bound = getattr(getattr(st, "playbooks", None), "ingest", None)
+    bound_uuid = getattr(bound, "uuid", None)
+    if not bound_uuid:
+        return None, None
+    clone = client.playbooks.get_definition(str(bound_uuid))
+    for step in clone.get("steps") or []:
+        s_args = step.get("arguments") or {}
+        if s_args.get("collection") == UPSERT_COLLECTION:
+            return str(bound_uuid), sorted(k for k in (s_args.get("resource") or {})
+                                           if not k.startswith("__"))
+    _fail(f"the bound ingest clone {bound_uuid} has no Create Record step")
 
 
 def _wait_run(client, task_id: str, label: str):
@@ -253,6 +301,39 @@ def main(argv=None) -> int:
         if pb is None:
             _fail(f"no {role!r}-tagged playbook in the sample collection")
         print(f"   {role}: {pb.name!r} (tags: {pb.tag!r})")
+
+    # The upgrade trap, caught before any run burns: the schedule fires the
+    # wizard's per-configuration CLONE, and a clone made by an older
+    # connector keeps writing the OLD field set after the new connector is
+    # installed -- its Create Record references only the fields that existed
+    # at clone time, so the installed connector's new mapped values flow
+    # through vars.item but nothing writes the new columns (live-established
+    # on 8.0.1: alert names showed the new recipe while every new column
+    # stored the literal string 'None'). Compare the bound clone's field set
+    # with the shipped definition and fail with the remedy, instead of
+    # discovering null columns three phases later.
+    shipped = _shipped_ingest_fields()
+    bound_uuid, clone_fields = _bound_clone_fields(client, conns, args.config)
+    if clone_fields is None:
+        print("   no ingestion setup bound yet -- [2] clones fresh from the"
+              " version-pinned sample, which cannot drift")
+    else:
+        missing = [f for f in shipped if f not in clone_fields]
+        extra = [f for f in clone_fields if f not in shipped]
+        if missing or extra:
+            _fail(f"the bound ingestion clone {bound_uuid} is STALE: it was"
+                  f" cloned by an older connector and writes "
+                  f"{len(clone_fields)} field(s) where this release ships "
+                  f"{len(shipped)} (missing: {missing}; unexpected: {extra})."
+                  " The schedule fires the clone, not the sample collection,"
+                  " so the installed connector's new mapped values never"
+                  " reach the alerts module. Remedy: tear the"
+                  " configuration's ingestion setup down and re-run the"
+                  " wizard (client.connectors.remove_ingestion(NAME,"
+                  " config=...) then data_ingest_wizard(...)) so the fresh"
+                  f" clone carries the {version} field set.")
+        print(f"   bound ingest clone {bound_uuid} carries all "
+              f"{len(shipped)} shipped field(s)")
 
     # ---------------------------------------------------------------- [2] wizard setup
     print("[2] data ingestion wizard setup (get-or-make)")

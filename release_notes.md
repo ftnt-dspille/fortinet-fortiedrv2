@@ -56,6 +56,24 @@ them): an `activedirectory` configuration pointing at the directory
 step names its record target explicitly, so the children post to the
 parent's alert rather than relying on the trigger-record default.
 
+Upgrade note (1.1.4 -> 1.1.5 specifically): the Data Ingestion Wizard
+clones the ingestion chain into a per-configuration collection at setup
+time, and the schedule fires that CLONE -- not the sample collection. A
+clone made by an earlier version keeps writing the old field set even
+after the 1.1.5 connector is installed: the clone's Fetch step calls the
+installed connector's mapping, so alert names and the stored source data
+do pick up the new values, but the clone's Create Record step references
+only the fields that existed when it was cloned, so nothing writes them
+into the new alert columns (live-established on 8.0.1: after the upgrade
+the alert names showed the new recipe while `eventTime`, `sourceIp`,
+`destinationIp` and the other new columns stayed empty). If the new
+columns are empty after upgrading, set the configuration's ingestion up
+again -- tear the ingestion setup down and re-run the wizard (or simply
+re-run the wizard for the configuration) so the fresh clone carries the
+1.1.5 field set. The ingestion verifier now checks the bound clone
+against the shipped definition at preflight and fails with this remedy
+instead of discovering null columns three phases later.
+
 ## 1.1.4
 
 Allow Event's organization scope, corrected: **`Allow Event (Time-Limited)`
