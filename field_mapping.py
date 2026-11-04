@@ -291,6 +291,10 @@ def map_event_to_alert(event: Event) -> Dict[str, Any]:
         'alert_state': 'New',
         'status': 'Open',
         'alert_type': resolve_alert_type(event),
+        # The source's own verdict on the event -- the FortiEDR console's
+        # classification vocabulary, verbatim, so the grid and gating
+        # playbooks use the same wording analysts see in FortiEDR.
+        'classification': event.classification or '',
         'source': 'Fortinet FortiEDR',
         'source_ip': collector.get('ip') or '',
         'source_hostname': collector.get('device') or '',

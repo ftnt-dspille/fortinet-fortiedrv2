@@ -6,7 +6,7 @@
 # Requires alongside this connector on the appliance:
 #   - fortinet-fortiedrv2 in its default config
 
-collection: Sample - Fortinet FortiEDR v2 - 1.1.7
+collection: Sample - Fortinet FortiEDR v2 - 1.1.8
 description: >-
   Sample playbooks for the "Fortinet FortiEDR v2" connector. If you are
   planning to use the sample playbooks in your environment, ensure that you
@@ -384,7 +384,7 @@ playbooks:
           {% if vars.steps.Fetch_Events.data | default([]) | length > 0 %}
           {{ vars.steps.Fetch_Events.data[0] }}
           {% else %}
-          {{ { 'name': 'cloud.exe - Rozena.ABV!tr on lab-endpoint-01', 'external_id': '1493703', 'severity': 'Critical', 'alert_state': 'New', 'status': 'Open', 'alert_type': 'Command and Control', 'source': 'Fortinet FortiEDR', 'source_ip': '203.0.113.5', 'source_hostname': 'lab-endpoint-01', 'dest_ips': '198.51.100.7', 'dest_ip': '198.51.100.7', 'user_names': 'labuser', 'primary_user': 'labuser', 'process_owner': 'labuser', 'process_type': 'EXE', 'analyst_comment': '', 'threat_name': 'Rozena.ABV!tr', 'rule': 'Exfiltration Detected', 'process_name': 'cloud.exe', 'process_path': 'C:/Users/Public/cloud.exe', 'description': 'cloud.exe on lab-endpoint-01 - rich-text card rendered from the event payload', 'alert_generation_epoch': 1789992300, 'last_observed_epoch': 1789992330, 'event_count': 1, 'source_payload': { 'eventId': 1493703, 'process': 'cloud.exe', 'severity': 'Critical' } } }}
+          {{ { 'name': 'cloud.exe - Rozena.ABV!tr on lab-endpoint-01', 'external_id': '1493703', 'severity': 'Critical', 'alert_state': 'New', 'status': 'Open', 'alert_type': 'Command and Control', 'classification': 'Malicious', 'source': 'Fortinet FortiEDR', 'source_ip': '203.0.113.5', 'source_hostname': 'lab-endpoint-01', 'dest_ips': '198.51.100.7', 'dest_ip': '198.51.100.7', 'user_names': 'labuser', 'primary_user': 'labuser', 'process_owner': 'labuser', 'process_type': 'EXE', 'analyst_comment': '', 'threat_name': 'Rozena.ABV!tr', 'rule': 'Exfiltration Detected', 'process_name': 'cloud.exe', 'process_path': 'C:/Users/Public/cloud.exe', 'description': 'cloud.exe on lab-endpoint-01 - rich-text card rendered from the event payload', 'alert_generation_epoch': 1789992300, 'last_observed_epoch': 1789992330, 'event_count': 1, 'source_payload': { 'eventId': 1493703, 'process': 'cloud.exe', 'severity': 'Critical' } } }}
           {% endif %}
 
     - name: Configuration
@@ -440,6 +440,14 @@ playbooks:
         # stock 'Other / Unknown' in the type column while severity, the
         # same picklist-pipe shape, resolved fine).
         type: '{{ "AlertType" | picklist(vars.item.alert_type | default("Other / Unknown")) }}'
+        # FortiEDR's own verdict on the event -- Malicious, Suspicious,
+        # Inconclusive, the same wording the FortiEDR console uses -- on the
+        # stock `sourceType` column: the alerts module has no native
+        # classification column and the picklist-typed `emailClassification`
+        # holds only Phishing/Non-Phishing, while a source-given verdict is
+        # exactly what "Source Type" holds. Gating playbooks read it directly
+        # off the record instead of digging through sourcedata.
+        sourceType: '{{ vars.item.classification | default("") }}'
         alertDetectionDate: '{{ vars.item.alert_generation_epoch or vars.item.last_observed_epoch }}'
         # eventTime (the datetime field the FortiSIEM v2 ingestion uses for the
         # same purpose) carries lastSeen, so a re-detection re-sorts the alert
@@ -466,7 +474,7 @@ playbooks:
         description: '{{ vars.item.description }}'
         sourcedata: '{{ vars.item | toJSON }}'
         __replace: 'true'
-        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'userName', 'userDetails', 'processName', 'description', 'sourcedata'] }}"
+        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'sourceType', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'userName', 'userDetails', 'processName', 'description', 'sourcedata'] }}"
       next: Update Last Pull Time
 
     - name: Update Last Pull Time

@@ -1,24 +1,41 @@
 # fortinet-fortiedrv2 release notes
 
-## 1.1.7
+## 1.1.8
 
-**The Get Incidents checkboxes render as checkboxes.** The two enrichment
-options below shipped with form type `boolean`, which the operation dialog
-does not implement: every true/false parameter in the stock connector
-schema (Archived, Strict Mode, Full Data Requested) declares form type
-`checkbox`, and that is the widget the dialog draws a control for. Under
-`boolean` the two fields rendered as an unknown control (live-caught on
-8.0.1). Both now declare `checkbox` with the same `value: false` default
-the stock rows use, and render exactly like the checkbox fields beside
-them. Nothing on the wire changes: the checked state travels as a real
-boolean either way.
+**FortiEDR's own classification lands on the alerts grid.** Every alert
+the ingestion writes now carries the event's classification -- Malicious,
+Suspicious, Inconclusive, the wording the FortiEDR console itself uses
+-- as a first-class column, not only as a chip on the rich-text card.
+The stock `sourceType` field ("Source Type") is the home: the alerts
+module has no native classification column, its picklist-typed
+`emailClassification` holds only Phishing/Non-Phishing, and the stock
+FortiEDR connector itself put classification on the description card
+alone, so the source's verdict was the one thing a gating playbook had
+to dig out of sourcedata. It rides `__fieldsToUpdate`, so the next
+ingestion pass back-fills the column on every already-ingested alert,
+and the ingestion verifier's module-column read-back now checks it
+(the stored `sourceType` must equal the classification the sourcedata
+payload claims). A bound ingestion clone created before this change is
+stale -- the verifier's preflight flags it -- so tear that ingestion
+setup down and re-run the wizard. Gating playbooks read the column
+straight off the record.
 
-**Why its own version.** The operation dialog reads the box's installed
-connector record, and a same-version replace does not refresh what it
-serves: reinstalling the fixed 1.1.6 over the installed 1.1.6 left the
-dialog on the old metadata even after the worker recycle. The fix
-therefore lands as 1.1.7, and with it the enrichment options below reach
-a first release (1.1.6 never shipped past the lab).
+**The Get Incidents checkboxes render as checkboxes.** The two
+enrichment options shipped with form type `boolean`, which the
+operation dialog does not implement: every true/false parameter in the
+stock fortiedr schema (Archived, Strict Mode, Full Data Requested)
+declares form type `checkbox`, the widget the dialog draws a control
+for. Under `boolean` the two fields rendered as an unknown control
+(live-caught on 8.0.1). Both now declare `checkbox` with the stock
+rows' `value: false` default.
+
+**Why the re-version.** The box serves a connector's forms from its
+installed record, and a same-version replace never refreshes what it
+serves: the fixed build reinstalled over its own installed version
+left the dialog on the old metadata even after worker recycles, while
+a fresh version took on the first call. Both fixes above therefore
+ride one version that reaches a first public release together -- the
+1.1.6 and 1.1.7 treads never shipped past the lab.
 
 ## 1.1.6
 

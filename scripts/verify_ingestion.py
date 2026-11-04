@@ -505,6 +505,19 @@ def main(argv=None) -> int:
             have_sev = _label(r.get("severity"))
             if not have_sev:
                 bad.append(f"{r.get('sourceId')}: module row carries no severity value")
+            # Same discipline for the classification column: FortiEDR's own
+            # verdict rides the stock `sourceType` field (the module has no
+            # native classification column; `emailClassification` is a
+            # Phishing/Non-Phishing picklist), and the stored row must carry
+            # what the payload claims or the Create Record key lies.
+            want_cls = str(payload.get("classification") or "")
+            have_cls = _label(r.get("sourceType"))
+            if want_cls and not have_cls:
+                bad.append(f"{r.get('sourceId')}: module row carries no sourceType "
+                           f"(a dropped or misnamed Create Record key)")
+            elif have_cls != want_cls:
+                bad.append(f"{r.get('sourceId')}: sourceType {have_cls!r} != payload "
+                           f"classification {want_cls!r}")
         except (ValueError, TypeError) as e:
             bad.append(f"{r.get('sourceId')}: sourcedata not JSON: {e}")
     if bad:
@@ -512,7 +525,7 @@ def main(argv=None) -> int:
     if checked:
         print("   every vouched alert: sourceId == payload external_id, "
               "generation <= observation, card markup in description, and the "
-              "type/severity columns read back what the payload claims")
+              "type/severity/classification columns read back what the payload claims")
 
     import os
     demo_id = os.environ.get("EDR_DEMO_EVENT_ID")

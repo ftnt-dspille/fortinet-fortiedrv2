@@ -277,11 +277,12 @@ def test_create_record_upserts_each_event_on_its_eventid():
     resource.pop('__replace')
     resource.pop('__fieldsToUpdate')
     assert set(resource) == {'name', 'source', 'sourceId', 'severity', 'type',
-                             'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName',
+                             'sourceType', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName',
                              'hostIPAddress', 'destinationIp', 'rule', 'filePath',
                              'userName', 'userDetails', 'processName',
                              'state', 'status', 'description', 'sourcedata'}
     assert resource['sourceId'] == '{{ vars.item.external_id }}'
+    assert resource['sourceType'] == '{{ vars.item.classification | default("") }}'
     assert resource['source'] == 'Fortinet FortiEDR'
     assert resource['sourcedata'] == '{{ vars.item | toJSON }}'
     assert resource['severity'] == '{{ "Severity" | picklist(vars.item.severity | default("Medium")) }}'
@@ -293,6 +294,7 @@ def test_create_record_upserts_each_event_on_its_eventid():
     assert create['arguments']['resource']['__replace'] == 'true'
     assert "'sourcedata'" in create['arguments']['resource']['__fieldsToUpdate']
     assert "'severity'" in create['arguments']['resource']['__fieldsToUpdate']
+    assert "'sourceType'" in create['arguments']['resource']['__fieldsToUpdate']
 
 
 def test_the_watermark_moves_only_after_the_alerts_are_written():
@@ -1451,10 +1453,17 @@ def test_alert_type_sees_through_placeholder_threat_names():
     assert resolve_alert_type(event) == 'Data Exfiltration'
 
 
+def test_classification_rides_the_mapped_payload():
+    row = fixture('events_full_page')[0]
+    assert map_event_to_alert(Event(**row))['classification'] == (row.get('classification') or '')
+    clean = Event(eventId=1, classification='Malicious')
+    assert map_event_to_alert(clean)['classification'] == 'Malicious'
+
+
 def test_mapped_alert_shape_matches_the_create_record_contract():
     alert = map_event_to_alert(Event(**fixture('events_full_page')[0]))
     expected = {'name', 'external_id', 'severity', 'alert_state', 'status', 'alert_type',
-                'source', 'source_ip', 'source_hostname', 'dest_ips', 'dest_ip', 'user_names',
+                'classification', 'source', 'source_ip', 'source_hostname', 'dest_ips', 'dest_ip', 'user_names',
                 'primary_user', 'process_owner', 'process_type', 'analyst_comment',
                 'threat_name', 'rule', 'process_name', 'process_path', 'description',
                 'alert_generation_epoch', 'last_observed_epoch', 'event_count',

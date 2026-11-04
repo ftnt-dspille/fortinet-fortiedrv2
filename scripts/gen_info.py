@@ -22,7 +22,7 @@ DEFAULT_STOCK = (Path.home() / 'PycharmProjects/Miscellaneous/fortisoar/corpus_b
                  'fortisoar-rpm-extracted/fortinet-fortiedr/fortinet-fortiedr/info.json')
 
 NAME = 'fortinet-fortiedrv2'
-VERSION = '1.1.7'
+VERSION = '1.1.8'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,
@@ -121,7 +121,7 @@ def _new_operations():
                    description='Optional exact organization name.'),
         ],
         'output_schema': [
-            {'name': '', 'external_id': '', 'severity': '', 'alert_type': '',
+            {'name': '', 'external_id': '', 'severity': '', 'alert_type': '', 'classification': '',
              'source_ip': '', 'dest_ip': '', 'rule': '', 'process_name': '',
              'alert_generation_epoch': 0, 'last_observed_epoch': 0,
              'description': '', 'source_payload': {}},
