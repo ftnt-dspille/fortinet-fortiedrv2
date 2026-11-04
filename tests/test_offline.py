@@ -204,6 +204,7 @@ def test_fetch_reads_events_since_the_watermark_on_last_seen():
     assert params['severities'] == '{{vars.severities}}'
     assert params['device'] == '{{vars.device}}'
     assert params['collector_groups'] == '{{vars.collector_groups}}'
+    assert params['include_command_timeline'] == '{{vars.include_command_timeline}}'
 
     # The window's default time field is the activity axis -- FortiEDR pins an
     # event's firstSeen at its first detection and only moves lastSeen, so a
@@ -214,10 +215,18 @@ def test_fetch_reads_events_since_the_watermark_on_last_seen():
         _step('> FortiEDR v2 > Fetch', 'Start')['arguments']['step_variables']['_configuration_schema'])
     assert [f['name'] for f in schema] == ['fetch_last_minutes', 'time_field', 'max_events',
                                            'classifications', 'severities', 'device',
-                                           'collector_groups']
+                                           'collector_groups', 'include_command_timeline']
     assert schema[1]['value'] == 'Last Seen (activity)'
     assert 'Last Seen (activity)' in schema[1]['options']
     assert 'First Seen (creations only)' in schema[1]['options']
+    # the command-timeline flag ships off: it is one extra console call per
+    # event, and a big backfill window with it on is a sub-call storm.
+    flag = schema[-1]
+    assert flag['type'] == 'select'
+    assert flag['value'] == 'false'
+    assert flag['options'] == ['false', 'true']
+    assert _step('> FortiEDR v2 > Fetch', 'Configuration')['arguments']['include_command_timeline'] \
+        == 'false'
 
 
 def test_wizard_filters_blank_by_default_and_match_the_configuration_defaults():
@@ -285,6 +294,8 @@ def test_create_record_upserts_each_event_on_its_eventid():
     assert resource['sourceType'] == '{{ vars.item.classification | default("") }}'
     assert resource['source'] == 'Fortinet FortiEDR'
     assert resource['sourcedata'] == '{{ vars.item | toJSON }}'
+    # the rich-text card lives one layer down in the mapped payload
+    assert resource['description'] == '{{ vars.item.card.description }}'
     assert resource['severity'] == '{{ "Severity" | picklist(vars.item.severity | default("Medium")) }}'
     # `type` is the module field behind the AlertType picklist (the house
     # recipe's name for it); an `alertType` key is not in the alerts schema and
@@ -1344,10 +1355,12 @@ def test_ingest_maps_rows_to_alert_payloads(edr):
     assert upstream['process_name'] == 'cloud.exe'
     assert upstream['alert_generation_epoch'] == 1792065558
     assert upstream['last_observed_epoch'] == 1793280778
-    assert '<table' in upstream['description']
-    assert '1493703' in upstream['description']
-    assert 'cloud.exe on lab-endpoint-01' in upstream['description']
-    assert '2026-10-29 13:32:58' in upstream['description']
+    # the rich-text card rides one layer down (card.description) so
+    # sourcedata stays scannable around it
+    assert '<table' in upstream['card']['description']
+    assert '1493703' in upstream['card']['description']
+    assert 'cloud.exe on lab-endpoint-01' in upstream['card']['description']
+    assert '2026-10-29 13:32:58' in upstream['card']['description']
     assert upstream['source_payload']['eventId'] == 1493703
 
     plain = by_id['1492374']
@@ -1358,7 +1371,7 @@ def test_ingest_maps_rows_to_alert_payloads(edr):
 
 def test_the_description_is_the_house_rich_text_card():
     row = next(r for r in fixture('events_full_page') if r['eventId'] == 1493703)
-    card = map_event_to_alert(Event(**row))['description']
+    card = map_event_to_alert(Event(**row))['card']['description']
     # the card recipe: bold headline, chip row, hairline table (see
     # field_mapping.build_description), all styles inline.
     assert card.startswith('<p style="margin:0 0 8px 0;font-size:16px;font-weight:700"')
@@ -1383,7 +1396,7 @@ def test_the_description_escapes_markup_and_braces_in_values():
     event = Event(eventId=7, process='<script>alert(1)</script>',
                   rules=['{ bogus_collect }'], severity='High',
                   collectors=[{'device': 'lab-endpoint-01', 'ip': '203.0.113.5'}])
-    card = map_event_to_alert(event)['description']
+    card = map_event_to_alert(event)['card']['description']
     assert '<script' not in card
     assert '&lt;script&gt;' in card
     assert '{ bogus_collect }' not in card
@@ -1392,7 +1405,7 @@ def test_the_description_escapes_markup_and_braces_in_values():
 
 def test_a_bare_event_still_renders_a_card():
     event = Event(eventId=1)
-    card = map_event_to_alert(event)['description']
+    card = map_event_to_alert(event)['card']['description']
     assert 'FortiEDR event on unknown device' in card
     assert '<table' in card                       # the Event ID row alone
     assert '>Event ID</td>' in card and '>1</td>' in card
@@ -1502,7 +1515,7 @@ def test_mapped_alert_shape_matches_the_create_record_contract():
     expected = {'name', 'external_id', 'severity', 'alert_state', 'status', 'alert_type',
                 'classification', 'source', 'source_ip', 'source_hostname', 'dest_ips', 'dest_ip', 'user_names',
                 'primary_user', 'process_owner', 'process_type', 'analyst_comment',
-                'threat_name', 'rule', 'process_name', 'process_path', 'description',
+                'threat_name', 'rule', 'process_name', 'process_path', 'card',
                 'alert_generation_epoch', 'last_observed_epoch', 'event_count',
                 'source_payload'}
     assert set(alert) == expected
@@ -1515,6 +1528,166 @@ def test_mapped_alert_shape_matches_the_create_record_contract():
     # array mixes both and the first row of this fixture is a label-shaped one.
     import re as _re
     assert _re.match(r'^\d{1,3}(\.\d{1,3}){3}$', alert['dest_ip'] or ''), alert['dest_ip']
+
+
+# --------------------------------------------------------------------------- command timeline enrichment
+
+def _rdi_raw_event(event_id=1493703):
+    """The rdi-events answer shape as the console sends it: {'rawEvent': ...}
+    with stacks full of null filler the alert must never store."""
+    return {'rawEvent': {
+        'id': 1503784, 'eventId': event_id, 'host': 'lab-endpoint-01',
+        'hostState': 'Down', 'os': 'Ubuntu 24.04.4 LTS', 'osFamily': 'Linux',
+        'destination': '1.1.1.1', 'remoteIP': '1.1.1.1', 'remoteUrl': None,
+        'country': None, 'countryCode': '', 'asn': '13335 CLOUDFLARENET',
+        'firstSeen': '03-Nov-2026, 11:13:02', 'lastSeen': '03-Nov-2026, 11:13:02',
+        'firstSeenEpoch': 1793725982000, 'lastSeenEpoch': 1793725982000,
+        'eventCount': 1, 'inForensics': False, 'organizationId': 85226,
+        'stacks': [
+            {'stageName': 'PARENT PROCESS CREATION',
+             'shortSourceProcessName': 'sudo', 'sourceProcessPath': '/usr/bin/sudo',
+             'sourceProcessOwner': None, 'executableHash': None,
+             'destinationProcessPath': '', 'is64Bit': True, 'highlighted': False,
+             'certificateStatus': 'Unsigned', 'processId': '5302',
+             'auxProcessName': '', 'auxProcessId': '5304', 'sessionId': 0,
+             'auxSessionId': 0, 'threadId': '0', 'auxThreadId': '0',
+             'timestamp': 1793725330000, 'company': None, 'description': None,
+             'version': None, 'product': None, 'comments': None,
+             'commandLine': 'bash /tmp/edr_lab.sh all', 'injectedModule': None,
+             'stackNum': 3, 'persistenceData': None, 'stackInfoFlags': 0,
+             'stackEntries': [
+                 {'processPath': '/usr/bin/sudo', 'shortProcessName': 'sudo',
+                  'certificateStatus': 'Unsigned', 'eventCount': None,
+                  'baseAddress': None, 'endAddress': None, 'dynamicFlags': None,
+                  'moduleFlags': '', 'peErrorFlags': '', 'highlighted': False,
+                  'rulesNames': '', 'isWritable': 'No', 'commonAdditionalInfo': '',
+                  'main': True, 'hash': None, 'originModuleFlags': None,
+                  'lastModified': None, 'isExecutableHash': None}]},
+            {'stageName': 'PROCESS ACTIVITY', 'shortSourceProcessName': 'bash',
+             'sourceProcessPath': '/usr/bin/bash',
+             'commandLine': '-c sudo bash /tmp/edr_lab.sh all',
+             'processId': '5301', 'timestamp': 1793725330000, 'stackNum': 4,
+             'stackEntries': []},
+        ],
+    }}
+
+
+def test_the_command_timeline_is_trimmed_to_what_the_widget_renders():
+    trimmed = ingestion._trim_command_timeline(_rdi_raw_event()['rawEvent'])
+    # event level: the whitelist only -- the console's filler (hostState,
+    # inForensics, organizationId, highlighted flags) never reaches the alert
+    assert set(trimmed) == {'id', 'eventId', 'host', 'os', 'osFamily', 'destination',
+                            'remoteIP', 'asn', 'firstSeen', 'lastSeen',
+                            'firstSeenEpoch', 'lastSeenEpoch', 'eventCount', 'stacks'}
+    assert trimmed['eventId'] == 1493703
+
+    def _no_empties(node):
+        if isinstance(node, dict):
+            for v in node.values():
+                assert v is not None and v != '', node
+                _no_empties(v)
+        elif isinstance(node, list):
+            for v in node:
+                _no_empties(v)
+    _no_empties(trimmed)
+    stage = trimmed['stacks'][0]
+    assert stage['stageName'] == 'PARENT PROCESS CREATION'
+    assert stage['commandLine'] == 'bash /tmp/edr_lab.sh all'
+    assert set(stage) <= set(ingestion.RDI_STACK_FIELDS) | {'stackEntries'}
+    # a stackEntry keeps only what renders; nulls and unlisted keys are gone
+    assert stage['stackEntries'][0] == {'processPath': '/usr/bin/sudo',
+                                        'shortProcessName': 'sudo',
+                                        'certificateStatus': 'Unsigned',
+                                        'main': True, 'isWritable': 'No'}
+    # an emptied stackEntries list is dropped, never stored as []
+    assert 'stackEntries' not in trimmed['stacks'][1]
+
+
+def test_the_timeline_flag_reads_wizard_strings_honestly():
+    assert ingestion._as_flag('true') and ingestion._as_flag('True')
+    assert ingestion._as_flag(True) and ingestion._as_flag('1') and ingestion._as_flag('yes')
+    assert not ingestion._as_flag('false') and not ingestion._as_flag('False')
+    assert not ingestion._as_flag('') and not ingestion._as_flag(None) and not ingestion._as_flag('no')
+
+
+def test_attach_command_timelines_enriches_and_fails_soft():
+    class _Resp:
+        def __init__(self, payload):
+            self.text = json.dumps(payload) if payload is not None else ''
+
+    class _Client:
+        def __init__(self, behavior):
+            self.behavior = behavior
+            self.calls = []
+
+        def get(self, title, endpoint, params=None, operation=''):
+            self.calls.append((title, endpoint, params, operation))
+            if isinstance(self.behavior, Exception):
+                raise self.behavior
+            return _Resp(self.behavior)
+
+    rows = [{'external_id': '1493703', 'name': 'a'},
+            {'external_id': '1492374', 'name': 'b'}]
+    ok = _Client({'rawEvent': {'eventId': 1493703, 'host': 'lab-endpoint-01',
+                               'stacks': []}})
+    ingestion.attach_command_timelines(ok, rows)
+    assert rows[0]['command_timeline'] == {'eventId': 1493703,
+                                           'host': 'lab-endpoint-01'}
+    assert 'command_timeline_error' not in rows[0]
+    # one sub-call per row, on the alert's sourceId, with the console's
+    # filter set, attributed to the ingestion operation
+    assert [call[1] for call in ok.calls] == [
+        ingestion.RDI_EVENT_TIMELINE.format('1493703'),
+        ingestion.RDI_EVENT_TIMELINE.format('1492374')]
+    assert ok.calls[0][2]['statusFilter'] == 'Unhandled'
+    assert ok.calls[0][2]['typeFilter'] == 'SecurityEvents'
+    assert ok.calls[0][3] == 'ingest_events'
+
+    # fail soft per row: a refused sub-call marks that row and touches
+    # nothing else -- one dead event must not sink the whole pull
+    rows = [{'external_id': '1493703'}, {'external_id': '1492374'}]
+    bad = _Client(ConnectorError('console refused the rdi read'))
+    ingestion.attach_command_timelines(bad, rows)
+    assert 'command_timeline' not in rows[0]
+    assert 'console refused the rdi read' in rows[0]['command_timeline_error']
+    assert 'command_timeline_error' in rows[1]
+
+    # an empty answer is an error, not an empty timeline
+    rows = [{'external_id': '7'}]
+    ingestion.attach_command_timelines(_Client(None), rows)
+    assert 'no raw event' in rows[0]['command_timeline_error']
+    assert 'command_timeline' not in rows[0]
+
+
+def test_ingest_events_attaches_the_timeline_only_when_the_flag_is_on(edr):
+    rows = fixture('events_full_page')
+    edr.add_callback(responses.GET, COUNT_EVENTS,
+                     callback=lambda request: (200, {}, str(len(rows))),
+                     content_type='application/json')
+    edr.add_callback(responses.GET, LIST_EVENTS,
+                     callback=lambda request: (200, {}, json.dumps(rows)),
+                     content_type='application/json')
+
+    def rdi(request):
+        event_id = urlparse(request.url).path.rsplit('/', 2)[-2]
+        return 200, {}, json.dumps(_rdi_raw_event(int(event_id)))
+
+    edr.add_callback(responses.GET, re.compile(BASE + r'/api/events/events/\d+/rdi-events'),
+                     callback=rdi, content_type='application/json')
+
+    alerts = run('ingest_events', {'from': '2026-10-29 00:00:00',
+                                   'include_command_timeline': 'true'})
+    assert len(alerts) == len(rows)
+    timeline = alerts[0]['command_timeline']
+    assert timeline['eventId'] == int(alerts[0]['external_id'])
+    assert timeline['stacks'], 'the widget needs at least one process stage'
+    # the flag rides the wire as the wizard's string and still reads truthy
+    rdi_calls = calls('GET', '/rdi-events')
+    assert len(rdi_calls) == len(rows)
+
+    alerts = run('ingest_events', {'from': '2026-10-29 00:00:00'})
+    assert all('command_timeline' not in alert for alert in alerts)
+    assert len(calls('GET', '/rdi-events')) == len(rows)  # no new sub-calls
 
 
 # --------------------------------------------------------------------------- library boundary (AST)

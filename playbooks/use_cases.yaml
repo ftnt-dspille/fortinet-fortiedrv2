@@ -22,7 +22,7 @@
 #     refused, the run records the outcome as an alert comment and carries
 #     on -- a missing side tool degrades the chain, it never kills it.
 
-collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.11
+collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.12
 description: >-
   Operational use-case playbooks for the "Fortinet FortiEDR v2" connector:
   alert triage with collector isolation, evidence collection, time-limited

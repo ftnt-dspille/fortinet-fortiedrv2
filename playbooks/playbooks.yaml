@@ -6,7 +6,7 @@
 # Requires alongside this connector on the appliance:
 #   - fortinet-fortiedrv2 in its default config
 
-collection: Sample - Fortinet FortiEDR v2 - 1.1.11
+collection: Sample - Fortinet FortiEDR v2 - 1.1.12
 description: >-
   Sample playbooks for the "Fortinet FortiEDR v2" connector. If you are
   planning to use the sample playbooks in your environment, ensure that you
@@ -215,6 +215,17 @@ playbooks:
         name: collector_groups
         value: ''
         tooltip: 'Comma-separated collector group names to pull from, e.g. GroupA,GroupB. Leave blank to pull from every group.'
+      - title: Include Command Timeline
+        required: false
+        editable: true
+        visible: true
+        type: select
+        name: include_command_timeline
+        options:
+        - 'false'
+        - 'true'
+        value: 'false'
+        tooltip: 'Enrich every ingested event with the console''s command timeline (the process/cmd stacks behind the detection: what triggered what, with command lines). One extra console call per event; the trimmed timeline is stored in the alert''s sourcedata. Leave false for very large backfill windows.'
       next: Configuration
 
     - name: Configuration
@@ -241,6 +252,7 @@ playbooks:
         severities: ''
         device: ''
         collector_groups: ''
+        include_command_timeline: 'false'
         FortiEDRMacroName: "FortiEDRLastEventPullTime_{{vars['audit_info']['cyops_playbook_iri'].split('/')[-1].replace('-','_')}}"
       next: Get Macro Value
 
@@ -316,6 +328,7 @@ playbooks:
         severities: '{{vars.severities}}'
         device: '{{vars.device}}'
         collector_groups: '{{vars.collector_groups}}'
+        include_command_timeline: '{{vars.include_command_timeline}}'
       next: Save Result
 
     - name: Save Result
@@ -384,7 +397,7 @@ playbooks:
           {% if vars.steps.Fetch_Events.data | default([]) | length > 0 %}
           {{ vars.steps.Fetch_Events.data[0] }}
           {% else %}
-          {{ { 'name': 'cloud.exe - Rozena.ABV!tr on lab-endpoint-01', 'external_id': '1493703', 'severity': 'Critical', 'alert_state': 'New', 'status': 'Open', 'alert_type': 'Command and Control', 'classification': 'Malicious', 'source': 'Fortinet FortiEDR', 'source_ip': '203.0.113.5', 'source_hostname': 'lab-endpoint-01', 'dest_ips': '198.51.100.7', 'dest_ip': '198.51.100.7', 'user_names': 'labuser', 'primary_user': 'labuser', 'process_owner': 'labuser', 'process_type': 'EXE', 'analyst_comment': '', 'threat_name': 'Rozena.ABV!tr', 'rule': 'Exfiltration Detected', 'process_name': 'cloud.exe', 'process_path': 'C:/Users/Public/cloud.exe', 'description': 'cloud.exe on lab-endpoint-01 - rich-text card rendered from the event payload', 'alert_generation_epoch': 1789992300, 'last_observed_epoch': 1789992330, 'event_count': 1, 'source_payload': { 'eventId': 1493703, 'process': 'cloud.exe', 'severity': 'Critical' } } }}
+          {{ { 'name': 'cloud.exe - Rozena.ABV!tr on lab-endpoint-01', 'external_id': '1493703', 'severity': 'Critical', 'alert_state': 'New', 'status': 'Open', 'alert_type': 'Command and Control', 'classification': 'Malicious', 'source': 'Fortinet FortiEDR', 'source_ip': '203.0.113.5', 'source_hostname': 'lab-endpoint-01', 'dest_ips': '198.51.100.7', 'dest_ip': '198.51.100.7', 'user_names': 'labuser', 'primary_user': 'labuser', 'process_owner': 'labuser', 'process_type': 'EXE', 'analyst_comment': '', 'threat_name': 'Rozena.ABV!tr', 'rule': 'Exfiltration Detected', 'process_name': 'cloud.exe', 'process_path': 'C:/Users/Public/cloud.exe', 'card': { 'description': 'cloud.exe on lab-endpoint-01 - rich-text card rendered from the event payload' }, 'alert_generation_epoch': 1789992300, 'last_observed_epoch': 1789992330, 'event_count': 1, 'command_timeline': { 'stacks': [] }, 'source_payload': { 'eventId': 1493703, 'process': 'cloud.exe', 'severity': 'Critical' } } }}
           {% endif %}
 
     - name: Configuration
@@ -476,7 +489,7 @@ playbooks:
         # triage back to New/Open.
         state: '{{ "AlertState" | picklist("New") }}'
         status: '{{ "AlertStatus" | picklist("Open") }}'
-        description: '{{ vars.item.description }}'
+        description: '{{ vars.item.card.description }}'
         sourcedata: '{{ vars.item | toJSON }}'
         __replace: 'true'
         __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'sourceType', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'userName', 'userDetails', 'processName', 'description', 'sourcedata'] }}"

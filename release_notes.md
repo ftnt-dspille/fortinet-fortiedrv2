@@ -1,5 +1,34 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.12
+
+**The alert's sourcedata now carries the console's command timeline.** New
+`Include Command Timeline` flag on the data ingestion wizard (and on the
+`ingest_events` operation, off by default): when on, every fetched event is
+enriched through FortiEDR's `rdi-events` endpoint -- the raw-detection
+record behind the console event, the same data the console's event
+timeline view renders. The process/cmd stacks (what triggered what, with
+command lines, paths, hashes, module frames) are trimmed to a whitelist
+of fields the timeline widget renders and stored on the alert's
+`sourcedata` as `command_timeline`.
+
+- Stored data is trimmed twice: only whitelisted event/stack/stackEntry
+  fields survive, and every null, empty string, and emptied container is
+  dropped recursively. The console's answer is full of filler
+  (`sourceProcessOwner: null`, `moduleFlags: ""`, unlisted booleans), and
+  sourcedata carries only what an alert will actually show. The trim also
+  sidesteps the code-snippet sandbox's `null` restriction for any
+  playbook that later renders the timeline (live-caught in 1.1.11).
+- Enrichment fails soft per row: a refused or empty sub-call records
+  `command_timeline_error` on that row only and touches nothing else, so
+  one dead event cannot sink a pull. Off by default: a large backfill
+  window with the flag on is one extra console call per event.
+- `sourcedata` is restructured: the rich-text alert `description` HTML
+  (by far the largest blob) moves one layer down to `card.description`,
+  so the JSON reads as flat scalars first, card and timeline nested
+  beneath. The Create Record mapping and the wizard's Data Mapping
+  preview moved with it; alert content is unchanged.
+
 ## 1.1.11
 
 **Live-caught on the first firing of the Auto-Triage trigger** (the

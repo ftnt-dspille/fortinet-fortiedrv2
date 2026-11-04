@@ -314,7 +314,9 @@ def map_event_to_alert(event: Event) -> Dict[str, Any]:
         'event_count': 1,
         'source_payload': payload,
     }
-    alert['description'] = build_description(event, alert)
+    # The card rides one layer down so sourcedata stays scannable: the
+    # scalars read flat, the big rich-text blob does not sit beside them.
+    alert['card'] = {'description': build_description(event, alert)}
     return alert
 
 

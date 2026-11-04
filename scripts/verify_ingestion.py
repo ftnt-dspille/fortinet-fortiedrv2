@@ -371,7 +371,7 @@ def main(argv=None) -> int:
 
     # ---------------------------------------------------------------- [3] confirm edit
     print(f"[3] wizard-confirm edit: Initial Backfill Range -> {args.backfill_minutes} min, "
-          f"Maximum Events Per Run -> {args.max_events}")
+          f"Maximum Events Per Run -> {args.max_events}, Include Command Timeline -> true")
     clone_buckets = conns.ingestion_playbooks(NAME, collection=result.collection_uuid)
     fetch = getattr(clone_buckets, "fetch", None)
     if fetch is None:
@@ -390,6 +390,9 @@ def main(argv=None) -> int:
           f"max_events {step_args.get('max_events')!r}")
     step_args["fetch_last_minutes"] = str(args.backfill_minutes)
     step_args["max_events"] = str(args.max_events)
+    # Lab posture: the verifier's window is small, so enrich every event with
+    # the command timeline and make phase [5] vouch the stored shape.
+    step_args["include_command_timeline"] = "true"
     client.records("workflow_steps").update(step_uuid, {"arguments": step_args})
     check = client.playbooks.get_definition(fetch.uuid)
     check_args = next(s for s in (check.get("steps") or [])
@@ -398,6 +401,9 @@ def main(argv=None) -> int:
         _fail(f"confirm edit did not stick: fetch_last_minutes={check_args['fetch_last_minutes']!r}")
     if str(check_args.get("max_events")) != str(args.max_events):
         _fail(f"confirm edit did not stick: max_events={check_args['max_events']!r}")
+    if str(check_args.get("include_command_timeline")).lower() != "true":
+        _fail(f"confirm edit did not stick: "
+              f"include_command_timeline={check_args['include_command_timeline']!r}")
     print(f"   fetch Configuration step patched: fetch_last_minutes="
           f"{check_args['fetch_last_minutes']!r}, max_events={check_args['max_events']!r}")
 
@@ -479,6 +485,7 @@ def main(argv=None) -> int:
 
     checked = [by_source[i] for i in fetched if i in by_source]
     bad = []
+    timelined = 0
 
     def _label(value):
         if isinstance(value, dict):
@@ -529,6 +536,28 @@ def main(argv=None) -> int:
             elif have_cls != want_cls:
                 bad.append(f"{r.get('sourceId')}: sourceType {have_cls!r} != payload "
                            f"classification {want_cls!r}")
+            # 1.1.12 restructure: the big HTML card lives one layer down
+            # (card.description) so sourcedata stays scannable around it.
+            card = payload.get("card")
+            if not (isinstance(card, dict) and "<table" in str(card.get("description") or "")):
+                bad.append(f"{r.get('sourceId')}: sourcedata card.description "
+                           f"is not the rich-text card")
+            # Include Command Timeline (verifier posture: on): the timeline,
+            # when stored, must be the trimmed dict -- stacks a list when
+            # present (the empties-stripper may drop an emptied one) -- and a
+            # row without one must say why (fail-soft command_timeline_error).
+            timeline = payload.get("command_timeline")
+            if timeline is not None:
+                if not isinstance(timeline, dict):
+                    bad.append(f"{r.get('sourceId')}: command_timeline is not a dict")
+                elif "stacks" in timeline and not isinstance(timeline["stacks"], list):
+                    bad.append(f"{r.get('sourceId')}: command_timeline.stacks "
+                               f"is not a list")
+                elif timeline.get("stacks"):
+                    timelined += 1
+            elif "command_timeline_error" not in payload:
+                bad.append(f"{r.get('sourceId')}: neither command_timeline nor "
+                           f"command_timeline_error in sourcedata")
         except (ValueError, TypeError) as e:
             bad.append(f"{r.get('sourceId')}: sourcedata not JSON: {e}")
     if bad:
@@ -537,6 +566,8 @@ def main(argv=None) -> int:
         print("   every vouched alert: sourceId == payload external_id, "
               "generation <= observation, card markup in description, and the "
               "type/severity/classification columns read back what the payload claims")
+        print(f"   command timeline: {timelined}/{len(checked)} vouched alert(s) "
+              f"carry process/cmd stacks in sourcedata (card one layer down)")
 
     import os
     demo_id = os.environ.get("EDR_DEMO_EVENT_ID")

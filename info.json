@@ -1,7 +1,7 @@
 {
   "name": "fortinet-fortiedrv2",
   "label": "Fortinet FortiEDR v2",
-  "version": "1.1.11",
+  "version": "1.1.12",
   "description": "FortiEDR protects endpoints pre and post infection, stopping data breaches in real-time and automatically orchestrating incident investigation and response. This connector covers events, forensics, collectors, exceptions, IP sets, console incidents and scheduled ingestion keyed on event activity (lastSeen).",
   "publisher": "Fortinet",
   "cs_approved": true,
@@ -5993,6 +5993,17 @@
           "value": "",
           "description": "Optional exact organization name.",
           "tooltip": "Optional exact organization name."
+        },
+        {
+          "title": "Include Command Timeline",
+          "name": "include_command_timeline",
+          "type": "checkbox",
+          "required": false,
+          "editable": true,
+          "visible": true,
+          "value": false,
+          "description": "Check to enrich every fetched event with the console's command timeline -- the process/cmd stacks behind the detection (what triggered what, with command lines), read from the rdi-events endpoint. One extra console call per event; the trimmed timeline rides the mapped row and so the alert's sourcedata (command_timeline), with command_timeline_error recorded per event on a refused sub-call. Off by default: a large backfill window with this on is one sub-call per event.",
+          "tooltip": "Check to enrich every fetched event with the console's command timeline -- the process/cmd stacks behind the detection (what triggered what, with command lines), read from the rdi-events endpoint. One extra console call per event; the trimmed timeline rides the mapped row and so the alert's sourcedata (command_timeline), with command_timeline_error recorded per event on a refused sub-call. Off by default: a large backfill window with this on is one sub-call per event."
         }
       ],
       "output_schema": [
@@ -6008,8 +6019,13 @@
           "process_name": "",
           "alert_generation_epoch": 0,
           "last_observed_epoch": 0,
-          "description": "",
-          "source_payload": {}
+          "card": {
+            "description": ""
+          },
+          "source_payload": {},
+          "command_timeline": {
+            "stacks": []
+          }
         }
       ]
     },

@@ -22,7 +22,7 @@ DEFAULT_STOCK = (Path.home() / 'PycharmProjects/Miscellaneous/fortisoar/corpus_b
                  'fortisoar-rpm-extracted/fortinet-fortiedr/fortinet-fortiedr/info.json')
 
 NAME = 'fortinet-fortiedrv2'
-VERSION = '1.1.11'
+VERSION = '1.1.12'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,
@@ -119,12 +119,26 @@ def _new_operations():
                                 'cap or shorten the pull schedule.')),
             _param('Organization', 'organization', 'text',
                    description='Optional exact organization name.'),
+            _param('Include Command Timeline', 'include_command_timeline', 'checkbox',
+                   value=False,
+                   description=('Check to enrich every fetched event with the '
+                                "console's command timeline -- the process/cmd "
+                                'stacks behind the detection (what triggered '
+                                'what, with command lines), read from the '
+                                'rdi-events endpoint. One extra console call '
+                                'per event; the trimmed timeline rides the '
+                                'mapped row and so the alert\'s sourcedata '
+                                '(command_timeline), with command_timeline_error '
+                                'recorded per event on a refused sub-call. Off '
+                                'by default: a large backfill window with this '
+                                'on is one sub-call per event.')),
         ],
         'output_schema': [
             {'name': '', 'external_id': '', 'severity': '', 'alert_type': '', 'classification': '',
              'source_ip': '', 'dest_ip': '', 'rule': '', 'process_name': '',
              'alert_generation_epoch': 0, 'last_observed_epoch': 0,
-             'description': '', 'source_payload': {}},
+             'card': {'description': ''}, 'source_payload': {},
+             'command_timeline': {'stacks': []}},
         ],
     })
 

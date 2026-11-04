@@ -60,6 +60,7 @@ soon as the run succeeds:
     pull has actually read.
 """
 
+import json
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -312,6 +313,106 @@ def fetch_window_events(client: FortiEDRClient, from_value, to_value: Optional[s
     return [Event(**row) for row in collected]
 
 
+# The console's command-timeline read: the raw-detection record behind one
+# console event, carrying the process/cmd stacks the console's event
+# timeline view renders. Live-probed on 8.0.1: the path id is the console
+# event id (the alert's sourceId), the answer is {'rawEvent': {...}}, and
+# no organizationId is needed -- the call runs inside the authenticated
+# organization's session.
+RDI_EVENT_TIMELINE = '/api/events/events/{0}/rdi-events'
+
+# What the alert KEEPS from the rawEvent answer: the whitelist of fields
+# the timeline widget and the triage card render, event-level first, then
+# per stack (the process/cmd stages), then per stackEntry (the module
+# frames under each stage). Everything else is dropped, and after the
+# whitelist every null and empty-string value is dropped too -- sourcedata
+# carries only data the alert will actually show, never console filler.
+RDI_EVENT_FIELDS = ('id', 'eventId', 'host', 'os', 'osFamily', 'destination',
+                    'remoteIP', 'remoteUrl', 'country', 'asn',
+                    'firstSeen', 'lastSeen', 'firstSeenEpoch', 'lastSeenEpoch',
+                    'eventCount')
+RDI_STACK_FIELDS = ('stageName', 'shortSourceProcessName', 'sourceProcessPath',
+                    'sourceProcessOwner', 'destinationProcessPath', 'is64Bit',
+                    'certificateStatus', 'processId', 'auxProcessName',
+                    'auxProcessId', 'sessionId', 'threadId', 'auxThreadId',
+                    'timestamp', 'company', 'description', 'version', 'product',
+                    'commandLine', 'injectedModule', 'stackNum',
+                    'persistenceData', 'executableHash')
+RDI_ENTRY_FIELDS = ('processPath', 'shortProcessName', 'certificateStatus',
+                    'eventCount', 'baseAddress', 'endAddress', 'main',
+                    'hash', 'isWritable', 'rulesNames', 'lastModified')
+
+_RDI_QUERY = {'timeFilter': 'Last30days', 'statusFilter': 'Unhandled',
+              'typeFilter': 'SecurityEvents', 'freeTextSearch': '',
+              'freeTextFilters': 'Process,DeviceName,Id,RdiId',
+              'advancedFilters': '{}'}
+
+
+def _strip_empties(value):
+    """Drop null and empty-string values recursively (and the containers
+    that empty out), so stored timeline JSON carries only real data."""
+    if isinstance(value, dict):
+        out = {k: _strip_empties(v) for k, v in value.items()}
+        return {k: v for k, v in out.items()
+                if v is not None and v != '' and v != {} and v != []}
+    if isinstance(value, list):
+        out = [_strip_empties(v) for v in value]
+        return [v for v in out if v is not None and v != '' and v != {} and v != []]
+    return value
+
+
+def _trim_command_timeline(raw):
+    """The whitelisted, null-free shape of one rawEvent answer."""
+    if not isinstance(raw, dict):
+        return {}
+    event = {key: raw.get(key) for key in RDI_EVENT_FIELDS}
+    stacks = []
+    for stack in raw.get('stacks') or []:
+        if not isinstance(stack, dict):
+            continue
+        trimmed = {key: stack.get(key) for key in RDI_STACK_FIELDS}
+        entries = [{key: entry.get(key) for key in RDI_ENTRY_FIELDS}
+                   for entry in (stack.get('stackEntries') or [])
+                   if isinstance(entry, dict)]
+        trimmed['stackEntries'] = entries
+        stacks.append(trimmed)
+    event['stacks'] = stacks
+    return _strip_empties(event)
+
+
+def attach_command_timelines(client: FortiEDRClient, rows: List[Dict[str, Any]]) -> None:
+    """Enrich mapped rows in place with the console's command timeline.
+
+    One rdi-events sub-call per event, keyed on the alert's sourceId (the
+    console event id). Fails soft per row: a refused or empty answer
+    leaves ``command_timeline_error`` on that row and touches nothing
+    else, mirroring the per-incident fail-soft of get_incidents'
+    enrichment checkboxes.
+    """
+    for row in rows:
+        event_id = row.get('external_id')
+        try:
+            response = client.get('Get Event Command Timeline',
+                                  RDI_EVENT_TIMELINE.format(event_id),
+                                  dict(_RDI_QUERY), 'ingest_events')
+            data = json.loads(response.text) if response.text else {}
+            raw = data.get('rawEvent') if isinstance(data, dict) else None
+            if not isinstance(raw, dict):
+                row['command_timeline_error'] = (
+                    'the console returned no raw event for eventId {0}'.format(event_id))
+                continue
+            row['command_timeline'] = _trim_command_timeline(raw)
+        except Exception as err:  # noqa: BLE001 -- fail soft per row, by contract
+            row['command_timeline_error'] = str(err)
+
+
+def _as_flag(value) -> bool:
+    """The playbook passes wizard strings ('true'/'false'); read them honestly."""
+    if isinstance(value, bool):
+        return value
+    return str(value or '').strip().lower() in ('true', '1', 'yes')
+
+
 def ingest_events(config, params) -> List[Dict[str, Any]]:
     """Op: fetch every event in [from, to] and map them to alert payloads.
 
@@ -340,4 +441,11 @@ def ingest_events(config, params) -> List[Dict[str, Any]]:
         cap=_max_events(params), time_field=time_field)
     logger.info('ingest_events: fetched {0} event(s), window [{1} .. {2}] on {3}'
                 .format(len(events), from_value, params.get('to') or 'now', time_field))
-    return map_events(events)
+    rows = map_events(events)
+    # Include Command Timeline: one extra console call per event, the
+    # process/cmd stacks stored under command_timeline in the mapped row
+    # (and so in the alert's sourcedata). Off by default -- a large
+    # backfill window with the flag on is one sub-call per event.
+    if _as_flag(params.get('include_command_timeline')):
+        attach_command_timelines(client, rows)
+    return rows
