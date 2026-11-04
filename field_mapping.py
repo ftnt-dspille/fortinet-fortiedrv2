@@ -15,6 +15,8 @@ ingestion playbook failed exactly that way before these clamps existed).
 
 from typing import Any, Dict, List, Optional
 
+import re
+
 from .models import Event
 
 # FortiEDR event severities observed on /management-rest/events/list-events
@@ -82,6 +84,23 @@ def _first_collector(event: Event) -> Dict[str, Any]:
 
 def _dest_string(event: Event) -> str:
     return ', '.join(str(d) for d in event.destinations if d not in (None, ''))
+
+
+_IPV4_RE = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+
+
+def _first_ip_destination(event: Event) -> str:
+    """The first IP-shaped destination, or '' when destinations carries none.
+
+    ``destinations`` mixes IP addresses with behavior labels ("Service Access",
+    "Modify OS Settings"), so the destinationIp column takes the first value
+    that parses as an IPv4 address -- never a label.
+    """
+    for d in event.destinations:
+        text = str(d or '').strip()
+        if _IPV4_RE.match(text):
+            return text
+    return ''
 
 
 def _rule_string(event: Event) -> str:
@@ -190,6 +209,10 @@ def build_description(event: Event, alert: Dict[str, Any]) -> str:
                            _CLASSIFICATION_COLOR.get(str(event.classification).lower(), '#8b8d98')))
     if event.action:
         chips.append(_chip(event.action, _ACTION_COLOR.get(str(event.action).lower(), '#8b8d98')))
+    if event.handled:
+        chips.append(_chip('Handled', '#30a46c'))
+    if event.muted:
+        chips.append(_chip('Muted', '#e5484d'))
     if chips:
         parts.append('<p style="margin:0 0 10px 0">{0}</p>'.format(''.join(chips)))
 
@@ -199,6 +222,9 @@ def build_description(event: Event, alert: Dict[str, Any]) -> str:
         ('Device', alert.get('source_hostname')),
         ('Device IP', alert.get('source_ip')),
         ('Logged users', alert.get('user_names')),
+        ('Process owner', alert.get('process_owner')),
+        ('Process type', alert.get('process_type')),
+        ('Analyst comment', alert.get('analyst_comment')),
         ('Action', event.action),
         ('Rules', alert.get('rule')),
         ('Destinations', alert.get('dest_ips')),
@@ -236,8 +262,17 @@ def map_event_to_alert(event: Event) -> Dict[str, Any]:
     """
     collector = _first_collector(event)
     payload = event.model_dump()
+    threat = event.threatDetails
+    threat_name = (threat.threatName or '') if threat else ''
+    first_rule = str(event.rules[0]) if event.rules else ''
+    # The name is what the grid shows: what ran, matched by what, on which
+    # device. The eventId stays in sourceId and on the card.
+    middle = threat_name or first_rule or event.classification or 'event'
+    name = '{0} - {1} on {2}'.format(
+        event.process or 'FortiEDR event', middle,
+        collector.get('device') or 'unknown device')
     alert = {
-        'name': '{0} - {1}'.format(event.eventId, collector.get('device') or event.process or 'FortiEDR event'),
+        'name': name,
         'external_id': str(event.eventId) if event.eventId is not None else '',
         'severity': resolve_severity(event.severity),
         'alert_state': 'New',
@@ -247,8 +282,13 @@ def map_event_to_alert(event: Event) -> Dict[str, Any]:
         'source_ip': collector.get('ip') or '',
         'source_hostname': collector.get('device') or '',
         'dest_ips': _dest_string(event),
-        'dest_ip': (_dest_string(event).split(', ')[0] if event.destinations else ''),
+        'dest_ip': _first_ip_destination(event),
         'user_names': ', '.join(str(u) for u in event.loggedUsers if u not in (None, '')),
+        'primary_user': event.processOwner or (str(event.loggedUsers[0]) if event.loggedUsers else ''),
+        'process_owner': event.processOwner or '',
+        'process_type': event.processType or '',
+        'analyst_comment': event.comment or '',
+        'threat_name': threat_name,
         'rule': _rule_string(event),
         'process_name': event.process or '',
         'process_path': event.processPath or '',

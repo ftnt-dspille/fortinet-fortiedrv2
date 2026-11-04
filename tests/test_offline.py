@@ -277,7 +277,10 @@ def test_create_record_upserts_each_event_on_its_eventid():
     resource.pop('__replace')
     resource.pop('__fieldsToUpdate')
     assert set(resource) == {'name', 'source', 'sourceId', 'severity', 'alertType',
-                             'alertDetectionDate', 'userName', 'processName', 'description', 'sourcedata'}
+                             'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName',
+                             'hostIPAddress', 'destinationIp', 'rule', 'filePath',
+                             'userName', 'userDetails', 'processName',
+                             'state', 'status', 'description', 'sourcedata'}
     assert resource['sourceId'] == '{{ vars.item.external_id }}'
     assert resource['source'] == 'Fortinet FortiEDR'
     assert resource['sourcedata'] == '{{ vars.item | toJSON }}'
@@ -331,6 +334,9 @@ def test_two_collections_ship_and_only_the_chain_is_wizard_visible():
         'FortiEDR v2 > Re-detection Digest',
         'FortiEDR v2 > IOC Retro-Hunt',
         'FortiEDR v2 > Fleet Compliance Audit',
+        'FortiEDR v2 > Containment Chain',
+        'FortiEDR v2 > Containment: Lookup User in Directory',
+        'FortiEDR v2 > Containment: Block IP at FortiGate',
     ]
 
 
@@ -1309,11 +1315,20 @@ def test_mapped_alert_shape_matches_the_create_record_contract():
     alert = map_event_to_alert(Event(**fixture('events_full_page')[0]))
     expected = {'name', 'external_id', 'severity', 'alert_state', 'status', 'alert_type',
                 'source', 'source_ip', 'source_hostname', 'dest_ips', 'dest_ip', 'user_names',
-                'rule', 'process_name', 'process_path', 'description', 'alert_generation_epoch',
-                'last_observed_epoch', 'event_count', 'source_payload'}
+                'primary_user', 'process_owner', 'process_type', 'analyst_comment',
+                'threat_name', 'rule', 'process_name', 'process_path', 'description',
+                'alert_generation_epoch', 'last_observed_epoch', 'event_count',
+                'source_payload'}
     assert set(alert) == expected
     assert alert['external_id'] == '1492374'
-    assert alert['name'] == '1492374 - lab-endpoint-01'
+    # The grid name is what ran, matched by what (threat name, else the first
+    # rule, else the classification), on which device -- the eventId lives in
+    # sourceId and on the card, not in the name.
+    assert alert['name'] == 'control.exe - Suspicious Application on lab-endpoint-01'
+    # destinationIp must be an IP, never a behavior label: the destinations
+    # array mixes both and the first row of this fixture is a label-shaped one.
+    import re as _re
+    assert _re.match(r'^\d{1,3}(\.\d{1,3}){3}$', alert['dest_ip'] or ''), alert['dest_ip']
 
 
 # --------------------------------------------------------------------------- library boundary (AST)

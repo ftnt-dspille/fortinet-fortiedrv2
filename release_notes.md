@@ -1,5 +1,61 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.5
+
+Alerts, enriched for triage: **Scheduled ingestion now writes the pivot
+fields an analyst sorts and filters on** -- `eventTime` (the event's last
+activity, so a re-detection re-sorts the alert to when it was LAST seen
+while `alertDetectionDate` stays first-seen), `sourceIp`/`hostIPAddress`
+and `hostName` (the endpoint and its address), `destinationIp` (the first
+IP-shaped destination -- the console's destinations array mixes IP
+addresses with behavior labels, and a label never lands in the column),
+`rule` (the matched rules), `filePath` (the process path), `userName`
+(the process owner, else the first logged user) and `userDetails` (every
+logged user). Alert names change shape too: what ran, matched by what,
+on which device (`control.exe - Suspicious Application on lab-endpoint-01`)
+instead of the bare event id -- the eventId stays in `sourceId` and on the
+card. On an upsert refresh the enrichment fields update, but the create-only
+`state`/`status` do not: a re-detection must never reset an analyst's
+in-progress triage back to New/Open. Every field was checked against the
+alerts module schema (126 fields) before shipping; object-typed fields with
+untested write shapes were left alone rather than guessed at.
+
+Alert cards, deepened: the card carries Handled and Muted chips next to
+the classification and action chips, and three overview rows -- process
+owner, process type, and the analyst's own comment from the console.
+
+Re-detection digest, wider: the incident table gains Device,
+Classification and Isolated columns -- an incident's device list is what
+the operator pivots on first, and an isolated incident is already
+contained (blank, not "no", so only the exceptional row shouts).
+
+**New use case: Containment Chain** (`FortiEDR v2 > Containment Chain`,
+a record action on an ingested alert). One approval, three coordinated
+responses: the playbook re-reads the live event, looks the event's user
+up in the directory (title, department, mail, manager -- posted to the
+alert before the question is asked), then asks the analyst to choose
+`Block IP and Isolate`, `Block IP only`, `Isolate only`, or
+`Skip Containment`, with a required reason that lands on the alert's
+audit trail. The FortiGate leg bans the event's IP-shaped destination
+(quarantine-based, time-boxed -- the ban expires on the gate by itself,
+so a containment action cannot become a permanent firewall artifact) and
+verifies the ban against the device's own list before reporting it as
+landed. The isolation leg is the proven triage call, now guarded: a
+refused isolation is recorded as an outcome instead of killing the run.
+
+The two action legs ship as fail-soft children (`FortiEDR v2 >
+Containment: Lookup User in Directory`, `FortiEDR v2 > Containment:
+Block IP at FortiGate`), each also runnable as a record action on its
+own. Both degrade to audit comments when their connector is
+unconfigured or the call is refused -- a missing side tool degrades the
+chain, it never kills it. They need two OPTIONAL connector
+configurations on the appliance (the collection installs without
+them): an `activedirectory` configuration pointing at the directory
+(plain LDAP bind; an AD DS or Samba DC both answer), and a
+`fortigate-firewall` configuration pointing at the gate. Every comment
+step names its record target explicitly, so the children post to the
+parent's alert rather than relying on the trigger-record default.
+
 ## 1.1.4
 
 Allow Event's organization scope, corrected: **`Allow Event (Time-Limited)`

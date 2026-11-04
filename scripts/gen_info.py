@@ -22,7 +22,7 @@ DEFAULT_STOCK = (Path.home() / 'PycharmProjects/Miscellaneous/fortisoar/corpus_b
                  'fortisoar-rpm-extracted/fortinet-fortiedr/fortinet-fortiedr/info.json')
 
 NAME = 'fortinet-fortiedrv2'
-VERSION = '1.1.4'
+VERSION = '1.1.5'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,

@@ -16,15 +16,22 @@
 #
 # Requires alongside this connector on the appliance:
 #   - fortinet-fortiedrv2 in its default config
+#   - OPTIONAL, only for the Containment Chain: a fortigate-firewall config
+#     (the block leg) and an activedirectory config (the directory leg).
+#     Both legs fail soft: with the connector unconfigured or the call
+#     refused, the run records the outcome as an alert comment and carries
+#     on -- a missing side tool degrades the chain, it never kills it.
 
-collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.4
+collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.5
 description: >-
   Operational use-case playbooks for the "Fortinet FortiEDR v2" connector:
   alert triage with collector isolation, evidence collection, time-limited
   exception governance, a re-detection digest over console incidents, a
-  file-hash IOC retro-hunt, and a fleet compliance audit. Clone before use,
-  like every sample collection: the connector upgrade deletes and re-imports
-  sample collections, so local edits are lost on upgrade.
+  file-hash IOC retro-hunt, a fleet compliance audit, and an analyst-approved
+  containment chain (directory lookup, FortiGate IP block, collector
+  isolation). Clone before use, like every sample collection: the connector
+  upgrade deletes and re-imports sample collections, so local edits are lost
+  on upgrade.
 visible: true
 tags:
   - fortinet-fortiedrv2
@@ -108,7 +115,11 @@ playbooks:
         Either the alert is not a FortiEDR alert, or the event was pruned on
         the tenant. A comment with the sourceId asks the analyst to act on
         the alert's own data instead of pretending the console agrees.
-      post_comment: "Triage to Isolation: no FortiEDR event found for sourceId {{ vars.event_id }} -- investigate manually; the console may have archived or pruned this event."
+        Explicit record target: the trigger record, named, so the comment
+        never depends on the engine's defaulting.
+      message:
+        content: "Triage to Isolation: no FortiEDR event found for sourceId {{ vars.event_id }} -- investigate manually; the console may have archived or pruned this event."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Enrich
@@ -195,14 +206,18 @@ playbooks:
 
     - name: Isolation Audit
       type: set_variable
-      post_comment: "Triage to Isolation: isolated collector {{ vars.device }} for event {{ vars.event_id }} ({{ vars.process }}, {{ vars.severity }}). Reason: {{ vars.steps.Isolation_Approval.input.decision_note }}"
+      message:
+        content: "Triage to Isolation: isolated collector {{ vars.device }} for event {{ vars.event_id }} ({{ vars.process }}, {{ vars.severity }}). Reason: {{ vars.steps.Isolation_Approval.input.decision_note }}"
+        record: '{{ vars.record_id }}'
       vars:
         isolation_result: "{{ vars.steps.Isolate_Collector.data | toJSON }}"
       next: End
 
     - name: Declined
       type: set_variable
-      post_comment: "Triage to Isolation: isolation of {{ vars.device }} declined for event {{ vars.event_id }}. Reason: {{ vars.steps.Isolation_Approval.input.decision_note }}"
+      message:
+        content: "Triage to Isolation: isolation of {{ vars.device }} declined for event {{ vars.event_id }}. Reason: {{ vars.steps.Isolation_Approval.input.decision_note }}"
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: End
@@ -281,7 +296,7 @@ playbooks:
       message:
         content: "Collect Evidence: this alert carries no FortiEDR sourceId; nothing to bag."
         record: '{{ vars.record_id }}'
-      next: End
+      next: Evidence Export
 
     - name: Get Event
       type: connector
@@ -307,7 +322,7 @@ playbooks:
       message:
         content: "Collect Evidence: no FortiEDR event found for sourceId {{ vars.event_id }} (archived or pruned on the tenant); nothing to bag."
         record: '{{ vars.record_id }}'
-      next: End
+      next: Evidence Export
 
     - name: Bag Context
       type: set_variable
@@ -339,7 +354,7 @@ playbooks:
       message:
         content: "Collect Evidence: FortiEDR event {{ vars.event_id }} carries no process file path; nothing disk-retrievable to bag."
         record: '{{ vars.record_id }}'
-      next: End
+      next: Evidence Export
 
     - name: Get Raw Data Items
       type: connector
@@ -365,7 +380,7 @@ playbooks:
       message:
         content: "Collect Evidence: event {{ vars.event_id }} has no raw data items on the tenant (the collection window may have expired); nothing to bag."
         record: '{{ vars.record_id }}'
-      next: End
+      next: Evidence Export
 
     - name: Collect File
       type: connector
@@ -413,17 +428,29 @@ playbooks:
       message:
         content: "Collect Evidence: {{ vars.steps.Collect_File.data['name'] }} attached -- the {{ vars.bag_file_path }} binary of FortiEDR event {{ vars.event_id }} off collector {{ vars.bag_device }} (raw event {{ vars.steps.Get_Raw_Data_Items.data[0].rawEventId }})."
         record: '{{ vars.record_id }}'
-      next: End
+      next: Evidence Export
 
     - name: Collection Failed Audit
       type: set_variable
       message:
         content: "Collect Evidence: the retrieval of {{ vars.bag_file_path }} from {{ vars.bag_device }} failed -- the tenant rejects forensics pulls from offline or decommissioned collectors; retry from the alert once the endpoint is back."
         record: '{{ vars.record_id }}'
-      next: End
+      next: Evidence Export
 
-    - name: End
-      type: end
+    - name: Evidence Export
+      type: set_variable
+      comment: |
+        The child's terminal data step. The workflow_reference engine hands
+        the parent only the LAST executed step's output -- an `end` step
+        returns {data: null}, so a parent that wants an answer must be able
+        to read this step instead. Both audit paths converge here; the
+        parent may ignore the export (the comments carry the outcome), but
+        the child's return value is an answer either way. The playbook ends
+        on this step (no `end` after it) so the export IS the terminal
+        step the engine returns.
+      vars:
+        evidence_collected: "{{ (vars.steps.Collect_File.data['@id'] | default('', true)) | length > 0 }}"
+        attachment_id: "{{ (vars.steps.Collect_File.data['@id'] | default('', true)).split('/') | last }}"
 
   # ---------------------------------------------------------------------------
   # Allow Event: an exception WITH an expiry, against an API with none.
@@ -460,6 +487,7 @@ playbooks:
       type: set_variable
       vars:
         event_id: "{{ vars.input.records[0].sourceId | default('', true) }}"
+        record_id: "{{ vars.input.records[0]['@id'] }}"
       next: Get Event
 
     - name: Get Event
@@ -484,7 +512,9 @@ playbooks:
 
     - name: Missing Event Audit
       type: set_variable
-      post_comment: "Allow Event: no FortiEDR event found for sourceId {{ vars.event_id }}; no exception will be created."
+      message:
+        content: "Allow Event: no FortiEDR event found for sourceId {{ vars.event_id }}; no exception will be created."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Check Existing Exceptions
@@ -513,7 +543,9 @@ playbooks:
 
     - name: Rule Exists Audit
       type: set_variable
-      post_comment: "Allow Event: refused -- event {{ vars.event_id }} already carries {{ vars.steps.Check_Existing_Exceptions.data | length }} exception rule(s). Clean them up on the console or through the sweep first."
+      message:
+        content: "Allow Event: refused -- event {{ vars.event_id }} already carries {{ vars.steps.Check_Existing_Exceptions.data | length }} exception rule(s). Clean them up on the console or through the sweep first."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Expiry Form
@@ -585,12 +617,16 @@ playbooks:
 
     - name: Exception Audit
       type: set_variable
-      post_comment: "Allow Event: time-limited exception created for event {{ vars.event_id }}, expires at epoch {{ vars.expires_epoch }} ({{ vars.steps.Expiry_Form.input.expiry_days }} days). Reason: {{ vars.steps.Expiry_Form.input.analyst_reason }}. The Exception Expiry Sweep will delete the rule when it expires."
+      message:
+        content: "Allow Event: time-limited exception created for event {{ vars.event_id }}, expires at epoch {{ vars.expires_epoch }} ({{ vars.steps.Expiry_Form.input.expiry_days }} days). Reason: {{ vars.steps.Expiry_Form.input.analyst_reason }}. The Exception Expiry Sweep will delete the rule when it expires."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: Cancelled
       type: set_variable
-      post_comment: "Allow Event: cancelled for event {{ vars.event_id }}; no exception was created."
+      message:
+        content: "Allow Event: cancelled for event {{ vars.event_id }}; no exception was created."
+        record: '{{ vars.record_id }}'
       next: End
 
     - name: End
@@ -774,16 +810,22 @@ playbooks:
     - name: Rank Incidents
       type: code_snippet
       comment: |
-        Ranks on eventIdsNum only -- one list per incident row, integers
-        only, so nothing typed ever crosses the sandbox. The digest itself
-        is built into the snippet: row separator + inline-styled table, the
-        house card recipe that survives both SOAR themes.
+        Ranks on eventsNum only -- one list per incident row, integers only,
+        so nothing typed ever crosses the sandbox. The digest itself is built
+        into the snippet: row separator + inline-styled table, the house card
+        recipe that survives both SOAR themes. Device, classification and
+        isolated ride along as display columns: an incident's device list is
+        what the operator pivots on first, and an isolated one is already
+        contained (the blank beats a 'no' -- only flag the exceptional).
       code: |
         counts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='eventsNum') | list | tojson }}
         names = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='name') | list | tojson }}
         ids = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='id') | list | tojson }}
         firsts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='firstSeen') | list | tojson }}
         lasts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='lastSeen') | list | tojson }}
+        devices = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='devices') | list | tojson }}
+        classes = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='classification') | list | tojson }}
+        isolateds = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='isolated') | list | tojson }}
         total = len(counts)
         rows = []
         i = 0
@@ -791,14 +833,28 @@ playbooks:
             n = counts[i]
             if n is None:
                 n = 0
-            rows.append((int(n), str(names[i]), str(ids[i]), str(firsts[i]), str(lasts[i])))
+            # The device column arrives as a list; tolerate a bare string
+            # without isinstance (the snippet sandbox restricts it): a string
+            # answers .split and becomes its parts, a list raises AttributeError
+            # and stays itself. Either way what follows is a list of names.
+            devs = devices[i] or []
+            try:
+                devs = devs.split(',')
+            except AttributeError:
+                pass
+            flag = 'yes' if isolateds[i] else ''
+            rows.append((int(n), str(names[i]), str(ids[i]), str(firsts[i]), str(lasts[i]),
+                         ', '.join(str(d) for d in devs), str(classes[i] or ''), flag))
             i = i + 1
         rows.sort(reverse=True)
         html = '<table class="table" border="1" style="border-collapse:collapse;">'
         html = html + '<tr><th style="text-align:left;padding:4px 10px;">Incident</th>'
         html = html + '<th style="text-align:left;padding:4px 10px;">Detections</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">Device</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">Classification</th>'
         html = html + '<th style="text-align:left;padding:4px 10px;">First seen</th>'
         html = html + '<th style="text-align:left;padding:4px 10px;">Last seen</th>'
+        html = html + '<th style="text-align:left;padding:4px 10px;">Isolated</th>'
         html = html + '<th style="text-align:left;padding:4px 10px;">Id</th></tr>'
         i = 0
         while i < len(rows):
@@ -806,7 +862,7 @@ playbooks:
             tone = ' style="padding:4px 10px;"'
             if i < 5:
                 tone = ' style="padding:4px 10px;background:rgba(229,72,77,.12);"'
-            html = html + '<tr><td' + tone + '>' + r[1] + '</td><td' + tone + '>' + str(r[0]) + '</td><td' + tone + '>' + r[3] + '</td><td' + tone + '>' + r[4] + '</td><td' + tone + '>' + r[2] + '</td></tr>'
+            html = html + '<tr><td' + tone + '>' + r[1] + '</td><td' + tone + '>' + str(r[0]) + '</td><td' + tone + '>' + r[5] + '</td><td' + tone + '>' + r[6] + '</td><td' + tone + '>' + r[3] + '</td><td' + tone + '>' + r[4] + '</td><td' + tone + '>' + r[7] + '</td><td' + tone + '>' + r[2] + '</td></tr>'
             i = i + 1
         html = html + '</table>'
         top5 = 0
@@ -1201,3 +1257,576 @@ playbooks:
         outdated_count: "{{ vars.steps.Audit_Fleet.data.code_output.outdated }}"
         not_running_count: "{{ vars.steps.Audit_Fleet.data.code_output.not_running }}"
         staged_version: "{{ vars.steps.Upgrade_Approval.input.target_version | default('', true) }}"
+
+  # ---------------------------------------------------------------------------
+  # Containment Chain: one approval, three coordinated responses.
+  #
+  # Triage to Isolation answers "get this endpoint off the network". The
+  # containment chain answers the wider question an analyst actually asks:
+  # WHO ran this (directory identity, title, manager), and should the
+  # attacker's infrastructure AND the endpoint both be cut? The playbook
+  # re-reads the live event, enriches the record with a directory lookup,
+  # then asks ONE approval carrying the whole action matrix -- block the
+  # talking destination at the FortiGate, isolate the collector, both, or
+  # neither -- with the reason captured for the audit trail.
+  #
+  # The two action legs are fail-soft children: a fortigate-firewall or
+  # activedirectory connector that is unconfigured, unreachable, or refused
+  # degrades to an audit comment on the alert and never kills the run --
+  # the chain is only as mandatory as its strongest leg, isolation, and
+  # even that leg records its failure instead of dying.
+  #
+  # The FortiGate block is QUARANTINE based (writes user/banned, needs only
+  # an address and a TTL -- the policy-based variant needs a pre-made policy
+  # and address group, which a stock gate does not have) and TIME-BOXED: the
+  # ban expires on the gate by itself, so a containment test cannot become a
+  # permanent firewall artifact. Verification reads the ban list back from
+  # the device; the block is only reported as landed when the gate agrees.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Containment Chain'
+    description: >-
+      Record action on an ingested FortiEDR alert: re-reads the live event,
+      looks the event's user up in the directory, and puts one approval in
+      front of the analyst -- block the destination IP at the FortiGate,
+      isolate the collector, both, or neither -- with the reason recorded.
+      Every leg reports its outcome as an alert comment.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - response
+    is_active: true
+    steps:
+    - name: Start
+      type: start
+      module: alerts
+      button_label: 'FortiEDR v2 > Containment Chain'
+      requires_record: true
+      next: Resolve Event
+
+    - name: Resolve Event
+      type: set_variable
+      comment: |
+        The alert's sourceId is the FortiEDR eventId (external_id the
+        ingestion chain maps), and the IRI is kept for the audit comments.
+        A slow refresh (sourceId blank -- a hand-created or foreign alert)
+        stops at the Missing Event step rather than calling the tenant with
+        a blank identifier.
+      vars:
+        event_id: "{{ vars.input.records[0].sourceId | default('', true) }}"
+        record_id: "{{ vars.input.records[0]['@id'] }}"
+      next: Get Event
+
+    - name: Get Event
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_event_by_id
+      config: ''
+      when: "{{ vars.event_id }}"
+      params:
+        eventIds: '{{ vars.event_id }}'
+      next: Event Resolved
+
+    - name: Event Resolved
+      type: decision
+      conditions:
+      - display: Found
+        when: "{{ vars.steps.Get_Event.data | default([]) | length > 0 }}"
+        next: Enrich
+      - display: Missing Event
+        default: true
+        next: Missing Event Audit
+
+    - name: Missing Event Audit
+      type: set_variable
+      message:
+        content: "Containment Chain: no FortiEDR event found for sourceId {{ vars.event_id }} -- investigate manually; the console may have archived or pruned this event."
+        record: '{{ vars.record_id }}'
+      next: End
+
+    - name: Enrich
+      type: set_variable
+      comment: |
+        The fresh event row, not the ingested card, decides what the analyst
+        sees: severity and the collector device may both have moved since the
+        pull (FortiEDR correlates a re-detection into the same event and only
+        moves its lastSeen, so the event CAN have drifted under a static
+        alert card).
+      vars:
+        event: "{{ vars.steps.Get_Event.data[0] }}"
+        device: "{{ vars.steps.Get_Event.data[0].collectors[0].device | default('', true) }}"
+        organization: "{{ vars.steps.Get_Event.data[0].organization | default('', true) }}"
+        severity: "{{ vars.steps.Get_Event.data[0].severity | default('Medium', true) }}"
+        process: "{{ vars.steps.Get_Event.data[0].process | default('', true) }}"
+        first_seen: "{{ vars.steps.Get_Event.data[0].firstSeen | default('', true) }}"
+        last_seen: "{{ vars.steps.Get_Event.data[0].lastSeen | default('', true) }}"
+      next: Extract Targets
+
+    - name: Extract Targets
+      type: code_snippet
+      comment: |
+        Picks the two containment targets off the fresh event. The block
+        target is the first IP-SHAPED destination: the destinations array
+        mixes IP addresses with behavior labels ("Service Access"), and a
+        label must never reach a firewall call -- shape-test in plain Python
+        (the snippet sandbox restricts isinstance). The identity target is
+        the process owner when the console recorded one, else the first
+        logged user.
+      code: |
+        dests = {{ vars.steps.Get_Event.data[0].destinations | default([], true) | tojson }}
+        owner = {{ vars.steps.Get_Event.data[0].processOwner | default('', true) | tojson }}
+        logged = {{ vars.steps.Get_Event.data[0].loggedUsers | default([], true) | tojson }}
+        block_ip = ''
+        for d in dests:
+            text = str(d or '').strip()
+            parts = text.split('.')
+            ok = len(parts) == 4
+            if ok:
+                for p in parts:
+                    if not p.isdigit() or int(p) > 255:
+                        ok = False
+                        break
+            if ok:
+                block_ip = text
+                break
+        user = str(owner or '')
+        if not user and logged:
+            user = str(logged[0])
+        print({'block_ip': block_ip, 'primary_user': user})
+      next: Directory Lookup
+
+    - name: Directory Lookup
+      type: workflow_reference
+      comment: |
+        WHO is behind this? The child looks the event's user up in the
+        directory and lands title/department/manager on the alert as a
+        comment BEFORE the approval, so the analyst deciding on containment
+        reads the identity context on the record. Fails soft inside the
+        child (an unconfigured or unreachable directory leaves a comment,
+        not a dead run).
+      target: 'FortiEDR v2 > Containment: Lookup User in Directory'
+      event_id: '{{ vars.event_id }}'
+      record_id: '{{ vars.record_id }}'
+      user: '{{ vars.steps.Extract_Targets.data.code_output.primary_user }}'
+      apply_async: false
+      pass_parent_env: false
+      pass_input_record: false
+      next: Containment Approval
+
+    - name: Containment Approval
+      type: manual_input
+      title: Approve containment actions
+      description: >-
+        FortiEDR event {{ vars.event_id }} -- {{ vars.severity }}, {{ vars.process }}
+        on {{ vars.device }}, first seen {{ vars.first_seen }}, last seen
+        {{ vars.last_seen }}. The directory lookup for {{ vars.steps.Extract_Targets.data.code_output.primary_user }}
+        is already on this alert as a comment (blank there means no user on
+        the event, or no directory configured). Block target:
+        {{ vars.steps.Extract_Targets.data.code_output.block_ip if vars.steps.Extract_Targets.data.code_output.block_ip else 'none found - the block leg will record a skip' }}.
+        The FortiGate ban is time-boxed and expires by itself; isolation
+        cuts {{ vars.device }} off the network until a release call.
+      options:
+      - display: Block IP and Isolate
+        primary: true
+        next: Block Then Isolate
+      - display: Block IP only
+        next: Block Only
+      - display: Isolate only
+        next: Isolate Collector
+      - display: Skip Containment
+        next: Declined
+      inputs:
+      - name: decision_note
+        kind: textarea
+        label: Reason (becomes part of the alert's audit trail)
+        required: true
+      is_approval: true
+      next: Isolate Collector
+
+    - name: Block Then Isolate
+      type: workflow_reference
+      comment: |
+        The block leg of the full response. The child blocks the destination
+        at the FortiGate and verifies the ban on the device, landing the
+        outcome as a comment; isolation follows here.
+      target: 'FortiEDR v2 > Containment: Block IP at FortiGate'
+      event_id: '{{ vars.event_id }}'
+      record_id: '{{ vars.record_id }}'
+      ip: '{{ vars.steps.Extract_Targets.data.code_output.block_ip }}'
+      block_ttl: ''
+      apply_async: false
+      pass_parent_env: false
+      pass_input_record: false
+      next: Isolate Collector
+
+    - name: Block Only
+      type: workflow_reference
+      comment: |
+        The same block leg, on its own: the analyst chose the network cut
+        without taking the endpoint offline. The child reports on the
+        record; the audit below adds the reason.
+      target: 'FortiEDR v2 > Containment: Block IP at FortiGate'
+      event_id: '{{ vars.event_id }}'
+      record_id: '{{ vars.record_id }}'
+      ip: '{{ vars.steps.Extract_Targets.data.code_output.block_ip }}'
+      block_ttl: ''
+      apply_async: false
+      pass_parent_env: false
+      pass_input_record: false
+      next: Block Only Audit
+
+    - name: Isolate Collector
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: isolate_collector
+      config: ''
+      comment: |
+        `type: Name` + the event's collector device, the pair the tenant
+        answered for both isolate and unisolate. ignore_errors: a refused
+        isolation is an outcome the alert should record (the collector may
+        already be isolated, decommissioned, or unreachable), not a reason
+        to kill the chain's audit trail.
+      ignore_errors: true
+      params:
+        type: Name
+        devices: '{{ vars.device }}'
+      next: Isolation Outcome
+
+    - name: Isolation Outcome
+      type: decision
+      conditions:
+      - display: Isolated
+        when: "{{ vars.steps.Isolate_Collector.data | default({}, true) | length > 0 }}"
+        next: Isolation Audit
+      - display: Isolation Did Not Land
+        default: true
+        next: Isolation Failed Audit
+
+    - name: Isolation Audit
+      type: set_variable
+      message:
+        content: "Containment Chain: isolated collector {{ vars.device }} for event {{ vars.event_id }} ({{ vars.process }}, {{ vars.severity }}). Reason: {{ vars.steps.Containment_Approval.input.decision_note }}"
+        record: '{{ vars.record_id }}'
+      next: End
+
+    - name: Isolation Failed Audit
+      type: set_variable
+      message:
+        content: "Containment Chain: the isolation call for {{ vars.device }} did not return success (the collector may already be isolated or unreachable). Reason on file: {{ vars.steps.Containment_Approval.input.decision_note }}"
+        record: '{{ vars.record_id }}'
+      next: End
+
+    - name: Block Only Audit
+      type: set_variable
+      message:
+        content: "Containment Chain: FortiGate block of {{ vars.steps.Extract_Targets.data.code_output.block_ip }} requested for event {{ vars.event_id }} (device outcome in the block comment above). Reason: {{ vars.steps.Containment_Approval.input.decision_note }}"
+        record: '{{ vars.record_id }}'
+      next: End
+
+    - name: Declined
+      type: set_variable
+      message:
+        content: "Containment Chain: containment declined for event {{ vars.event_id }}. Reason: {{ vars.steps.Containment_Approval.input.decision_note }}"
+        record: '{{ vars.record_id }}'
+      next: End
+
+    - name: End
+      type: end
+
+  # ---------------------------------------------------------------------------
+  # Containment child: the directory half of the chain.
+  #
+  # Resolves the human behind the event: the process owner when the console
+  # recorded one, else the first logged user, normalized to a bare
+  # sAMAccountName (DEMO\jdoe and jdoe@demo.lab both become jdoe) and
+  # searched with an explicit LDAP filter through the activedirectory
+  # connector's advanced_search. Title, department, mail and the manager
+  # parsed out of the manager DN land on the alert as one comment -- the
+  # context the approval screen points the analyst at.
+  #
+  # Fail-soft by contract: the connector step ignores errors (unconfigured
+  # connector, unreachable server, refused bind) and the run always ends in
+  # an audit comment plus an export -- a degraded lookup degrades the CHAIN,
+  # it never kills it.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Containment: Lookup User in Directory'
+    description: >-
+      Looks an alert's user up in the directory (title, department, mail,
+      manager) and posts the identity to the alert as a comment. Runs as a
+      child of Containment Chain (pass user/event/record), or directly as a
+      record action. Degrades to a comment when no user is on the event or
+      the directory is unreachable.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - containment
+    is_active: true
+    parameters:
+    - event_id
+    - record_id
+    - user
+    steps:
+    - name: Start
+      type: start
+      module: alerts
+      button_label: 'FortiEDR v2 > Containment: Lookup User in Directory'
+      requires_record: true
+      next: Resolve Inputs
+
+    - name: Resolve Inputs
+      type: set_variable
+      comment: |
+        Two entry modes share one resolve: called from a parent playbook the
+        explicit params win; run as a record action the alert itself carries
+        sourceId and the record IRI, and the user comes from the parent's
+        extraction (blank here degrades to the No User audit).
+        The bare-name normalization splits a DOMAIN\\user or user@realm form
+        down to the sAMAccountName an LDAP filter wants.
+      vars:
+        event_id: >-
+          {% if vars.input.params.event_id | default('', true) %}{{ vars.input.params.event_id }}{% else %}{{ vars.input.records[0].sourceId | default('', true) }}{% endif %}
+        record_id: >-
+          {% if vars.input.params.record_id | default('', true) %}{{ vars.input.params.record_id }}{% else %}{{ vars.input.records[0]['@id'] }}{% endif %}
+        raw_user: "{{ vars.input.params.user | default('', true) }}"
+        lookup_user: "{{ ((vars.input.params.user | default('', true) | string).split('\\\\') | last).split('@') | first }}"
+      next: Have User
+
+    - name: Have User
+      type: decision
+      conditions:
+      - display: Have User
+        when: "{{ (vars.lookup_user | default('', true) | string) | length > 0 }}"
+        next: Lookup User
+      - display: No User
+        default: true
+        next: No User Audit
+
+    - name: No User Audit
+      type: set_variable
+      message:
+        content: "Directory Lookup: event {{ vars.event_id }} carries no user (no process owner, no logged users); there is nobody to look up."
+        record: '{{ vars.record_id }}'
+      vars:
+        directory_looked_up: false
+        directory_user: ''
+
+    - name: Lookup User
+      type: connector
+      connector: activedirectory
+      operation: advanced_search
+      config: ''
+      comment: |
+        An explicit LDAP filter through the connector's advanced_search: one
+        required text parameter, a fully documented contract, and an output
+        of {cookie, entries} rows. ignore_errors: an unconfigured connector,
+        an unreachable server or a refused bind is a DEGRADED lookup the
+        alert should record, not a dead chain.
+      ignore_errors: true
+      params:
+        query: '(&(objectClass=user)(sAMAccountName={{ vars.lookup_user }}))'
+      next: Entries Found
+
+    - name: Entries Found
+      type: decision
+      conditions:
+      - display: Found
+        when: "{{ vars.steps.Lookup_User.data.entries | default([], true) | length > 0 }}"
+        next: Resolve Identity
+      - display: Nothing Returned
+        default: true
+        next: Lookup Empty Audit
+
+    - name: Lookup Empty Audit
+      type: set_variable
+      message:
+        content: "Directory Lookup: the directory returned no entries for {{ vars.lookup_user }} -- the AD/LDAP connector may be unconfigured on this box, or the user is unknown to the directory."
+        record: '{{ vars.record_id }}'
+      vars:
+        directory_looked_up: false
+        directory_user: '{{ vars.lookup_user | default("", true) }}'
+
+    - name: Resolve Identity
+      type: set_variable
+      comment: |
+        The first returned entry, lifted out of the lookup response in a
+        dedicated step: the per-field reads below reference vars.entry from
+        HERE, because same-step vars cannot reference each other.
+      vars:
+        entry: "{{ vars.steps.Lookup_User.data.entries | default([], true) | first | default({}, true) }}"
+      next: Identity Fields
+
+    - name: Identity Fields
+      type: set_variable
+      comment: |
+        The identity fields. LDAP attributes arrive single-valued for these
+        (cn, title, department, mail, manager); the manager value is a DN,
+        so the readable name is its first RDN's value (CN=Michael
+        Wilson,OU=... becomes Michael Wilson).
+      vars:
+        dn_display: "{{ vars.entry.attributes.displayName | default(vars.entry.attributes.cn, true) | default(vars.entry.attributes.name, true) | default('', true) }}"
+        dn_title: "{{ vars.entry.attributes.title | default('', true) }}"
+        dn_department: "{{ vars.entry.attributes.department | default('', true) }}"
+        dn_mail: "{{ vars.entry.attributes.mail | default('', true) }}"
+        dn_manager: "{{ (vars.entry.attributes.manager | default('', true) | string).split(',')[0].split('=', 1) | last }}"
+      next: Identity Audit
+
+    - name: Identity Audit
+      type: set_variable
+      message:
+        content: >-
+          Directory Lookup: {{ vars.lookup_user }} resolves to
+          {{ vars.dn_display | default(vars.lookup_user, true) }};
+          title {{ vars.dn_title | default('n/a', true) }}, department
+          {{ vars.dn_department | default('n/a', true) }}, mail
+          {{ vars.dn_mail | default('n/a', true) }}, manager
+          {{ vars.dn_manager | default('n/a', true) }}.
+        record: '{{ vars.record_id }}'
+      vars:
+        directory_looked_up: true
+        directory_user: '{{ vars.lookup_user | default("", true) }}'
+
+  # ---------------------------------------------------------------------------
+  # Containment child: the network half of the chain.
+  #
+  # Blocks the event's destination at the FortiGate and PROVES it: the block
+  # is quarantine based (user/banned -- works on a stock gate where the
+  # policy-based variant needs a pre-made policy and address group), the
+  # ban is time-boxed so a containment action cannot become a permanent
+  # firewall artifact, and the device's own ban list is read back so the
+  # comment says "landed" only when the gate agrees.
+  #
+  # Fail-soft by contract: both connector steps ignore errors (unconfigured
+  # connector, unreachable gate, refused call) and the run always ends in
+  # an audit comment plus an export. A missing FortiGate degrades the CHAIN,
+  # it never kills it.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Containment: Block IP at FortiGate'
+    description: >-
+      Blocks an IP at the FortiGate (quarantine ban, time-boxed), verifies
+      the ban on the device's own list, and posts the outcome to the alert
+      as a comment. Runs as a child of Containment Chain (pass ip/event/
+      record), or directly as a record action. Degrades to a comment when
+      the event carries no IP or the gate is unreachable.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - containment
+    is_active: true
+    parameters:
+    - event_id
+    - record_id
+    - ip
+    - block_ttl
+    steps:
+    - name: Start
+      type: start
+      module: alerts
+      button_label: 'FortiEDR v2 > Containment: Block IP at FortiGate'
+      requires_record: true
+      next: Resolve Inputs
+
+    - name: Resolve Inputs
+      type: set_variable
+      comment: |
+        Two entry modes share one resolve: called from a parent playbook the
+        explicit params win; run as a record action the alert itself carries
+        sourceId and the record IRI, and the IP comes from the parent's
+        extraction (blank here degrades to the No IP audit). The default TTL
+        is the lab-safe one hour: the ban expires on the gate by itself.
+        The needle is the IP wrapped in JSON quotes -- the ban-list check
+        below matches the QUOTED form, so a shorter address cannot
+        false-positive on a longer one that merely shares its prefix.
+      vars:
+        event_id: >-
+          {% if vars.input.params.event_id | default('', true) %}{{ vars.input.params.event_id }}{% else %}{{ vars.input.records[0].sourceId | default('', true) }}{% endif %}
+        record_id: >-
+          {% if vars.input.params.record_id | default('', true) %}{{ vars.input.params.record_id }}{% else %}{{ vars.input.records[0]['@id'] }}{% endif %}
+        block_ip: "{{ vars.input.params.ip | default('', true) }}"
+        block_ttl: "{{ vars.input.params.block_ttl | default('1 Hour', true) }}"
+        ban_needle: '{{ "\"" ~ vars.block_ip ~ "\"" }}'
+      next: Have IP
+
+    - name: Have IP
+      type: decision
+      conditions:
+      - display: Have IP
+        when: "{{ (vars.block_ip | default('', true) | string) | length > 0 }}"
+        next: Block On FortiGate
+      - display: No IP
+        default: true
+        next: No IP Audit
+
+    - name: No IP Audit
+      type: set_variable
+      message:
+        content: "FortiGate Block: event {{ vars.event_id }} carries no IP-shaped destination (the destinations array holds behavior labels only); there is nothing to block."
+        record: '{{ vars.record_id }}'
+      vars:
+        block_landed: false
+        blocked_ip: ''
+        block_ttl_used: '{{ vars.block_ttl | default("", true) }}'
+
+    - name: Block On FortiGate
+      type: connector
+      connector: fortigate-firewall
+      operation: block_ip_new
+      config: ''
+      comment: |
+        Quarantine Based needs only an address and a TTL (Policy Based needs
+        a pre-made policy and address group a stock gate does not carry);
+        the ban expires on the gate by itself. ignore_errors: an
+        unconfigured connector or a refused call is a DEGRADED block the
+        alert should record, not a dead chain.
+      ignore_errors: true
+      params:
+        method: Quarantine Based
+        ip_addresses: '{{ vars.block_ip }}'
+        time_to_live: '{{ vars.block_ttl }}'
+        vdom: ''
+      next: Verify On Device
+
+    - name: Verify On Device
+      type: connector
+      connector: fortigate-firewall
+      operation: get_blocked_ip
+      config: ''
+      comment: |
+        Reads the gate's own ban list back, so the outcome comment reports
+        what the DEVICE believes, not what the API call returned.
+      ignore_errors: true
+      params:
+        method: Quarantine Based
+        vdom: ''
+      next: Ban Landed
+
+    - name: Ban Landed
+      type: decision
+      conditions:
+      - display: Landed
+        when: "{{ vars.ban_needle in (vars.steps.Verify_On_Device.data | default({}, true) | toJSON) }}"
+        next: Blocked Audit
+      - display: Not On The Gate
+        default: true
+        next: Block Failed Audit
+
+    - name: Blocked Audit
+      type: set_variable
+      message:
+        content: "FortiGate Block: banned {{ vars.block_ip }} on the gate for {{ vars.block_ttl }} (verified in the device's ban list) for event {{ vars.event_id }}."
+        record: '{{ vars.record_id }}'
+      vars:
+        block_landed: true
+        blocked_ip: '{{ vars.block_ip | default("", true) }}'
+        block_ttl_used: '{{ vars.block_ttl | default("", true) }}'
+
+    - name: Block Failed Audit
+      type: set_variable
+      message:
+        content: "FortiGate Block: the ban of {{ vars.block_ip }} did not land -- the fortigate-firewall connector may be unconfigured on this box, or the gate refused the call. The event {{ vars.event_id }} stays unblocked at the network edge."
+        record: '{{ vars.record_id }}'
+      vars:
+        block_landed: false
+        blocked_ip: '{{ vars.block_ip | default("", true) }}'
+        block_ttl_used: '{{ vars.block_ttl | default("", true) }}'
