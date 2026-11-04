@@ -6,7 +6,7 @@
 # Requires alongside this connector on the appliance:
 #   - fortinet-fortiedrv2 in its default config
 
-collection: Sample - Fortinet FortiEDR v2 - 1.1.4
+collection: Sample - Fortinet FortiEDR v2 - 1.1.6
 description: >-
   Sample playbooks for the "Fortinet FortiEDR v2" connector. If you are
   planning to use the sample playbooks in your environment, ensure that you
@@ -181,8 +181,8 @@ playbooks:
         visible: true
         type: text
         name: max_events
-        value: '2000'
-        tooltip: Safety cap on one run's window. A window whose event count exceeds it fails the run instead of silently skipping events -- raise the cap or shorten the schedule rather than let it bind.
+        value: '10'
+        tooltip: Safety cap on one run's window. A window whose event count exceeds it fails the run instead of silently skipping events. The 10 default suits a lab tenant -- raise it to fit real pull volume, or shorten the schedule, rather than let it bind.
       - title: Classifications (optional)
         required: false
         editable: true
@@ -236,7 +236,7 @@ playbooks:
       vars:
         fetch_last_minutes: '60'
         time_field: Last Seen (activity)
-        max_events: '2000'
+        max_events: '10'
         classifications: ''
         severities: ''
         device: ''
@@ -433,7 +433,13 @@ playbooks:
         source: Fortinet FortiEDR
         sourceId: '{{ vars.item.external_id }}'
         severity: '{{ "Severity" | picklist(vars.item.severity | default("Medium")) }}'
-        alertType: '{{ "AlertType" | picklist(vars.item.alert_type | default("Other / Unknown")) }}'
+        # The module field behind the AlertType picklist is `type`, exactly
+        # as the FortiSIEM v2 house recipe writes it -- an `alertType` key
+        # does not exist in the alerts schema and the API silently drops it
+        # (live-caught on 8.0.1: every malware alert kept the module's
+        # stock 'Other / Unknown' in the type column while severity, the
+        # same picklist-pipe shape, resolved fine).
+        type: '{{ "AlertType" | picklist(vars.item.alert_type | default("Other / Unknown")) }}'
         alertDetectionDate: '{{ vars.item.alert_generation_epoch or vars.item.last_observed_epoch }}'
         # eventTime (the datetime field the FortiSIEM v2 ingestion uses for the
         # same purpose) carries lastSeen, so a re-detection re-sorts the alert
@@ -460,7 +466,7 @@ playbooks:
         description: '{{ vars.item.description }}'
         sourcedata: '{{ vars.item | toJSON }}'
         __replace: 'true'
-        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'alertType', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'userName', 'userDetails', 'processName', 'description', 'sourcedata'] }}"
+        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'userName', 'userDetails', 'processName', 'description', 'sourcedata'] }}"
       next: Update Last Pull Time
 
     - name: Update Last Pull Time

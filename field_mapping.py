@@ -13,9 +13,8 @@ the alert POST fail with a picklist 400 (the FortiSIEM v2 connector's
 ingestion playbook failed exactly that way before these clamps existed).
 """
 
-from typing import Any, Dict, List, Optional
-
 import re
+from typing import Any, Dict, List, Optional
 
 from .models import Event
 
@@ -41,6 +40,12 @@ VALID_ALERT_TYPES = (
 )
 
 VALID_ALERT_STATES = ('New', 'Open', 'Closed', 'In Progress', 'Resolved')
+
+# The console's "no signature resolved" names, seen live on 8.0.1 events
+# (threat name or family): non-empty strings that carry no threat signal,
+# which the clamp used to read as signatures -- typing unsigned events
+# Malware. They mean no threat at all.
+_PLACEHOLDER_THREATS = ('unknown', 'n/a', 'na', 'none', 'clear')
 
 _RULE_TYPE_HINTS = (
     ('ransom', 'Ransomware'),
@@ -73,8 +78,16 @@ def resolve_alert_type(event: Event) -> str:
     for needle, alert_type in _RULE_TYPE_HINTS:
         if needle in haystack:
             return alert_type
-    if (event.threatDetails and (event.threatDetails.threatName or event.threatDetails.threatFamily)):
-        return 'Malware'
+    # A resolved signature means malware -- but the console reports "no
+    # signature" with placeholder names (Unknown, N/A, None, Clear), which
+    # read as no threat: an unsigned event falls through to Other / Unknown,
+    # or to whatever a matched rule hinted above.
+    if event.threatDetails:
+        name = (event.threatDetails.threatName or '').strip().lower()
+        family = (event.threatDetails.threatFamily or '').strip().lower()
+        if ((name and name not in _PLACEHOLDER_THREATS)
+                or (family and family not in _PLACEHOLDER_THREATS)):
+            return 'Malware'
     return 'Other / Unknown'
 
 

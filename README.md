@@ -30,6 +30,12 @@ want it.
   `time_field` selects the Last Seen / First Seen window axis.
 - `get_incidents`, `get_incident_by_id`, `get_incident_events` -- the
   console-tier incidents (the objects the FortiEDR UI groups events by).
+  `get_incidents` carries two OPTIONAL enrichment checkboxes that fan out
+  per incident inside the one call: Include Events attaches the incident's
+  linked events, and Include Process Detail re-reads its newest linked
+  event through the event API (`latestEvent`, the full process identity:
+  path, type, owner, users, destinations, rules, threat, collector
+  ip/OS/group). Both are fail-soft per incident and off by default.
 - `delete_exception` -- the API's `exceptions/delete` endpoint, which the
   shipped connector never exposed; without it an exception created for an
   event was permanent for playbook purposes. Exception IDs are required
@@ -156,7 +162,9 @@ fsrpb compiler -- it compiles both and merges them into the single
   FortiEDR 7.x, a windowed `list-events` request carrying `pageNumber`
   answers `200` with an empty page, so the connector asks `count-events`
   first, sizes one request to the count, and fails loudly rather than
-  reading part of a window (see Ingest Events in the release notes).
+  reading part of a window (see Ingest Events in the release notes). The
+  run-level safety cap (Maximum Events Per Run) defaults to 10 -- a
+  lab-safe ceiling; raise it to fit real pull volume.
 - **The Use Cases collection** (`usecase` tags, never offered as an
   ingestion configuration): Triage to Isolation (approval-gated collector
   isolation with the event refreshed from the console and the outcome

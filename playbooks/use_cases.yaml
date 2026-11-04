@@ -22,7 +22,7 @@
 #     refused, the run records the outcome as an alert comment and carries
 #     on -- a missing side tool degrades the chain, it never kills it.
 
-collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.5
+collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.6
 description: >-
   Operational use-case playbooks for the "Fortinet FortiEDR v2" connector:
   alert triage with collector isolation, evidence collection, time-limited
@@ -1011,13 +1011,16 @@ playbooks:
         source: Fortinet FortiEDR
         sourceId: '{{ vars.item.eventId }}'
         severity: '{{ "Severity" | picklist(vars.item.severity | default("Medium")) }}'
-        alertType: '{{ "AlertType" | picklist("Malware") }}'
+        # The alerts module field behind the AlertType picklist is `type`; an
+        # `alertType` key is not in the schema and the upsert silently drops it
+        # (the ingest chain's Create Record carries the readable story).
+        type: '{{ "AlertType" | picklist("Malware") }}'
         userName: '{{ vars.item.loggedUsers | default("") | join(",") }}'
         processName: '{{ vars.item.process | default("") }}'
         description: "{{ 'Retro-hunt finding: file hash <code>' ~ vars.input.params.file_hash ~ '</code> is harbored by FortiEDR event ' ~ vars.item.eventId ~ ' on <code>' ~ vars.item.collectors[0].device ~ '</code> (' ~ vars.item.severity ~ ', ' ~ vars.item.classification ~ '), first seen ' ~ vars.item.firstSeen ~ ', last seen ' ~ vars.item.lastSeen ~ '.' }}"
         sourcedata: '{{ vars.item | toJSON }}'
         __replace: 'true'
-        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'alertType', 'userName', 'processName', 'description', 'sourcedata'] }}"
+        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'userName', 'processName', 'description', 'sourcedata'] }}"
       next: Hunt Summary
 
     - name: Hunt Summary

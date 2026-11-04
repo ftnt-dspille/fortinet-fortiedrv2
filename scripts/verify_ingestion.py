@@ -30,8 +30,11 @@ field, down to the schedule-name convention the ingestion screen matches on):
      alike, so re-runs cannot premise-drift and every FAIL prints its own
      numbers. The covered rows are then content-checked (sourceId ==
      eventId, the rich-text card in description, sourcedata JSON,
-     alert_generation_epoch <= last_observed_epoch; the configured
-     long-lived event proves the pinned-firstSeen defect fix);
+     alert_generation_epoch <= last_observed_epoch, and a module-column
+     read-back: the stored row's type/severity must hold the clamped values
+     the payload claims -- a misnamed or nonexistent Create Record key is
+     silently dropped by the upsert API, so only a read-back catches it;
+     the configured long-lived event proves the pinned-firstSeen defect fix);
   6. dedup -- fire ingestion again: the re-read window must not duplicate or
      duplicate alerts (the upsert on sourceId), and the macro advances again;
   7. env_setup probe -- fire the ingest clone the way the wizard's mapping
@@ -253,7 +256,15 @@ def main(argv=None) -> int:
     ap.add_argument("--config", default=CONFIG_NAME,
                     help="connector configuration (default: %(default)s)")
     ap.add_argument("--backfill-minutes", default="43200",
-                    help="Initial Backfill Range the confirm step writes (default: 30 days)")
+                    help="Initial Backfill Range the confirm-edit writes into the "
+                         "clone (default %(default)s)")
+    ap.add_argument("--max-events", default="5000",
+                    help="Maximum Events Per Run the confirm-edit writes into the "
+                         "clone. The wizard form ships a lab-safe default of 10 "
+                         "and the harness's deep backfill deliberately reads "
+                         "past it, so the confirm-edit raises the cap the way "
+                         "an analyst does in the Data Import form. A run whose "
+                         "window exceeds the cap fails loud on purpose.")
     ap.add_argument("--reset-watermark", action="store_true",
                     help="reset the pull watermark macro to '0' before the first run, so"
                          " it re-reads the Initial Backfill Range; use after an earlier"
@@ -348,7 +359,8 @@ def main(argv=None) -> int:
     print(f"   schedule {result.schedule_name!r} enabled={result.scheduled}")
 
     # ---------------------------------------------------------------- [3] confirm edit
-    print(f"[3] wizard-confirm edit: Initial Backfill Range -> {args.backfill_minutes} min")
+    print(f"[3] wizard-confirm edit: Initial Backfill Range -> {args.backfill_minutes} min, "
+          f"Maximum Events Per Run -> {args.max_events}")
     clone_buckets = conns.ingestion_playbooks(NAME, collection=result.collection_uuid)
     fetch = getattr(clone_buckets, "fetch", None)
     if fetch is None:
@@ -363,15 +375,20 @@ def main(argv=None) -> int:
         _fail("the Configuration step record carries no uuid/@id")
     step_args = dict(step.get("arguments") or {})
     print(f"   fetch_last_minutes was {step_args.get('fetch_last_minutes')!r}, "
-          f"time_field {step_args.get('time_field')!r}")
+          f"time_field {step_args.get('time_field')!r}, "
+          f"max_events {step_args.get('max_events')!r}")
     step_args["fetch_last_minutes"] = str(args.backfill_minutes)
+    step_args["max_events"] = str(args.max_events)
     client.records("workflow_steps").update(step_uuid, {"arguments": step_args})
     check = client.playbooks.get_definition(fetch.uuid)
-    now_value = next(s for s in (check.get("steps") or [])
-                     if s.get("name") == "Configuration")["arguments"]["fetch_last_minutes"]
-    if str(now_value) != str(args.backfill_minutes):
-        _fail(f"confirm edit did not stick: fetch_last_minutes={now_value!r}")
-    print(f"   fetch Configuration step patched: fetch_last_minutes={now_value!r}")
+    check_args = next(s for s in (check.get("steps") or [])
+                      if s.get("name") == "Configuration")["arguments"]
+    if str(check_args.get("fetch_last_minutes")) != str(args.backfill_minutes):
+        _fail(f"confirm edit did not stick: fetch_last_minutes={check_args['fetch_last_minutes']!r}")
+    if str(check_args.get("max_events")) != str(args.max_events):
+        _fail(f"confirm edit did not stick: max_events={check_args['max_events']!r}")
+    print(f"   fetch Configuration step patched: fetch_last_minutes="
+          f"{check_args['fetch_last_minutes']!r}, max_events={check_args['max_events']!r}")
 
     macro = _macro_name(fetch.uuid)
     before = _read_macro(client, macro)
@@ -451,6 +468,12 @@ def main(argv=None) -> int:
 
     checked = [by_source[i] for i in fetched if i in by_source]
     bad = []
+
+    def _label(value):
+        if isinstance(value, dict):
+            return str(value.get("name") or value.get("label") or "")
+        return str(value or "")
+
     for r in checked:
         desc = r.get("description") or ""
         if "<table" not in desc or "border-collapse" not in desc:
@@ -465,13 +488,31 @@ def main(argv=None) -> int:
                 bad.append(f"{r.get('sourceId')}: sourcedata external_id {ex_id!r} mismatch")
             if gen is None or obs is None or int(gen) > int(obs):
                 bad.append(f"{r.get('sourceId')}: generation not <= observation ({gen}, {obs})")
+            # The module-column read-back, the class the 1.1.6 `type` fix belongs
+            # to: a Create Record key that is not an alerts module field is
+            # silently DROPPED by the upsert, 200 and all -- live-caught on
+            # 8.0.1 as every alert stuck on the module's stock 'Other / Unknown'
+            # while the payload claimed 'Malware'. The stored row must hold
+            # what the payload claims, or the step's field mapping is lying.
+            want_type = str(payload.get("alert_type") or "Other / Unknown")
+            have_type = _label(r.get("type"))
+            if not have_type:
+                bad.append(f"{r.get('sourceId')}: module row carries no type value "
+                           f"(a dropped or misnamed Create Record key)")
+            elif have_type != want_type:
+                bad.append(f"{r.get('sourceId')}: type column {have_type!r} != payload "
+                           f"alert_type {want_type!r}")
+            have_sev = _label(r.get("severity"))
+            if not have_sev:
+                bad.append(f"{r.get('sourceId')}: module row carries no severity value")
         except (ValueError, TypeError) as e:
             bad.append(f"{r.get('sourceId')}: sourcedata not JSON: {e}")
     if bad:
         _fail("; ".join(bad))
     if checked:
         print("   every vouched alert: sourceId == payload external_id, "
-              "generation <= observation, card markup in description")
+              "generation <= observation, card markup in description, and the "
+              "type/severity columns read back what the payload claims")
 
     import os
     demo_id = os.environ.get("EDR_DEMO_EVENT_ID")

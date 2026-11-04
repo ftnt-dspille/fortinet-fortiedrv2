@@ -131,3 +131,24 @@ def test_console_incidents_round_trip(call_op):
     assert one['id'] == first['id']
     events = call_op('get_incident_events', {'incident_id': first['id'], 'page_size': 10})
     assert isinstance(events, list)
+
+    # The enrichment checkboxes, checked live: the same one operation now
+    # returns what the round trip above had to chain by hand, and the chain
+    # rides on the identity the enrichment depends on -- a console
+    # incident-event id IS the event API's eventId.
+    enriched = call_op('get_incidents', {'time_filter': 'Last30days', 'page_size': 5,
+                                         'include_events': True,
+                                         'include_process_detail': True,
+                                         'events_page_size': 20})
+    assert enriched['incidents'], 'the unfiltered list above had incidents'
+    for incident in enriched['incidents']:
+        assert 'events' in incident, 'Include Events must attach the incident\'s events'
+        assert 'eventsError' not in incident, incident.get('eventsError')
+        if incident['events']:
+            assert 'latestEvent' in incident
+            assert 'latestEventError' not in incident, incident.get('latestEventError')
+            assert (incident['latestEvent'] or {}).get('eventId') \
+                in [e['id'] for e in incident['events']], \
+                'the re-read detail must key one of the very rows the incidents came with'
+        else:
+            assert incident['latestEvent'] is None

@@ -1,5 +1,74 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.6
+
+**Get Incidents, enriched in one call.** Two optional checkboxes on Get
+Incidents fan out per incident inside the one operation, so a single
+playbook step returns the triage context the use-case playbooks otherwise
+chain themselves. Neither is checked by default: the request pattern and
+the return shape are exactly as shipped until one is ticked, and the
+re-detection digest (the operation's existing consumer) is unchanged.
+
+- **Include Events** attaches each incident's linked events as `events`:
+  modeled console rows with the epoch twins, capped by **Events Per
+  Incident** (10 by default, 500 at most). An incident that reports more
+  linked events (`eventsNum`) than the cap returned is flagged
+  `eventsTruncated` -- raise the cap for the long-running ones, or page
+  through Get Incident Events for the full history. The per-incident
+  sub-call is auto-scoped: to the Organization ID parameter when one is
+  given, else to the incident row's own console account (`accountId`) --
+  the console's per-incident events endpoint answers 200 with an empty
+  page when left unscoped, a live-caught trap (the listing endpoint,
+  unlike it, honors the authenticated organization).
+- **Include Process Detail** re-reads the incident's newest linked event
+  through the event API and attaches it as `latestEvent`: the full process
+  identity -- `processPath`, `processType`, `processOwner`, the logged
+  users, the destinations, the matched rules, the threat details and the
+  collector's ip / OS / group. It chains off the incident's events, so
+  those are fetched and attached too, and `latestEvent` is `null` when
+  the incident carries no events to chain.
+
+Both legs are fail-soft per incident: a refused sub-fetch records
+`eventsError` / `latestEventError` on that row and the list carries on --
+the same degradation the containment playbooks practice. A missing
+enrichment degrades the row, it never kills the list.
+
+**Ingestion default cap lowered to 10 events.** The Fetch playbook's
+Maximum Events Per Run now defaults to 10 (was 2000). The cap is what its
+tooltip always said -- a safety valve that fails a run loudly rather than
+letting a scheduled pull silently stream a backlog (the window fetch is
+count-verified and never paged, so an oversized window cannot advance the
+watermark half-read). The 10 default suits a lab tenant; on a busier one
+raise the cap -- the Data Ingestion Wizard edits the value in place on
+the configuration -- or shorten the pull schedule rather than let it
+bind.
+
+**The alert type column actually lands now.** The Create Record step
+wrote the AlertType picklist under the key `alertType`, which is not a
+field of the alerts module -- the API silently drops unknown keys, 200
+and all, so the event's real type never reached the column: every alert
+kept the module's stock 'Other / Unknown', a Rozena malware alert
+included, while severity, the same picklist-pipe shape, resolved fine.
+The key is `type`, exactly as the FortiSIEM v2 house recipe writes it,
+and the Retro-Hunt use case's hunt-finding upsert carried the same
+wrong key, fixed with it. Because `type` rides `__fieldsToUpdate`, the
+next ingestion pass back-fills the type of every already-ingested alert
+with no delete/re-create. Upgrade note for an existing ingestion
+configuration: the bound clone carries the old field set, so the
+ingestion verifier's preflight flags it stale -- tear the
+configuration's ingestion setup down and re-run the wizard (the
+verifier prints both calls) so the fresh clone writes `type`.
+
+**Placeholder threat names are no longer typed Malware.** The console
+reports an unresolved signature with placeholder names -- "Unknown",
+"N/A", "None" -- and the type clamp read them as signatures,
+live-typing every signature-less event Malware (MicrosoftEdgeUpdate.exe
+included). They now read as no threat: the alert falls to whatever a
+matched rule hints, else to Other / Unknown. A named signature
+(Rozena.ABV!tr, Agent.BLY) still means Malware, by name or by family.
+The type columns self-correct with the next ingestion pass, the same
+back-fill as above.
+
 ## 1.1.5
 
 Alerts, enriched for triage: **Scheduled ingestion now writes the pivot

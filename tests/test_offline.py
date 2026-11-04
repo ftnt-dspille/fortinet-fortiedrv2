@@ -276,7 +276,7 @@ def test_create_record_upserts_each_event_on_its_eventid():
     resource = dict(args['resource'])
     resource.pop('__replace')
     resource.pop('__fieldsToUpdate')
-    assert set(resource) == {'name', 'source', 'sourceId', 'severity', 'alertType',
+    assert set(resource) == {'name', 'source', 'sourceId', 'severity', 'type',
                              'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName',
                              'hostIPAddress', 'destinationIp', 'rule', 'filePath',
                              'userName', 'userDetails', 'processName',
@@ -285,7 +285,11 @@ def test_create_record_upserts_each_event_on_its_eventid():
     assert resource['source'] == 'Fortinet FortiEDR'
     assert resource['sourcedata'] == '{{ vars.item | toJSON }}'
     assert resource['severity'] == '{{ "Severity" | picklist(vars.item.severity | default("Medium")) }}'
-    assert resource['alertType'] == '{{ "AlertType" | picklist(vars.item.alert_type | default("Other / Unknown")) }}'
+    # `type` is the module field behind the AlertType picklist (the house
+    # recipe's name for it); an `alertType` key is not in the alerts schema and
+    # the API silently drops it -- live-caught on 8.0.1 as every malware
+    # alert stuck on the module's stock 'Other / Unknown' type.
+    assert resource['type'] == '{{ "AlertType" | picklist(vars.item.alert_type | default("Other / Unknown")) }}'
     assert create['arguments']['resource']['__replace'] == 'true'
     assert "'sourcedata'" in create['arguments']['resource']['__fieldsToUpdate']
     assert "'severity'" in create['arguments']['resource']['__fieldsToUpdate']
@@ -499,6 +503,13 @@ def test_retrohunt_upserts_alerts_without_moving_detection_date():
     assert 'alertDetectionDate' not in source['__fieldsToUpdate']
     assert source['sourceId'] == '{{ vars.item.eventId }}'
     assert source['source'] == 'Fortinet FortiEDR'
+    # the AlertType picklist rides the module's `type` field; an `alertType`
+    # key is not in the alerts schema and the upsert silently drops it (the
+    # same live-caught trap the ingest chain's Create Record fixed)
+    assert 'alertType' not in bare
+    assert bare['type'] == '{{ "AlertType" | picklist("Malware") }}'
+    assert "'type'" in source['__fieldsToUpdate']
+    assert 'alertType' not in source['__fieldsToUpdate']
     # the search answers event ids; the full rows come from one event-list
     # call with the ids joined, not a per-hit fetch
     fetch = _uc_step('FortiEDR v2 > IOC Retro-Hunt', 'Get Hunt Events')['arguments']['params']
@@ -984,6 +995,110 @@ def test_incident_id_is_required(edr):
         run('get_incident_by_id', {})
 
 
+def test_get_incidents_enrichment_is_opt_in(edr):
+    """Unchecked checkboxes keep the operation's contract exactly as shipped:
+    one request, the plain incident rows -- every existing playbook (the
+    re-detection digest calls get_incidents today) is untouched."""
+    edr.get(BASE + '/api/incidents', json=fixture('console_incidents'))
+    result = run('get_incidents', {})
+    assert len(calls('GET', '/api/incidents?')) == 1
+    assert not calls('GET', MGMT + '/events')
+    assert not calls('GET', '/events')
+    for incident in result['incidents']:
+        assert 'events' not in incident
+        assert 'eventsTruncated' not in incident
+        assert 'latestEvent' not in incident
+        assert 'eventsError' not in incident
+
+
+def test_get_incidents_include_events_attaches_the_linked_events(edr):
+    edr.get(BASE + '/api/incidents', json=fixture('console_incidents'))
+    # Both incidents answer with the same two rows: the first reports 13
+    # linked events (the page cap cut it short -> eventsTruncated), the
+    # second reports 1 (the page covers it).
+    edr.get(BASE + '/api/incidents/1492384/events', json=fixture('console_incident_events'))
+    edr.get(BASE + '/api/incidents/1503822/events', json=fixture('console_incident_events'))
+    result = run('get_incidents', {'include_events': 'True'})
+    assert len(calls('GET', '/api/incidents/1492384/events')) == 1
+    assert len(calls('GET', '/api/incidents/1503822/events')) == 1
+    events_call = calls('GET', '/api/incidents/1492384/events')[0]
+    assert query(events_call)['pageSize'] == ['10']
+    # the sub-call self-scopes to the incident row's own console account:
+    # the events endpoint answers an empty page when left unscoped (the
+    # listing endpoint, unlike it, honors the authenticated org)
+    assert query(events_call)['organizationId'] == ['85226']
+    first, second = result['incidents']
+    assert [r['id'] for r in first['events']] == [1492374, 1493703]
+    # modeled console rows carry the epoch twins even though the console
+    # answer only spelled lastSeen out
+    assert first['events'][1]['lastSeenEpoch'] == 1793280778
+    assert first['eventsTruncated'] is True    # eventsNum 13 against a 2-row page
+    assert second['eventsTruncated'] is False  # eventsNum 1, the page covers it
+    assert 'latestEvent' not in first           # the detail flag was not ticked
+
+
+def test_get_incidents_explicit_organization_id_wins_over_the_rows_account(edr):
+    """An explicit Organization ID overrides the row's own accountId in the
+    enrichment sub-calls, so a caller reading across orgs keeps control."""
+    edr.get(BASE + '/api/incidents', json=fixture('console_incidents'))
+    edr.get(BASE + '/api/incidents/1492384/events', json=fixture('console_incident_events'))
+    run('get_incidents', {'include_events': 'True', 'organization_id': 1101})
+    assert query(calls('GET', '/api/incidents/1492384/events')[0])['organizationId'] == ['1101']
+
+
+def test_get_incidents_include_process_detail_chains_the_newest_event(edr):
+    """The detail leg demonstrates the whole chain inside the one operation:
+    the incident's linked events are read (the chain source, attached as
+    events even though only the detail was asked for), the newest row wins
+    by lastSeen, and its id re-reads through the event API as latestEvent.
+    An incident with no linked events answers latestEvent None -- a skip,
+    not an error."""
+    edr.get(BASE + '/api/incidents', json=fixture('console_incidents'))
+    edr.get(BASE + '/api/incidents/1492384/events', json=fixture('console_incident_events'))
+    edr.get(BASE + '/api/incidents/1503822/events', json={'result': {'items': []}})
+
+    def event_row(request):
+        wanted = parse_qs(urlparse(request.url).query).get('eventIds', [''])[0]
+        rows = [r for r in fixture('events_full_page') if str(r['eventId']) == wanted]
+        return 200, {}, json.dumps(rows)
+
+    edr.add_callback(responses.GET, LIST_EVENTS, callback=event_row)
+    result = run('get_incidents', {'include_process_detail': 'True'})
+    first, second = result['incidents']
+    # the shared sub-call: the events ride along with the detail
+    assert [r['id'] for r in first['events']] == [1492374, 1493703]
+    # the newest linked event (29-Oct lastSeen) is the one re-read
+    detail_calls = calls('GET', '/events/list-events')
+    assert len(detail_calls) == 1
+    assert query(detail_calls[0])['eventIds'] == ['1493703']
+    assert first['latestEvent']['eventId'] == 1493703
+    assert first['latestEvent']['processPath'] == 'C:/Users/Public/cloud.exe'
+    assert first['latestEvent']['collectors'][0]['ip'] == '203.0.113.5'
+    assert second['latestEvent'] is None
+    assert second['events'] == []
+
+
+def test_get_incidents_enrichment_is_fail_soft(edr):
+    """Every enrichment leg degrades its own incident, never the batch: a
+    refused sub-fetch records eventsError / latestEventError on that row and
+    the other incidents' enrichment survives."""
+    edr.get(BASE + '/api/incidents', json=fixture('console_incidents'))
+    edr.get(BASE + '/api/incidents/1492384/events', json={'errorMessage': 'console exploded'},
+            status=500)
+    edr.get(BASE + '/api/incidents/1503822/events', json=fixture('console_incident_events'))
+    result = run('get_incidents', {'include_events': 'True', 'include_process_detail': 'True'})
+    first, second = result['incidents']
+    # the refused leg: the row carries both error keys in the client's own
+    # error voice, and no partial attachments
+    assert 'events' not in first
+    assert 'Response [500:console exploded]' in first['eventsError']
+    assert 'could not be read' in first['latestEventError']
+    # the healthy sibling: enriched in full except its detail re-read (no
+    # mock for it), which degrades to its own error key
+    assert [r['id'] for r in second['events']] == [1492374, 1493703]
+    assert second['latestEventError'] == 'A connection error occurred'
+
+
 def test_generic_rest_api_call(edr):
     edr.get(BASE + '/api/anything', json={'ok': True})
     result = run('generic_rest_api_call', {'endpoint': 'api/anything', 'method': 'GET',
@@ -1309,6 +1424,31 @@ def test_alert_type_clamps_to_the_picklist():
     assert resolve_alert_type(event) == 'Other / Unknown'
     event = Event(eventId=1, rules=['Ransomware Behavior C2 beacon'])
     assert resolve_alert_type(event) == 'Ransomware'
+
+
+def test_alert_type_sees_through_placeholder_threat_names():
+    # Live-caught on 8.0.1: the console reports an unresolved signature as
+    # non-empty placeholder names, which the clamp read as real signatures
+    # -- typing signature-less events Malware. A placeholder means no
+    # threat; a real signature still means Malware, by name or by family.
+    event = Event(eventId=1, threatDetails={'threatName': 'Unknown'})
+    assert resolve_alert_type(event) == 'Other / Unknown'
+    event = Event(eventId=1, threatDetails={'threatName': 'N/A',
+                                            'threatFamily': ''})
+    assert resolve_alert_type(event) == 'Other / Unknown'
+    event = Event(eventId=1, threatDetails={'threatName': 'None',
+                                            'threatFamily': 'Clear'})
+    assert resolve_alert_type(event) == 'Other / Unknown'
+    event = Event(eventId=1, threatDetails={'threatName': 'Rozena.ABV!tr'})
+    assert resolve_alert_type(event) == 'Malware'
+    event = Event(eventId=1, threatDetails={'threatName': '',
+                                            'threatFamily': 'Agent.BLY'})
+    assert resolve_alert_type(event) == 'Malware'
+    # a matched rule still wins: the signature below also carries an
+    # exfiltration-named rule, and the hint fires first.
+    event = Event(eventId=1, rules=['Data Exfiltration Attempt'],
+                 threatDetails={'threatName': 'Rozena.ABV!tr'})
+    assert resolve_alert_type(event) == 'Data Exfiltration'
 
 
 def test_mapped_alert_shape_matches_the_create_record_contract():

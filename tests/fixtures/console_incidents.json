@@ -10,6 +10,7 @@
         "classification": "ClassificationMalicious",
         "classificationValue": "ClassificationMalicious",
         "organization": "Demo Org",
+        "accountId": 85226,
         "devices": [
           {
             "name": "lab-endpoint-01",
@@ -33,6 +34,7 @@
         "classification": "ClassificationInconclusive",
         "classificationValue": "ClassificationInconclusive",
         "organization": "Demo Org",
+        "accountId": 85226,
         "devices": [
           {
             "name": "lab-endpoint-01",

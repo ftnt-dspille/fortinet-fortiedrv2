@@ -22,7 +22,7 @@ DEFAULT_STOCK = (Path.home() / 'PycharmProjects/Miscellaneous/fortisoar/corpus_b
                  'fortisoar-rpm-extracted/fortinet-fortiedr/fortinet-fortiedr/info.json')
 
 NAME = 'fortinet-fortiedrv2'
-VERSION = '1.1.5'
+VERSION = '1.1.6'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,
@@ -130,7 +130,15 @@ def _new_operations():
                         'FortiEDR UI groups events by (typically one per '
                         'process). An incident absorbs re-detections of the same '
                         'process: firstSeen is when it was created, lastSeen '
-                        'when the latest event was linked into it.'),
+                        'when the latest event was linked into it. Two optional '
+                        'checkboxes enrich every incident inside this one call: '
+                        'Include Events attaches the incident\'s linked events '
+                        '(events), and Include Process Detail re-reads its '
+                        'newest event through the event API as latestEvent, the '
+                        'full process identity (path, type, owner, users, '
+                        'destinations, rules, threat, collector ip/OS/group). '
+                        'Both fail soft per incident: a refused sub-fetch '
+                        'records eventsError / latestEventError on that row.'),
         'category': 'investigation',
         'annotation': 'get_incidents',
         'handler_method': True,
@@ -152,11 +160,38 @@ def _new_operations():
             _param('Offset', 'offset', 'integer', value=0),
             _param('Sorting', 'sorting', 'text', placeholder='{"lastSeen": true}',
                    description='JSON sorting, e.g. {"lastSeen": true}.'),
+            _param('Include Events', 'include_events', 'boolean', value=False,
+                   description=('Check to attach each incident\'s linked events as '
+                                '`events` (modeled console rows, epoch twins '
+                                'included). An incident reporting more linked '
+                                'events than Events Per Incident returned is '
+                                'flagged `eventsTruncated`. Unchecked by '
+                                'default: the plain incident list is unchanged. '
+                                'The per-incident sub-call is auto-scoped: to '
+                                'Organization ID when given, else to the '
+                                'incident\'s own console account.')),
+            _param('Events Per Incident', 'events_page_size', 'integer', value=10,
+                   minimum=1, maximum=500,
+                   description=('Cap on the events list attached per incident by '
+                                'the enrichment checkboxes. Default 10; raise it '
+                                'for long-running incidents, or page through Get '
+                                'Incident Events for the full history.')),
+            _param('Include Process Detail', 'include_process_detail', 'boolean',
+                   value=False,
+                   description=('Check to also re-read each incident\'s newest '
+                                'linked event through the event API and attach it '
+                                'as `latestEvent`: the full process identity '
+                                '(path, type, owner, logged users, destinations, '
+                                'rules, threat details, collector ip/OS/group). It '
+                                'chains off the incident\'s events, so those are '
+                                'fetched and attached too. `latestEvent` is null '
+                                'when the incident carries no events to chain.')),
         ],
         'output_schema': [
             {'id': 0, 'name': '', 'type': '', 'eventsNum': 0, 'classification': '',
              'firstSeen': '', 'lastSeen': '', 'firstSeenEpoch': 0, 'lastSeenEpoch': 0,
-             'isolated': False, 'tags': []},
+             'isolated': False, 'tags': [], 'events': [], 'eventsTruncated': False,
+             'latestEvent': {}},
         ],
     })
 

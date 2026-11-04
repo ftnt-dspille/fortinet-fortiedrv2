@@ -14,7 +14,12 @@ playbook can be repointed one operation at a time, plus the v2 additions:
   the Last Seen / First Seen window choice (see ingestion.py);
 - ``get_incidents`` / ``get_incident_by_id`` / ``get_incident_events`` -- the
   console-tier incident objects (an incident is what the FortiEDR console UI
-  groups events by; it absorbs re-detections of the same process);
+  groups events by; it absorbs re-detections of the same process).
+  ``get_incidents`` carries two OPTIONAL enrichment checkboxes that fan out
+  per incident inside the one call: Include Events attaches the incident's
+  linked events, Include Process Detail re-reads the newest of them through
+  the event API (``latestEvent``, the full process identity). Both fail
+  soft per incident and are off by default;
 - ``delete_exception`` -- the API's ``exceptions/delete`` endpoint, which the
   shipped connector never exposed; without it an exception created for an
   event was permanent for playbook purposes.
@@ -31,7 +36,7 @@ from connectors.core.connector import get_logger
 
 from .client import MGMT_PREFIX, ConnectorError, FortiEDRClient
 from .ingestion import ingest_events  # noqa: F401  (re-exported op)
-from .models import ConsoleIncident, Event, RawDataItem
+from .models import ConsoleIncident, ConsoleIncidentEvent, Event, RawDataItem
 
 logger = get_logger('fortinet-fortiedrv2')
 
@@ -666,8 +671,174 @@ def _console_incident_params(params):
     return query
 
 
+def _console_items(payload):
+    """Rows out of a console list envelope, tolerant of the two shapes the
+    console API answers with: ``{result: {items: [...]}}`` and a bare list."""
+    items = payload.get('result') if isinstance(payload, dict) else payload
+    items = items.get('items') if isinstance(items, dict) else items
+    return items if isinstance(items, list) else []
+
+
+def _truthy(value):
+    """Normalize a checkbox param: the UI delivers a real boolean, but a
+    playbook step or an API caller can spell the checked state the way the
+    manifest's selects do ('True'). Same contract as deleteAll."""
+    if isinstance(value, str):
+        return value.strip().lower() == 'true'
+    return bool(value)
+
+
+DEFAULT_EVENTS_PER_INCIDENT = 10
+
+
+def _enrichment_params(params):
+    """(events_page_size, organization_id) for the per-incident sub-calls.
+
+    The page cap keeps one ticked checkbox from turning a 50-incident page
+    into an unbounded read of every linked event; the organization threading
+    keeps multi-org tenants reading the same org they listed incidents from.
+    """
+    try:
+        page_size = int(params.get('events_page_size') or DEFAULT_EVENTS_PER_INCIDENT)
+    except (TypeError, ValueError):
+        page_size = DEFAULT_EVENTS_PER_INCIDENT
+    page_size = max(1, min(500, page_size))
+    organization_id = params.get('organization_id')
+    return page_size, organization_id
+
+
+def _incident_events_rows(client, incident_id, events_page_size, organization_id):
+    """The events linked into one incident, modeled (console rows with the
+    epoch twins). The same endpoint get_incident_events reads, called inside
+    get_incidents so both enrichment flags chain off ONE shared sub-call."""
+    endpoint = '{0}/{1}/events'.format(CONSOLE_INCIDENTS, incident_id)
+    query = {'pageSize': events_page_size, 'offset': 0}
+    if organization_id not in (None, ''):
+        query['organizationId'] = organization_id
+    response = client.get('Get Incident Events', endpoint, query, 'get_incident_events')
+    payload = response.json() if response.text else {}
+    return [ConsoleIncidentEvent(**row).model_dump() for row in _console_items(payload)]
+
+
+def _newest_event_row(rows):
+    """The row the process detail chains from: the incident's newest event.
+
+    Modeled rows carry the lastSeenEpoch twin, so the max epoch wins; ties
+    and epoch-less rows fall back to the console's own order, which answers
+    an incident's events ascending (observed), so the later row is the
+    newer one of two that claim the same instant.
+    """
+    if not rows:
+        return None
+
+    def rank(index):
+        return (rows[index].get('lastSeenEpoch') or 0, index)
+    return rows[max(range(len(rows)), key=rank)]
+
+
+def _event_detail_rows(client, event_id):
+    """The full management-rest event row behind one console event id.
+
+    The console's incident-event row says what happened (device, process,
+    severity); the event row carries the identity a responder acts on: path,
+    type, owner, logged users, destinations, rules, threat details, and the
+    collector's ip / OS / group. The two APIs key the same detection by the
+    same id (the console event id IS the eventId), so the detail is fetched
+    strictly on that id and nothing else.
+    """
+    response = client.get('Get Event by ID', E + '/list-events',
+                          {'eventIds': event_id}, 'get_event_by_id')
+    rows = client.json_or_empty(response)
+    if not isinstance(rows, list):
+        raise ConnectorError('Unexpected response from list-events: expected a JSON array')
+    return [Event(**row).model_dump() for row in rows]
+
+
+def _sub_call_org(organization_id, incident):
+    """The organizationId the per-incident sub-calls travel with.
+
+    The console's incident LISTING answers without one (it scopes to the
+    authenticated organization), but the per-incident events endpoint does
+    not honor that implicit scope: asked without an explicit organizationId
+    it answers 200 with an empty page (live on the demo tenant). Every
+    incident row carries the console account id the UI itself sends as
+    organizationId (``accountId``), so the sub-call is always scoped -- to
+    the caller's Organization ID when one was given, else to the row's own
+    accountId.
+    """
+    if organization_id not in (None, ''):
+        return organization_id
+    return incident.get('accountId')
+
+
+def _enrich_incident(client, incident, events_page_size, organization_id, want_detail):
+    """Attach the requested enrichment to one incident row, fail-soft per leg.
+
+    Both flags share ONE events sub-call: the events list IS the detail's
+    chain source. A successfully read incident gains, whether Include Events
+    was ticked or not (Include Process Detail needs the same list):
+
+    - ``events``: the incident's linked events, modeled console rows;
+    - ``eventsTruncated``: the incident reports more linked events
+      (eventsNum) than the Events Per Incident cap returned -- raise the cap
+      for the long-running ones;
+    - ``latestEvent`` (Include Process Detail): the newest linked event
+      re-read through the event API -- the full process identity -- or None
+      when the incident carries no events to chain.
+
+    A refused sub-fetch never kills the batch: the failed leg records
+    ``eventsError`` / ``latestEventError`` on the row and the list carries
+    on, the same degradation the containment playbooks practice (a missing
+    enrichment degrades the row, it never kills the list).
+    """
+    rows = None
+    events_error = None
+    if incident.get('id') in (None, ''):
+        events_error = 'the incident carried no id to read events from'
+    else:
+        try:
+            rows = _incident_events_rows(client, incident['id'], events_page_size,
+                                         _sub_call_org(organization_id, incident))
+        except Exception as err:
+            events_error = str(err)
+            logger.error('Get Incidents: could not read the events of incident {0}: {1}'
+                         .format(incident.get('id'), err))
+    if rows is not None:
+        incident['events'] = rows
+        total = incident.get('eventsNum')
+        incident['eventsTruncated'] = bool(isinstance(total, int) and total > len(rows))
+    elif events_error is not None:
+        incident['eventsError'] = events_error
+    if not want_detail:
+        return
+    if events_error is not None:
+        incident['latestEventError'] = 'the incident\'s events could not be read ({0})'\
+            .format(events_error)
+        return
+    newest = _newest_event_row(rows)
+    if newest is None:
+        incident['latestEvent'] = None
+        return
+    try:
+        detail = _event_detail_rows(client, newest.get('id'))
+        # One id keys at most one event row; take the first rather than assume.
+        incident['latestEvent'] = detail[0] if detail else None
+    except Exception as err:
+        incident['latestEventError'] = str(err)
+        logger.error('Get Incidents: could not re-read the process detail of incident {0} '
+                     '(event {1}): {2}'.format(incident.get('id'), newest.get('id'), err))
+
+
 def get_incidents(config, params):
-    """List console incidents (each is the FortiEDR UI's grouping of events)."""
+    """List console incidents (each is the FortiEDR UI's grouping of events).
+
+    Two OPTIONAL checkboxes enrich each incident inside this one call, so a
+    single step returns the triage context the use-case playbooks otherwise
+    chain themselves: Include Events attaches the incident's linked events,
+    and Include Process Detail re-reads the newest of them through the event
+    API and attaches it as latestEvent (full process identity). Both
+    unchecked: one request, the shipped return shape unchanged.
+    """
     client = FortiEDRClient(config)
     query = _console_incident_params(params)
     try:
@@ -679,9 +850,12 @@ def get_incidents(config, params):
     response = client.make_rest_api_call('Get Incidents', 'GET', CONSOLE_INCIDENTS, headers,
                                          payload=dict(query, pageSize=page_size, offset=offset))
     payload = response.json() if response.text else {}
-    items = payload.get('result') if isinstance(payload, dict) else payload
-    items = items.get('items') if isinstance(items, dict) else items
-    incidents = [ConsoleIncident(**row).model_dump() for row in items] if isinstance(items, list) else []
+    incidents = [ConsoleIncident(**row).model_dump() for row in _console_items(payload)]
+    if _truthy(params.get('include_events')) or _truthy(params.get('include_process_detail')):
+        want_detail = _truthy(params.get('include_process_detail'))
+        events_page_size, organization_id = _enrichment_params(params)
+        for incident in incidents:
+            _enrich_incident(client, incident, events_page_size, organization_id, want_detail)
     return {'totalCount': payload.get('totalCount') if isinstance(payload, dict) else len(incidents),
             'incidents': incidents}
 
@@ -715,9 +889,7 @@ def get_incident_events(config, params):
     query['offset'] = int(params.get('offset') or 0)
     response = client.get('Get Incident Events', endpoint, query, 'get_incident_events')
     payload = response.json() if response.text else {}
-    items = payload.get('result') if isinstance(payload, dict) else payload
-    items = items.get('items') if isinstance(items, dict) else items
-    return items if isinstance(items, list) else []
+    return _console_items(payload)
 
 
 # ---------------------------------------------------------------------------
