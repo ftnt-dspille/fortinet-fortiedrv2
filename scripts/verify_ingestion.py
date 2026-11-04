@@ -48,8 +48,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 
+import requests
 import urllib3
 from pyfsr.exceptions import FortiSOARException
 
@@ -69,6 +71,29 @@ def _fail(msg: str) -> None:
     raise SystemExit(f"FAIL: {msg}")
 
 
+def _transport_retry(fn, what, attempts=8, base=5.0):
+    """Call fn(), riding out transient local transport failures.
+
+    Long verification runs died mid-poll with requests' ConnectionError
+    wrapping OSError(49) ("Can't assign requested address") -- the workstation
+    briefly loses the address it binds from (interface/VPN flap), not a box
+    failure; every wrapped call here is an idempotent read, so a retry cannot
+    double-apply anything. Retry with a short backoff; re-raise only once the
+    transport has stayed broken for minutes (a real outage fails loudly).
+    """
+    delay = base
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn()
+        except requests.exceptions.ConnectionError as exc:
+            if attempt == attempts:
+                raise
+            print(f"   transport blip during {what}: {str(exc)[:90]} -- "
+                  f"retrying in {delay:.0f}s ({attempt}/{attempts - 1})")
+            time.sleep(delay)
+            delay = min(delay * 2, 60.0)
+
+
 def _macro_name(fetch_uuid: str) -> str:
     return f"FortiEDRLastEventPullTime_{fetch_uuid.replace('-', '_')}"
 
@@ -81,12 +106,16 @@ def _wait_run(client, task_id: str, label: str):
     and per-step snapshots, which is what gets printed and checked.
     """
     print(f"   waiting for {label} run {task_id} (poll {POLL}s)...")
-    waited = client.playbooks.wait_for_task(task_id, timeout=STEP_WAIT_TIMEOUT,
-                                            poll_interval=POLL, steps=True)
+    waited = _transport_retry(
+        lambda: client.playbooks.wait_for_task(task_id, timeout=STEP_WAIT_TIMEOUT,
+                                               poll_interval=POLL, steps=True),
+        f"{label} wait")
     failure = getattr(waited, "failure", None)
     err = getattr(failure, "message", None) or (str(failure) if failure else None)
     status = getattr(waited, "status", None)
-    tree = client.playbooks.run_tree(task_id, steps=True, detailed=True)
+    tree = _transport_retry(
+        lambda: client.playbooks.run_tree(task_id, steps=True, detailed=True),
+        f"{label} tree")
     return status, err, tree
 
 

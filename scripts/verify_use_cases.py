@@ -67,6 +67,7 @@ import hashlib
 import time
 from pathlib import Path
 
+import requests
 import urllib3
 
 # Demo-box self-signed certs; the warnings bury the phase output otherwise.
@@ -105,6 +106,29 @@ def _info(msg: str) -> None:
     print(f"   {msg}")
 
 
+def _transport_retry(fn, what, attempts=8, base=5.0):
+    """Call fn(), riding out transient local transport failures.
+
+    Long verification runs died mid-poll with requests' ConnectionError
+    wrapping OSError(49) ("Can't assign requested address") -- the workstation
+    briefly loses the address it binds from (interface/VPN flap), not a box
+    failure; every wrapped call here is an idempotent read, so a retry cannot
+    double-apply anything. Retry with a short backoff; re-raise only once the
+    transport has stayed broken for minutes (a real outage fails loudly).
+    """
+    delay = base
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn()
+        except requests.exceptions.ConnectionError as exc:
+            if attempt == attempts:
+                raise
+            _info(f"transport blip during {what}: {str(exc)[:90]} -- "
+                  f"retrying in {delay:.0f}s ({attempt}/{attempts - 1})")
+            time.sleep(delay)
+            delay = min(delay * 2, 60.0)
+
+
 def _fmt(rec, *keys):
     return {k: rec.get(k) for k in keys if k in rec}
 
@@ -136,7 +160,8 @@ def _wait_run(client, task_id, label):
     resolve_deadline = time.time() + 60
     resolved = False
     while time.time() < resolve_deadline:
-        probe = client.playbooks.run_tree(task_id)
+        probe = _transport_retry(lambda: client.playbooks.run_tree(task_id),
+                                 f"{label} resolve probe")
         if getattr(probe, "pk", None):
             resolved = True
             break
@@ -144,12 +169,16 @@ def _wait_run(client, task_id, label):
     if not resolved:
         _fail(f"{label} run {task_id!r} never appeared in the run table")
     print(f"   waiting for {label} run {task_id}...")
-    waited = client.playbooks.wait_for_task(task_id, timeout=RUN_TIMEOUT,
-                                            poll_interval=5, steps=True,
-                                            detailed=True)
+    waited = _transport_retry(
+        lambda: client.playbooks.wait_for_task(task_id, timeout=RUN_TIMEOUT,
+                                               poll_interval=5, steps=True,
+                                               detailed=True),
+        f"{label} wait")
     failure = getattr(waited, "failure", None)
     err = getattr(failure, "message", None) or (str(failure) if failure else None)
-    tree = client.playbooks.run_tree(task_id, steps=True, detailed=True)
+    tree = _transport_retry(
+        lambda: client.playbooks.run_tree(task_id, steps=True, detailed=True),
+        f"{label} tree")
     return getattr(waited, "status", None), err, tree
 
 
@@ -347,8 +376,10 @@ def _await_gate(client, task_id, title):
     """
     deadline = time.time() + GATE_TIMEOUT
     while time.time() < deadline:
-        rows = client.manual_input.pending_for_run(str(task_id), wait=15,
-                                                   typed=False)
+        rows = _transport_retry(
+            lambda: client.manual_input.pending_for_run(str(task_id), wait=15,
+                                                        typed=False),
+            f"gate {title!r} poll")
         for row in rows or []:
             if _gate_title(row) != title:
                 continue
@@ -419,9 +450,11 @@ def _clear_stale_gates(client, title, option_label, note):
         answered = {str(r["id"]) for r in stale}
         deadline = time.time() + GATE_TIMEOUT
         while time.time() < deadline:
-            left = [r for r in client.manual_input.list(assigned_to="all",
-                                                        typed=False)
-                    if str(r.get("id")) in answered]
+            left = [r for r in _transport_retry(
+                lambda: client.manual_input.list(assigned_to="all",
+                                                 typed=False),
+                "stale-gate drain")
+                if str(r.get("id")) in answered]
             if not left:
                 return
             time.sleep(3)
@@ -834,7 +867,8 @@ def phase_08_schedule(client, ops, config, env, state):
     deadline = time.time() + SCHEDULE_FIRE_TIMEOUT
     new = set()
     while time.time() < deadline and not new:
-        new = _sweep_run_pks(client, str(row["uuid"])) - runs_before
+        new = _transport_retry(lambda: _sweep_run_pks(client, str(row["uuid"])),
+                               "sweep cron probe") - runs_before
         if new:
             break
         time.sleep(10)
