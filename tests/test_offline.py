@@ -295,6 +295,42 @@ def test_create_record_upserts_each_event_on_its_eventid():
     assert "'sourcedata'" in create['arguments']['resource']['__fieldsToUpdate']
     assert "'severity'" in create['arguments']['resource']['__fieldsToUpdate']
     assert "'sourceType'" in create['arguments']['resource']['__fieldsToUpdate']
+    # THE trigger-delivery pin: __bulk (and batch_size, its companion) bypass
+    # on-create playbook triggers entirely. The Malicious Auto-Triage use case
+    # is woken by exactly these inserts, so the ingest loop must stay plain;
+    # the window is tens of events per pull, not the high-volume feed __bulk
+    # exists for. The Retro-Hunt keeps __bulk by contract.
+    for_each = create['arguments']['for_each']
+    assert '__bulk' not in for_each, for_each
+    assert 'batch_size' not in for_each, for_each
+
+
+def test_malicious_auto_triage_fires_from_ingestion_and_reuses_the_chain():
+    flow = _uc_flow('FortiEDR v2 > Malicious Auto-Triage')
+    start = flow['steps'][0]
+    fbt = start['arguments']['fieldbasedtrigger']
+    # The platform-side gate: only an INSERT classified Malicious starts a
+    # run; re-detections are upserts, not inserts, so no re-fire loop.
+    flt = fbt['filters'][0]
+    assert (flt['field'], flt['operator'], flt['value']) == ('sourceType', 'eq', 'Malicious')
+    find = _uc_step('FortiEDR v2 > Malicious Auto-Triage', 'Find Incident')['arguments']
+    assert find['operation'] == 'get_incidents'
+    # BOTH enrichment checkboxes, the user's explicit pick: the triage reads
+    # the fresh identity (latestEvent), not the static card.
+    assert find['params']['include_events'] is True
+    assert find['params']['include_process_detail'] is True
+    assert find['params']['events_page_size'] == 100
+    hand = _uc_step('FortiEDR v2 > Malicious Auto-Triage', 'Hand to Containment')['arguments']
+    # The record rides to the child; the fire-and-forget keeps the triage run
+    # from parking on the chain's manual approval.
+    assert hand['pass_input_record'] is True
+    assert hand['apply_async'] is True
+    # Coherence, not a pinned uuid: the reference must resolve to the
+    # Containment Chain workflow inside this same bundle.
+    uid = hand['workflowReference'].rsplit('/', 1)[-1]
+    names = {w['name'] for c in PLAYBOOKS['data'] for w in c['workflows']
+             if uid in (str(w.get('uuid') or ''), str(w.get('id') or ''))}
+    assert names == {'FortiEDR v2 > Containment Chain'}, names
 
 
 def test_the_watermark_moves_only_after_the_alerts_are_written():
@@ -343,6 +379,7 @@ def test_two_collections_ship_and_only_the_chain_is_wizard_visible():
         'FortiEDR v2 > Containment Chain',
         'FortiEDR v2 > Containment: Lookup User in Directory',
         'FortiEDR v2 > Containment: Block IP at FortiGate',
+        'FortiEDR v2 > Malicious Auto-Triage',
     ]
 
 

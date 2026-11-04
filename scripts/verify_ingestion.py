@@ -129,23 +129,25 @@ def _shipped_ingest_fields():
 
 
 def _bound_clone_fields(client, conns, config):
-    """The bound ingest clone's Create Record field set.
+    """The bound ingest clone's Create Record field set and bulk flag.
 
-    Returns (uuid, fields), or (None, None) when the configuration has no
-    ingestion setup yet -- nothing bound, nothing to compare. get_definition
-    without relationships: the relationships form 414s on the appliance.
+    Returns (uuid, fields, bulk), or (None, None, None) when the
+    configuration has no ingestion setup yet -- nothing bound, nothing to
+    compare. get_definition without relationships: the relationships form
+    414s on the appliance.
     """
     st = conns.ingestion_status(NAME, config=config)
     bound = getattr(getattr(st, "playbooks", None), "ingest", None)
     bound_uuid = getattr(bound, "uuid", None)
     if not bound_uuid:
-        return None, None
+        return None, None, None
     clone = client.playbooks.get_definition(str(bound_uuid))
     for step in clone.get("steps") or []:
         s_args = step.get("arguments") or {}
         if s_args.get("collection") == UPSERT_COLLECTION:
+            bulk = bool((s_args.get("for_each") or {}).get("__bulk"))
             return str(bound_uuid), sorted(k for k in (s_args.get("resource") or {})
-                                           if not k.startswith("__"))
+                                           if not k.startswith("__")), bulk
     _fail(f"the bound ingest clone {bound_uuid} has no Create Record step")
 
 
@@ -324,7 +326,7 @@ def main(argv=None) -> int:
     # with the shipped definition and fail with the remedy, instead of
     # discovering null columns three phases later.
     shipped = _shipped_ingest_fields()
-    bound_uuid, clone_fields = _bound_clone_fields(client, conns, args.config)
+    bound_uuid, clone_fields, clone_bulk = _bound_clone_fields(client, conns, args.config)
     if clone_fields is None:
         print("   no ingestion setup bound yet -- [2] clones fresh from the"
               " version-pinned sample, which cannot drift")
@@ -343,8 +345,17 @@ def main(argv=None) -> int:
                   " wizard (client.connectors.remove_ingestion(NAME,"
                   " config=...) then data_ingest_wizard(...)) so the fresh"
                   f" clone carries the {version} field set.")
+        if clone_bulk:
+            _fail(f"the bound ingestion clone {bound_uuid} still bulk-inserts"
+                  " (__bulk on its Create Record loop): bulk inserts BYPASS"
+                  " on-create playbook triggers, so the Malicious Auto-Triage"
+                  " use case never fires. The clone predates the 1.1.9 ingest"
+                  " loop. Remedy: tear the configuration's ingestion setup"
+                  " down and re-run the wizard so the fresh clone carries the"
+                  " trigger-delivering loop.")
         print(f"   bound ingest clone {bound_uuid} carries all "
-              f"{len(shipped)} shipped field(s)")
+              f"{len(shipped)} shipped field(s), inserts fire triggers"
+              f" (no __bulk)")
 
     # ---------------------------------------------------------------- [2] wizard setup
     print("[2] data ingestion wizard setup (get-or-make)")

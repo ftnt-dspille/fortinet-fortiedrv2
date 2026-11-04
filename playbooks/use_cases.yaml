@@ -22,7 +22,7 @@
 #     refused, the run records the outcome as an alert comment and carries
 #     on -- a missing side tool degrades the chain, it never kills it.
 
-collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.8
+collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.11
 description: >-
   Operational use-case playbooks for the "Fortinet FortiEDR v2" connector:
   alert triage with collector isolation, evidence collection, time-limited
@@ -1345,7 +1345,6 @@ playbooks:
       message:
         content: "Containment Chain: no FortiEDR event found for sourceId {{ vars.event_id }} -- investigate manually; the console may have archived or pruned this event."
         record: '{{ vars.record_id }}'
-      next: End
 
     - name: Enrich
       type: set_variable
@@ -1510,31 +1509,24 @@ playbooks:
       message:
         content: "Containment Chain: isolated collector {{ vars.device }} for event {{ vars.event_id }} ({{ vars.process }}, {{ vars.severity }}). Reason: {{ vars.steps.Containment_Approval.input.decision_note }}"
         record: '{{ vars.record_id }}'
-      next: End
 
     - name: Isolation Failed Audit
       type: set_variable
       message:
         content: "Containment Chain: the isolation call for {{ vars.device }} did not return success (the collector may already be isolated or unreachable). Reason on file: {{ vars.steps.Containment_Approval.input.decision_note }}"
         record: '{{ vars.record_id }}'
-      next: End
 
     - name: Block Only Audit
       type: set_variable
       message:
         content: "Containment Chain: FortiGate block of {{ vars.steps.Extract_Targets.data.code_output.block_ip }} requested for event {{ vars.event_id }} (device outcome in the block comment above). Reason: {{ vars.steps.Containment_Approval.input.decision_note }}"
         record: '{{ vars.record_id }}'
-      next: End
 
     - name: Declined
       type: set_variable
       message:
         content: "Containment Chain: containment declined for event {{ vars.event_id }}. Reason: {{ vars.steps.Containment_Approval.input.decision_note }}"
         record: '{{ vars.record_id }}'
-      next: End
-
-    - name: End
-      type: end
 
   # ---------------------------------------------------------------------------
   # Containment child: the directory half of the chain.
@@ -1833,3 +1825,312 @@ playbooks:
         block_landed: false
         blocked_ip: '{{ vars.block_ip | default("", true) }}'
         block_ttl_used: '{{ vars.block_ttl | default("", true) }}'
+
+  # ---------------------------------------------------------------------------
+  # Malicious Auto-Triage: the classification column made actionable.
+  #
+  # Fires the moment the ingestion INSERTS an alert whose FortiEDR
+  # classification is Malicious (the stock sourceType column the Create
+  # Record writes; the trigger filter is evaluated platform-side, so the
+  # suspicious and inconclusive slices of a window start nothing). The
+  # playbook then re-reads the parent console incident through Get Incidents
+  # with BOTH enrichment checkboxes ticked -- linked events and process
+  # detail -- and decides on the fresh identity, not the static card:
+  # latestEvent is the full process row (path, owner, logged users,
+  # destinations, rules, threat, collector) as it stands now, which is what
+  # a gating decision should read on a detection that re-detects.
+  #
+  # Gate, in order:
+  #   1. the trigger filter -- sourceType is Malicious (event verdict);
+  #   2. the parent incident's own classification -- Malicious proceeds;
+  #      ProbablyMalicious exists only at the incident level and is
+  #      watchlisted with a comment, never auto-responded; anything else
+  #      ends on the same watchlist note;
+  #   3. the fresh event's rules against the two response families:
+  #      process injection (Injected Process, Injected Thread, Stack Pivot,
+  #      Dynamic Code) and credential access (Access to Critical System
+  #      Information -- the rule family hashdump-style tooling trips). A
+  #      Malicious incident with neither family still lands its triage card
+  #      and stops short of containment.
+  #
+  # The Containment Chain is reused whole with the record passed through:
+  # its own approval step stays the gate on any actual isolation or
+  # firewall block, so auto-triage never auto-contains without a human.
+  #
+  # No __bulk anywhere downstream matters here more than anywhere else:
+  # the ingestion's Create Record deliberately does NOT bulk its inserts
+  # (see the ingest playbook) because bulk inserts bypass on-create
+  # triggers -- this playbook is the reason that field is gone.
+  # ---------------------------------------------------------------------------
+
+  - name: 'FortiEDR v2 > Malicious Auto-Triage'
+    description: >-
+      Fires on an ingested FortiEDR alert classified Malicious, re-reads the
+      parent console incident with its linked events and newest process
+      detail attached, and posts the triage card on the alert. Confirmed
+      malware running process-injection or credential-access rules is
+      handed to the Containment Chain (whose approval still gates every
+      containment action); a ProbablyMalicious incident is watchlisted with
+      a comment and never auto-responds.
+    tags:
+    - fortinet-fortiedrv2
+    - usecase
+    - triage
+    - response
+    is_active: true
+    steps:
+    - name: Start
+      type: start_on_create
+      module: alerts
+      comment: |
+        Platform-side filter on the column the ingestion writes: only an
+        INSERT whose sourceType is Malicious starts a run. Re-detections
+        are upserts against the existing sourceId, not inserts, so a
+        long-running incident wakes this playbook once, on the alert's
+        creation -- the re-detection Digest is the scheduled view of what
+        happened since.
+      when:
+        logic: AND
+        filters:
+        - field: sourceType
+          op: eq
+          value: Malicious
+      next: Resolve Record
+
+    - name: Resolve Record
+      type: set_variable
+      comment: |
+        The trigger record: sourceId is the FortiEDR eventId the ingestion
+        keyed the alert on, and the IRI anchors every comment. A blank
+        sourceId (a hand-created or foreign alert) has no parent incident
+        to find -- stop at the audit step rather than call the console with
+        a blank identifier.
+      vars:
+        event_id: "{{ vars.input.records[0].sourceId | default('', true) }}"
+        record_id: "{{ vars.input.records[0]['@id'] }}"
+      next: Find Incident
+
+    - name: Find Incident
+      type: connector
+      connector: fortinet-fortiedrv2
+      operation: get_incidents
+      config: ''
+      when: "{{ vars.event_id }}"
+      comment: |
+        ONE listing call with both enrichment checkboxes ticked: every
+        unhandled incident of the last 30 days arrives with its linked
+        events (the rows the eventId match needs) and its newest event
+        re-read through the event API as latestEvent. The match happens in
+        plain Python next, so the console is asked exactly once. No
+        ignore_errors: a console this playbook cannot read is a failed run
+        in the run log, not a lying comment on the alert.
+      params:
+        time_filter: 'Last30days'
+        status_filter: 'Unhandled'
+        type_filter: 'SecurityEvents'
+        include_events: true
+        include_process_detail: true
+        events_page_size: 100
+      next: Match Table
+
+    - name: Match Table
+      type: set_variable
+      comment: |
+        One delimited row per incident, built in Jinja. The raw modeled rows
+        cannot cross into a snippet as JSON: they carry None fields, and
+        `null` is a forbidden token in snippet code (live-caught on 8.0.1
+        as Invalid code snippet: Uses of ['null'] is restricted). So this
+        step flattens to scalars only -- fields joined with ~, incidents
+        joined with ||ROW|| -- and the snippet next door parses the table.
+      vars:
+        match_rows: >-
+          {%- set out = [] -%}
+          {%- for inc in vars.steps.Find_Incident.data.incidents | default([], true) -%}
+          {%- set evs = [] -%}
+          {%- for ev in inc.events | default([], true) -%}
+          {%- set _ = evs.append(ev.id | default('', true) | string) -%}
+          {%- endfor -%}
+          {%- set latest = inc.latestEvent | default({}, true) -%}
+          {%- set cols = latest.collectors | default([], true) -%}
+          {%- set dev = '' -%}
+          {%- if cols -%}
+          {%- set dev = cols[0].device | default('', true) | string -%}
+          {%- endif -%}
+          {%- set th = latest.threatDetails | default({}, true) -%}
+          {%- set rls = [] -%}
+          {%- for r in latest.rules | default([], true) -%}
+          {%- set _ = rls.append(r | string) -%}
+          {%- endfor -%}
+          {%- set _ = out.append(([
+          inc.id | default('', true) | string,
+          inc.name | default('', true) | string,
+          inc.classification | default('', true) | string,
+          inc.eventsNum | default(0, true) | string,
+          ('1' if inc.eventsTruncated else '0'),
+          evs | join(','),
+          latest.eventId | default('', true) | string,
+          latest.process | default('', true) | string,
+          latest.processPath | default('', true) | string,
+          latest.processOwner | default('', true) | string,
+          dev,
+          th.threatName | default('', true) | string,
+          rls | join(',')]) | join('~')) -%}
+          {%- endfor -%}
+          {{ out | join('||ROW||') }}
+      next: Match Incident
+
+    - name: Match Incident
+      type: code_snippet
+      comment: |
+        Parses the flattened incident table and finds the incident absorbing
+        THIS event -- the console event id IS the eventId the alert's
+        sourceId carries. The newest-event fallback covers a truncated
+        linked-event page: a fresh detection is the incident's newest event
+        by construction. Reads the triage facts off the matched row: the
+        incident's own classification (ProbablyMalicious exists only here;
+        the console's incident surfaces answer enum-prefixed values --
+        ClassificationMalicious -- while the event API answers the bare
+        word the alert columns carry, so the row value is normalized to the
+        vocabulary the trigger filtered on), and latestEvent's rules
+        against the two response families. Sandbox-safe: string splits and
+        compares, no isinstance, no JSON.
+      code: |
+        event_id = {{ vars.event_id | tojson }}
+        rows_raw = {{ vars.match_rows | tojson }}
+        injection = ['Injected Process', 'Injected Thread', 'Stack Pivot', 'Dynamic Code']
+        credential = ['Access to Critical System Information']
+        matched = None
+        for row in rows_raw.split('||ROW||'):
+            if not row.strip():
+                continue
+            f = row.split('~')
+            if len(f) < 13:
+                continue
+            ev_ids = f[5].split(',') if f[5] else []
+            latest_id = f[6]
+            if str(event_id) in ev_ids or (latest_id and latest_id == str(event_id)):
+                matched = f
+                break
+        result = {'incident_id': '', 'incident_name': '', 'classification': '',
+                  'events_num': 0, 'truncated': False, 'injection_hits': [],
+                  'credential_hits': [], 'triage_html': ''}
+        if matched:
+            classification = matched[2]
+            if classification.startswith('Classification'):
+                classification = classification[len('Classification'):]
+            if not classification:
+                classification = 'unclassified'
+            rules = matched[12].split(',') if matched[12] else []
+            injection_hits = []
+            credential_hits = []
+            for r in rules:
+                if r in injection and r not in injection_hits:
+                    injection_hits.append(r)
+                if r in credential and r not in credential_hits:
+                    credential_hits.append(r)
+            events_num = int(matched[3] or 0)
+            truncated = matched[4] == '1'
+            pairs = [('Incident', matched[1] + ' (id ' + matched[0] + ')'),
+                     ('Incident classification', classification),
+                     ('Linked detections', str(events_num) + (' (event page truncated)' if truncated else '')),
+                     ('Process', matched[7]),
+                     ('Path', matched[8]),
+                     ('Owner', matched[9]),
+                     ('Collector device', matched[10]),
+                     ('Threat', matched[11]),
+                     ('Injection indicators', ', '.join(injection_hits) if injection_hits else 'none in the fresh rules'),
+                     ('Credential-access indicators', ', '.join(credential_hits) if credential_hits else 'none in the fresh rules')]
+            triage_html = '<table class="table" border="1" style="border-collapse:collapse;">'
+            for pair in pairs:
+                triage_html = triage_html + '<tr><th style="text-align:left;padding:4px 10px;white-space:nowrap;">' + pair[0] + '</th><td style="padding:4px 10px;">' + pair[1] + '</td></tr>'
+            triage_html = triage_html + '</table>'
+            result = {'incident_id': matched[0], 'incident_name': matched[1],
+                      'classification': classification, 'events_num': events_num,
+                      'truncated': truncated, 'injection_hits': injection_hits,
+                      'credential_hits': credential_hits, 'triage_html': triage_html}
+        print(result)
+      next: Incident Found
+
+    - name: Incident Found
+      type: decision
+      conditions:
+      - display: Found
+        when: "{{ (vars.steps.Match_Incident.data.code_output.incident_id | default('', true) | string) | length > 0 }}"
+        next: Classification Gate
+      - display: Missing Incident
+        default: true
+        next: Missing Incident Audit
+
+    - name: Missing Incident Audit
+      type: set_variable
+      message:
+        content: "Malicious Auto-Triage: no unhandled console incident carries event {{ vars.event_id }}{{ ' (its linked-event page was truncated -- raise Events Per Incident)' if vars.steps.Match_Incident.data.code_output.truncated else '' }}. The incident may be handled, archived or pruned; triage manually from the alert card."
+        record: '{{ vars.record_id }}'
+      next: End
+
+    - name: Classification Gate
+      type: decision
+      conditions:
+      - display: Malicious
+        when: "{{ vars.steps.Match_Incident.data.code_output.classification == 'Malicious' }}"
+        next: Triage Card
+      - display: Watchlist
+        default: true
+        next: Watchlist Audit
+
+    - name: Watchlist Audit
+      type: set_variable
+      message:
+        content: "Malicious Auto-Triage: event {{ vars.event_id }} is classified Malicious, but its parent incident {{ vars.steps.Match_Incident.data.code_output.incident_name }} (id {{ vars.steps.Match_Incident.data.code_output.incident_id }}) is classified {{ vars.steps.Match_Incident.data.code_output.classification }}. Policy: only Malicious incidents auto-respond -- watchlisted for manual triage."
+        record: '{{ vars.record_id }}'
+      next: End
+
+    - name: Triage Card
+      type: set_variable
+      comment: |
+        The triage card lands on the alert BEFORE the containment approval
+        is requested, so the analyst deciding reads the fresh identity --
+        incident rollup, process, owner, device, and which response family
+        the rules tripped -- on the record itself.
+      message:
+        content: '{{ vars.steps.Match_Incident.data.code_output.triage_html }}'
+        record: '{{ vars.record_id }}'
+      next: Response Gate
+
+    - name: Response Gate
+      type: decision
+      conditions:
+      - display: Injection TTP
+        when: "{{ (vars.steps.Match_Incident.data.code_output.injection_hits | default([], true)) | length > 0 }}"
+        next: Hand to Containment
+      - display: Credential-access TTP
+        when: "{{ (vars.steps.Match_Incident.data.code_output.credential_hits | default([], true)) | length > 0 }}"
+        next: Hand to Containment
+      - display: No Response TTP
+        default: true
+        next: No TTP Audit
+
+    - name: No TTP Audit
+      type: set_variable
+      message:
+        content: "Malicious Auto-Triage: incident {{ vars.steps.Match_Incident.data.code_output.incident_name }} (id {{ vars.steps.Match_Incident.data.code_output.incident_id }}) is Malicious, but its fresh rules carry neither process-injection nor credential-access indicators (triage card on this alert). Containment not attempted."
+        record: '{{ vars.record_id }}'
+      next: End
+
+    - name: Hand to Containment
+      type: workflow_reference
+      comment: |
+        The Containment Chain runs whole with this alert passed through as
+        its record: it re-reads the live event, looks the user up in the
+        directory, and puts ONE approval in front of the analyst before any
+        isolation or firewall block -- auto-triage never auto-contains.
+        apply_async: the triage run ends here and the chain lives on its
+        own; its approval task drives it to completion.
+      target: 'FortiEDR v2 > Containment Chain'
+      apply_async: true
+      pass_input_record: true
+      pass_parent_env: false
+      next: End
+
+    - name: End
+      type: end

@@ -6,7 +6,7 @@
 # Requires alongside this connector on the appliance:
 #   - fortinet-fortiedrv2 in its default config
 
-collection: Sample - Fortinet FortiEDR v2 - 1.1.8
+collection: Sample - Fortinet FortiEDR v2 - 1.1.11
 description: >-
   Sample playbooks for the "Fortinet FortiEDR v2" connector. If you are
   planning to use the sample playbooks in your environment, ensure that you
@@ -423,10 +423,15 @@ playbooks:
         builds it as sanitised rich text (inline styles only), and escaping it
         here would store visible `<table>` markup instead of rendering the
         card. This matches the FortiSIEM v2 ingestion playbook.
+      # No __bulk on this loop: bulk inserts bypass on-create playbook
+      # triggers, and the Malicious Auto-Triage use-case playbook is woken
+      # by exactly these inserts (its trigger filters sourceType=Malicious
+      # platform-side, so only the malicious slice of a window starts a
+      # run). The window is tens of events per pull, not the high-volume
+      # feed __bulk exists for; the Retro-Hunt keeps __bulk because a hunt
+      # re-annotating old alerts must not wake response playbooks.
       for_each:
         item: '{{ vars.incident_source_data }}'
-        __bulk: true
-        batch_size: 100
         condition: ''
       fields:
         name: "{{ vars.item.name | truncate(200) }}"

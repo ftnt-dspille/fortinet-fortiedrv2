@@ -1,5 +1,65 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.11
+
+**Live-caught on the first firing of the Auto-Triage trigger** (the
+trigger itself delivered perfectly: the sample-alert insert started the
+run through the platform's post_create trigger):
+
+- The code-snippet sandbox rejects the token `null`, and the modeled
+  incident rows carry None fields -- embedding them as JSON died with
+  "Invalid code snippet: Uses of ['null'] is restricted" before the
+  snippet ran a line. The matching now goes through a Jinja flatten step
+  that renders one delimited scalar row per incident (fields joined with
+  ~, incidents with ||ROW||), and the snippet parses that table with
+  string splits only -- no nested JSON crosses the sandbox, ever.
+- The console's incident surfaces answer enum-prefixed classification
+  values (ClassificationMalicious, ClassificationProbablyMalicious,
+  ClassificationInconclusive) while the event API answers the bare words
+  the alert columns carry (Malicious, Suspicious, Inconclusive). The
+  incident's verdict is normalized to the bare vocabulary before the
+  gate compares it, so the trigger filter (sourceType, bare) and the
+  incident gate (normalized) speak one language.
+
+**Same-name import does not refresh box content.** Two faces of one
+rule, both live-established: a same-version connector replace never
+refreshes the served form metadata (1.1.7), and re-importing a sample
+collection under the same version-suffixed name keeps the existing
+workflow records by name -- no duplicates, no step update. Any
+box-visible change to forms OR sample playbook code ships as a new
+version. The 1.1.9 and 1.1.10 builds were burned on the lab box before
+the second half was understood; their content ships as 1.1.11.
+
+**Malicious alerts answer for themselves.** New use-case playbook
+`FortiEDR v2 > Malicious Auto-Triage`: an automatic record trigger fires
+the moment the ingestion inserts an alert classified Malicious, re-reads
+the parent console incident through Get Incidents with both enrichment
+checkboxes ticked, and posts the triage card -- incident rollup,
+classification, process identity, owner, collector, and which response
+family the fresh rules tripped -- on the alert itself. Process-injection
+indicators (Injected Process, Injected Thread, Stack Pivot, Dynamic Code)
+or the credential-access analog (Access to Critical System Information,
+the rule family hashdump-style tooling trips) hand the alert to the
+Containment Chain whole, record passed through: the chain's approval step
+still gates every isolation and firewall block, so auto-triage never
+auto-contains without a human. A ProbablyMalicious incident -- a verdict
+that exists only at the incident level -- is watchlisted with a comment
+and never auto-responds; so is a Malicious incident whose fresh rules
+carry neither family.
+
+**The ingestion's inserts now wake record triggers.** The ingest Create
+Record loop shipped with `__bulk`, which bypasses on-create and on-update
+playbook triggers -- right for a high-volume feed, and this feed is tens
+of events per pull. Bulk is gone from the ingest loop (the Retro-Hunt
+keeps it: a hunt re-annotating old alerts must not wake response
+playbooks), so the trigger above actually fires. This also resumes every
+other on-create playbook the appliance already binds to alerts -- the
+standard system set (indicator extraction, ATT&CK linking, assignment
+dates) plus anything site-local -- which is normal platform behavior for
+a newly created alert, previously suppressed for FortiEDR ones. A bound
+ingestion clone created before this change still bulk-inserts -- tear
+that ingestion setup down and re-run the wizard after upgrading.
+
 ## 1.1.8
 
 **FortiEDR's own classification lands on the alerts grid.** Every alert
