@@ -407,9 +407,18 @@ def _gate_run_pk(gate):
 def _resume(client, gate, option_label, form):
     """Resume a paused run by choosing one of the gate's options.
 
-    The canonical body the FortiSOAR UI posts: the option's step_iri picks the
-    branch, `input` carries the form fields, `approved` rides an approval
-    gate, and the run advances asynchronously.
+    The body mirrors the working submission shape: the option's step_iri
+    picks the branch, `input` carries the form fields, and the run advances
+    asynchronously. `approved` is deliberately NOT sent. The resume handler
+    treats its mere presence as the approval path and skips the input merge,
+    so an approval gate that also collects fields records the decision but
+    loses every form value -- the downstream steps then render an empty
+    reason. Live-pinned A/B on 8.0.1: same gate, same option, the body with
+    `approved` (true or false) yields a gate result carrying `approved` and
+    no `input`, the body without it merges the input. Our playbooks branch
+    on the chosen option's step, not on the flag, and the result still
+    records userid/username/datetime, so nothing is lost by omitting it.
+    This matches pyfsr's manual_input.answer(), which never sends the field.
     """
     options = (gate.get("response_mapping") or {}).get("options") or []
     chosen = next((o for o in options if o.get("option") == option_label), None)
@@ -420,9 +429,7 @@ def _resume(client, gate, option_label, form):
                             manual_input_id=int(gate["id"]),
                             step_iri=chosen.get("step_iri"),
                             step_id=str(gate.get("step_id")),
-                            input=form or None,
-                            approved=bool(chosen.get("primary"))
-                            if gate.get("is_approval") else None)
+                            input=form or None)
 
 
 def _clear_stale_gates(client, title, option_label, note):

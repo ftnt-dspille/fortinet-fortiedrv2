@@ -63,6 +63,7 @@ from verify_use_cases import (          # noqa: E402  (house helpers, live-prove
     _isolation_target,
     _ops,
     _resolve_pb,
+    _resume,
     _route,
     _trigger_action,
     _unexpected_errors,
