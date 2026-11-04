@@ -1,5 +1,25 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.7
+
+**The Get Incidents checkboxes render as checkboxes.** The two enrichment
+options below shipped with form type `boolean`, which the operation dialog
+does not implement: every true/false parameter in the stock connector
+schema (Archived, Strict Mode, Full Data Requested) declares form type
+`checkbox`, and that is the widget the dialog draws a control for. Under
+`boolean` the two fields rendered as an unknown control (live-caught on
+8.0.1). Both now declare `checkbox` with the same `value: false` default
+the stock rows use, and render exactly like the checkbox fields beside
+them. Nothing on the wire changes: the checked state travels as a real
+boolean either way.
+
+**Why its own version.** The operation dialog reads the box's installed
+connector record, and a same-version replace does not refresh what it
+serves: reinstalling the fixed 1.1.6 over the installed 1.1.6 left the
+dialog on the old metadata even after the worker recycle. The fix
+therefore lands as 1.1.7, and with it the enrichment options below reach
+a first release (1.1.6 never shipped past the lab).
+
 ## 1.1.6
 
 **Get Incidents, enriched in one call.** Two optional checkboxes on Get

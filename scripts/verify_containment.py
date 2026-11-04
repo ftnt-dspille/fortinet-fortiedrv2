@@ -48,14 +48,13 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from verify_use_cases import (          # noqa: E402  (house helpers, live-proven)
+from verify_use_cases import (  # noqa: E402  (house helpers, live-proven)
     MARKER,
     _alert_by_source,
     _alert_rows,
     _await_gate,
     _clear_stale_gates,
     _comments,
-    _env_files,
     _errors,
     _fail,
     _fmt,

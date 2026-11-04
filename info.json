@@ -1,7 +1,7 @@
 {
   "name": "fortinet-fortiedrv2",
   "label": "Fortinet FortiEDR v2",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "FortiEDR protects endpoints pre and post infection, stopping data breaches in real-time and automatically orchestrating incident investigation and response. This connector covers events, forensics, collectors, exceptions, IP sets, console incidents and scheduled ingestion keyed on event activity (lastSeen).",
   "publisher": "Fortinet",
   "cs_approved": true,
@@ -6108,7 +6108,7 @@
         {
           "title": "Include Events",
           "name": "include_events",
-          "type": "boolean",
+          "type": "checkbox",
           "required": false,
           "editable": true,
           "visible": true,
@@ -6132,7 +6132,7 @@
         {
           "title": "Include Process Detail",
           "name": "include_process_detail",
-          "type": "boolean",
+          "type": "checkbox",
           "required": false,
           "editable": true,
           "visible": true,

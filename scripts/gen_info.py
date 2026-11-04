@@ -22,12 +22,17 @@ DEFAULT_STOCK = (Path.home() / 'PycharmProjects/Miscellaneous/fortisoar/corpus_b
                  'fortisoar-rpm-extracted/fortinet-fortiedr/fortinet-fortiedr/info.json')
 
 NAME = 'fortinet-fortiedrv2'
-VERSION = '1.1.6'
+VERSION = '1.1.7'
 
 
 def _param(title, name, ptype, required=False, value=None, options=None,
            description=None, placeholder=None, minimum=None, maximum=None,
            onchange=None):
+    # The operation dialog renders a fixed set of form widget types: text,
+    # select, multiselect, integer, datetime, checkbox (live-verified on
+    # 8.0.1). 'boolean' is not one of them -- the stock schema spells every
+    # true/false parameter 'checkbox' (Archived, Strict Mode, Full Data
+    # Requested), and a 'boolean' row renders as an unknown control.
     field = {
         'title': title,
         'name': name,
@@ -160,7 +165,7 @@ def _new_operations():
             _param('Offset', 'offset', 'integer', value=0),
             _param('Sorting', 'sorting', 'text', placeholder='{"lastSeen": true}',
                    description='JSON sorting, e.g. {"lastSeen": true}.'),
-            _param('Include Events', 'include_events', 'boolean', value=False,
+            _param('Include Events', 'include_events', 'checkbox', value=False,
                    description=('Check to attach each incident\'s linked events as '
                                 '`events` (modeled console rows, epoch twins '
                                 'included). An incident reporting more linked '
@@ -176,7 +181,7 @@ def _new_operations():
                                 'the enrichment checkboxes. Default 10; raise it '
                                 'for long-running incidents, or page through Get '
                                 'Incident Events for the full history.')),
-            _param('Include Process Detail', 'include_process_detail', 'boolean',
+            _param('Include Process Detail', 'include_process_detail', 'checkbox',
                    value=False,
                    description=('Check to also re-read each incident\'s newest '
                                 'linked event through the event API and attach it '

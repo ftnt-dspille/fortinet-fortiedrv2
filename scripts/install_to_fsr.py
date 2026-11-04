@@ -121,6 +121,13 @@ def main(argv=None) -> int:
                     help="KEY=VALUE file for the EDR_* credentials "
                          "(default: %(default)s; never committed)")
     ap.add_argument("--tarball", help="path to the .tgz (default: dist/<name>-<version>.tgz)")
+    ap.add_argument("--on-existing-version", choices=("bump_patch", "error", "allow"),
+                    default="bump_patch",
+                    help="what install_from_file does when the box already has this "
+                         "version (default: %(default)s -- pyfsr re-bundles with a "
+                         "bumped patch and installs that copy, leaving the box "
+                         "serving the original record; 'allow' installs over the "
+                         "same version; 'error' refuses)")
     ap.add_argument("--with-config", action="store_true",
                     help="create/refresh a configuration from the EDR_* environment")
     ap.add_argument("--config-name", default=CONFIG_NAME,
@@ -151,11 +158,20 @@ def main(argv=None) -> int:
           f"with $replace -> {client.base_url}")
     _t = time.time()
     try:
-        conns.install_from_file(str(tgz), replace=True, wait=True, timeout=_CLIENT_TIMEOUT)
+        res = conns.install_from_file(str(tgz), replace=True, wait=True,
+                                      timeout=_CLIENT_TIMEOUT,
+                                      on_existing_version=args.on_existing_version)
     except FortiSOARException as e:
         print(f"   FAILED after {time.time() - _t:.0f}s: {e.status_code} {e.message}")
         return 1
     conns.clear_cache()
+    bumped = res.get("bumped") if isinstance(res, dict) else None
+    if bumped:
+        print(f"   NOTE: version {version} was already installed; pyfsr re-bundled "
+              f"and installed {bumped} instead (ghost connector: the box keeps "
+              "serving the original record's metadata and forms). Bump the "
+              "info.json version so a release lands as its own version.")
+        version = bumped
     live_ver = conns.resolve_version(NAME)
     print(f"   installed: live version={live_ver} ({time.time() - _t:.0f}s)")
     if live_ver != version:

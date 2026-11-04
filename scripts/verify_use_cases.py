@@ -778,7 +778,7 @@ def phase_06_allow_event(client, ops, config, env, state):
         _fail("EDR_SACRIFICIAL_EVENT_ID is not set -- no approved carrier event")
     alert = _alert_by_source(client, sac)
     if alert is None:
-        _fail(f"the sacrificial event has no alert on the box (is it ingested?)")
+        _fail("the sacrificial event has no alert on the box (is it ingested?)")
     org = ops["get_event_by_id"](config, {"eventIds": int(sac)})[0].get("organization")
     existing = ops["get_event_exceptions"](config, {"eventId": int(sac),
                                                     "organization": org})
