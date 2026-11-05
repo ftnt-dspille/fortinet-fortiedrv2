@@ -22,7 +22,7 @@
 #     refused, the run records the outcome as an alert comment and carries
 #     on -- a missing side tool degrades the chain, it never kills it.
 
-collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.12
+collection: Sample - Fortinet FortiEDR v2 Use Cases - 1.1.13
 description: >-
   Operational use-case playbooks for the "Fortinet FortiEDR v2" connector:
   alert triage with collector isolation, evidence collection, time-limited
@@ -825,7 +825,7 @@ playbooks:
         lasts = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='lastSeen') | list | tojson }}
         devices = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='devices') | list | tojson }}
         classes = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='classification') | list | tojson }}
-        isolateds = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='isolated') | list | tojson }}
+        isolateds = {{ vars.steps.Get_Incidents.data.incidents | map(attribute='isolated') | map('int') | list | tojson }}
         total = len(counts)
         rows = []
         i = 0

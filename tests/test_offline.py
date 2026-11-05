@@ -512,6 +512,10 @@ def test_redetection_digest_ranks_long_runners_and_files_a_task():
     script = _uc_step('FortiEDR v2 > Re-detection Digest', 'Rank Incidents')['arguments']['params']['python_function']
     # integer-only crossing: booleans from tojson would be sandbox syntax errors
     assert "map(attribute='eventsNum')" in script
+    # the isolated flag is a boolean: tojson renders `true`/`false`, which the Code
+    # Snippet connector refuses ("Uses of ['false', 'False'] is restricted",
+    # live-caught on 8.0.0), so it must cross as 0/1.
+    assert "map(attribute='isolated') | map('int')" in script
     assert 'rows.sort(reverse=True)' in script
     task = _uc_step('FortiEDR v2 > Re-detection Digest', 'Digest Task')['arguments']['resource']
     # portability pin: task status/priority are picklist references the

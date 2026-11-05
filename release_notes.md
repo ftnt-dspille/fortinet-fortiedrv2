@@ -1,5 +1,16 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.13
+
+**Re-detection Digest runs on boxes whose Code Snippet connector restricts
+`false`.** The `Rank Incidents` step rendered each incident's `isolated`
+flag into the snippet with `tojson`, which emits the JSON word `false`; the
+Code Snippet connector refuses any snippet containing `false`/`False`
+("Uses of ['false', 'False'] is restricted"), so the digest failed at that
+step (live-caught on 8.0.1). The flag now crosses as 0/1 (`map('int')`),
+like every other value the snippet receives. No behaviour change on boxes
+that did not restrict the word.
+
 ## 1.1.12
 
 **The alert's sourcedata now carries the console's command timeline.** New
