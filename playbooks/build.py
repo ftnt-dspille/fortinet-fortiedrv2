@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Build playbooks.json from playbooks.yaml.
 
+The connector ships ONLY the basic ingestion chain. The operational use-case
+playbooks are a standalone deliverable (../fortinet-fortiedrv2-usecases/)
+with their own build, version and install path -- a connector upgrade never
+touches them and a playbook change never forces a connector release.
+
 Compiles the YAML with the fsrpb compiler. The Data Ingestion Wizard contract
 is expressed natively in the YAML dialect:
 
@@ -14,15 +19,9 @@ is expressed natively in the YAML dialect:
      the canonical ``route``/``resources``/``displayConditions``/...
      ``noRecordExecution``/``singleRecordExecution`` shape.
 
-The only post-compile work left is deterministic housekeeping: stamping every
+The only post-compile work left is deterministic housekeeping: stamping the
 sample collection's name with the version from ``info.json`` and pinning
 ``lastModifyDate`` so a rebuild is byte-identical.
-
-The output lists BOTH collections FortiSOAR installs with the connector: the
-ingestion chain (playbooks.yaml) and the operational use cases
-(use_cases.yaml). Both compile, then merge -- the use-cases collection
-carries no dataingestion/fetch/ingest/create tags, so the Data Ingestion
-Wizard never mistakes it for an ingestion candidate.
 
 Usage:  python playbooks/build.py [--fsrpb /path/to/fsrpb]
 """
@@ -37,7 +36,6 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 YAML_IN = HERE / "playbooks.yaml"
-USE_CASES_IN = HERE / "use_cases.yaml"
 JSON_OUT = HERE / "playbooks.json"
 
 CONNECTOR = "fortinet-fortiedrv2"
@@ -57,10 +55,7 @@ def _freeze_timestamps(doc):
     reproducible-builds convention.
     """
     epoch = os.environ.get("SOURCE_DATE_EPOCH")
-    stamp = int(epoch) if epoch and epoch.isdigit() else max(
-        YAML_IN.stat().st_mtime,
-        USE_CASES_IN.stat().st_mtime if USE_CASES_IN.exists() else 0,
-    )
+    stamp = int(epoch) if epoch and epoch.isdigit() else YAML_IN.stat().st_mtime
 
     def walk(node):
         if isinstance(node, dict):
@@ -191,57 +186,40 @@ def main():
     ap.add_argument("--fsrpb", default="fsrpb", help="path to the fsrpb executable")
     args = ap.parse_args()
 
-    sources = [YAML_IN]
-    if USE_CASES_IN.exists():
-        sources.append(USE_CASES_IN)
-    tmp_paths = [HERE / f".build_{i}.tmp.json" for i in range(len(sources))]
+    tmp_path = HERE / ".build.tmp.json"
 
-    def _compile(idx, lax=False):
-        cmd = [args.fsrpb, "compile", str(sources[idx]), "-o", str(tmp_paths[idx])]
+    def _compile(lax=False):
+        cmd = [args.fsrpb, "compile", str(YAML_IN), "-o", str(tmp_path)]
         if lax:
             cmd.insert(3, "--lax")
         return subprocess.run(cmd, capture_output=True, text=True)
 
-    doc = None
-    for idx, yaml_in in enumerate(sources):
-        proc = _compile(idx)
-        if proc.returncode != 0 and "unknown connector" in (proc.stdout + proc.stderr):
-            # The reference store has not been told about this connector yet, so
-            # every step referencing it fails validation. Fall back to --lax so the
-            # build still works, but say how to fix it properly - under --lax a
-            # genuinely misspelled operation slips through as a warning too.
-            sys.stderr.write(
-                f"warning: the fsrpb catalog does not know {CONNECTOR!r}; compiling "
-                f"{yaml_in.name} with --lax, which also demotes real typos to warnings.\n"
-                f"         fix: fsrpb provision {HERE.parent}\n",
-            )
-            proc = _compile(idx, lax=True)
-        if proc.returncode != 0:
-            sys.stderr.write(proc.stdout + proc.stderr)
-            return proc.returncode
-        # A successful compile can still carry warnings (severity=warning
-        # findings don't flip the exit code); the fsrpb CLI prints them on
-        # success -- don't swallow them here. Warnings are how the
-        # reference-catalog gaps surface (unknown jinja tests, decision
-        # conditions that don't render strict bools, message: blocks
-        # without an explicit record:) -- all three were live-caught the
-        # hard way on runs that compiled "clean".
-        if proc.stderr:
-            sys.stderr.write(proc.stderr)
-        part = json.loads(tmp_paths[idx].read_text())
-        if doc is None:
-            doc = part
-        else:
-            # Merge: the appliance imports one playbook.json listing every
-            # collection. The chain stays first (it is what the Data Ingestion
-            # Wizard scans), and the exported tag union covers both.
-            doc["data"].extend(part["data"])
-            for tag in part.get("exported_tags") or []:
-                if tag not in (doc.get("exported_tags") or []):
-                    doc.setdefault("exported_tags", []).append(tag)
-
-    for tmp in tmp_paths:
-        tmp.unlink(missing_ok=True)
+    proc = _compile()
+    if proc.returncode != 0 and "unknown connector" in (proc.stdout + proc.stderr):
+        # The reference store has not been told about this connector yet, so
+        # every step referencing it fails validation. Fall back to --lax so the
+        # build still works, but say how to fix it properly - under --lax a
+        # genuinely misspelled operation slips through as a warning too.
+        sys.stderr.write(
+            f"warning: the fsrpb catalog does not know {CONNECTOR!r}; compiling "
+            f"with --lax, which also demotes real typos to warnings.\n"
+            f"         fix: fsrpb provision {HERE.parent}\n",
+        )
+        proc = _compile(lax=True)
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stdout + proc.stderr)
+        return proc.returncode
+    # A successful compile can still carry warnings (severity=warning
+    # findings don't flip the exit code); the fsrpb CLI prints them on
+    # success -- don't swallow them here. Warnings are how the
+    # reference-catalog gaps surface (unknown jinja tests, decision
+    # conditions that don't render strict bools, message: blocks
+    # without an explicit record:) -- all three were live-caught the
+    # hard way on runs that compiled "clean".
+    if proc.stderr:
+        sys.stderr.write(proc.stderr)
+    doc = json.loads(tmp_path.read_text())
+    tmp_path.unlink(missing_ok=True)
 
     doc = _sync_collection_version(doc)
     doc = _freeze_timestamps(doc)

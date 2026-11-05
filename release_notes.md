@@ -1,5 +1,17 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.15
+
+**The use-case playbooks are no longer bundled with the connector.** The
+connector now ships only the basic ingestion chain (Init Macros / Fetch /
+Ingest) as its sample collection. The operational use cases -- Triage to
+Isolation, Collect Evidence, governed exceptions, Re-detection Digest, IOC
+Retro-Hunt, Fleet Compliance Audit, the Containment Chain and Malicious
+Auto-Triage -- are the standalone `fortinet-fortiedrv2-usecases`
+deliverable, with its own build, version and install path. A connector
+upgrade no longer deletes and reimports the use-case collection, and a
+playbook change no longer forces a connector release.
+
 ## 1.1.14
 
 **Collector lifecycle operations: Delete Collectors and Uninstall Collectors.**

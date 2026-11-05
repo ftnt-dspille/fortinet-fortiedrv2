@@ -150,11 +150,9 @@ resolve from `~/.pyfsr/instances.toml` and the `EDR_*` environment from
 
 ## Playbooks
 
-`playbooks/playbooks.yaml` (the ingestion chain) and
-`playbooks/use_cases.yaml` (operational use cases) are the source of truth;
+`playbooks/playbooks.yaml` -- the ingestion chain -- is the source of truth;
 rebuild the compiled JSON with `python3 playbooks/build.py` (requires the
-fsrpb compiler -- it compiles both and merges them into the single
-`playbooks.json` the appliance imports). Two collections ship:
+fsrpb compiler). One collection ships:
 
 - **The Data Ingestion Wizard chain** (Init Macros / Fetch / Ingest), which
   the wizard discovers by its `dataingestion`/`fetch`/`ingest`/`create`
@@ -165,19 +163,10 @@ fsrpb compiler -- it compiles both and merges them into the single
   reading part of a window (see Ingest Events in the release notes). The
   run-level safety cap (Maximum Events Per Run) defaults to 10 -- a
   lab-safe ceiling; raise it to fit real pull volume.
-- **The Use Cases collection** (`usecase` tags, never offered as an
-  ingestion configuration): Triage to Isolation (approval-gated collector
-  isolation with the event refreshed from the console and the outcome
-  commented on the alert), Collect Evidence (the event's own binary as an
-  appended appliance attachment), Allow Event / Exception Expiry Sweep
-  (governed exceptions with an expiry encoded in the rule's own comment
-  and a sweeper that deletes only the expired managed ones),
-  Re-detection Digest (incidents ranked by detections still being
-  absorbed), IOC Retro-Hunt (one hash in, one upserted alert per hit
-  event), and Fleet Compliance Audit (collector fleet vs the available
-  installers, with an approval-gated staging step).
 
-Scheduling note: the Sweep, Digest and Audit playbooks use the same plain
-trigger shape the wizard's scheduled fetchers do. Point a FortiSOAR
-scheduled task at them (Schedules > the playbook's Run) -- e.g. nightly for
-the digest and the sweep, weekly for the audit.
+The connector deliberately ships ONLY this chain. The operational use-case
+playbooks (Triage to Isolation, Collect Evidence, governed exceptions, the
+Containment Chain, ...) are the standalone
+`../fortinet-fortiedrv2-usecases/` deliverable with their own build,
+version and install path -- a connector upgrade never touches them and a
+playbook change never forces a connector release.
