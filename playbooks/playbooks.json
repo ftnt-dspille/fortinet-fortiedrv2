@@ -13,7 +13,7 @@
   "data": [
     {
       "@type": "WorkflowCollection",
-      "name": "Sample - Fortinet FortiEDR v2 - 1.1.13",
+      "name": "Sample - Fortinet FortiEDR v2 - 1.1.14",
       "description": "Sample playbooks for the \"Fortinet FortiEDR v2\" connector. If you are planning to use the sample playbooks in your environment, ensure that you clone those playbooks and move them to a different collection, since the sample playbook collection gets deleted during connector upgrade and delete.",
       "visible": true,
       "image": null,
@@ -951,7 +951,7 @@
     },
     {
       "@type": "WorkflowCollection",
-      "name": "Sample - Fortinet FortiEDR v2 Use Cases - 1.1.13",
+      "name": "Sample - Fortinet FortiEDR v2 Use Cases - 1.1.14",
       "description": "Operational use-case playbooks for the \"Fortinet FortiEDR v2\" connector: alert triage with collector isolation, evidence collection, time-limited exception governance, a re-detection digest over console incidents, a file-hash IOC retro-hunt, a fleet compliance audit, and an analyst-approved containment chain (directory lookup, FortiGate IP block, collector isolation). Clone before use, like every sample collection: the connector upgrade deletes and re-imports sample collections, so local edits are lost on upgrade.",
       "visible": true,
       "image": null,

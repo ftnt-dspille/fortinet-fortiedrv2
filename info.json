@@ -1,7 +1,7 @@
 {
   "name": "fortinet-fortiedrv2",
   "label": "Fortinet FortiEDR v2",
-  "version": "1.1.13",
+  "version": "1.1.14",
   "description": "FortiEDR protects endpoints pre and post infection, stopping data breaches in real-time and automatically orchestrating incident investigation and response. This connector covers events, forensics, collectors, exceptions, IP sets, console incidents and scheduled ingestion keyed on event activity (lastSeen).",
   "publisher": "Fortinet",
   "cs_approved": true,
@@ -5228,6 +5228,97 @@
           "tooltip": "Indicates whether to force the assignment, even if the organization of the target collector group is under migration.",
           "description": "(Optional) Indicates whether to force the assignment, even if the organization of the target collector group is under migration.",
           "name": "forceAssign"
+        }
+      ]
+    },
+    {
+      "operation": "delete_collectors",
+      "title": "Delete Collectors",
+      "description": "Deletes collector records from the Fortinet FortiEDR console inventory. Filter the deletion by device IDs, device names, or a last-seen cutoff; at least one filter is REQUIRED. The console's delete API requires the explicit deleteAll=true confirmation, which this operation always sends, and with no filter that confirmation deletes EVERY collector record in the organization, so an empty request is refused before it is ever sent. All parameters travel as query parameters; a JSON request body is ignored by the console. Deleting a record does not uninstall the agent: a collector that is still installed and running re-registers on its next heartbeat. To uninstall the agent itself, use Uninstall Collector.",
+      "category": "investigation",
+      "annotation": "delete_collectors",
+      "endpoint": "/management-rest/inventory/delete-collectors",
+      "http_method": "DELETE",
+      "handler_method": false,
+      "output_schema": {
+        "result": ""
+      },
+      "enabled": true,
+      "parameters": [
+        {
+          "title": "Device IDs",
+          "required": false,
+          "visible": true,
+          "editable": true,
+          "type": "text",
+          "value": "",
+          "name": "devicesIds",
+          "description": "(Optional) Comma-separated collector IDs whose records you want to delete from the console.",
+          "tooltip": "(Optional) Comma-separated collector IDs whose records you want to delete from the console.",
+          "placeholder": "e.g. 1406332,1406333"
+        },
+        {
+          "title": "Device Names",
+          "required": false,
+          "visible": true,
+          "editable": true,
+          "type": "text",
+          "value": "",
+          "name": "devices",
+          "description": "(Optional) Comma-separated collector device names whose records you want to delete from the console.",
+          "tooltip": "(Optional) Comma-separated collector device names whose records you want to delete from the console.",
+          "placeholder": "e.g. ubuntu,win10"
+        },
+        {
+          "title": "Last Seen End",
+          "required": false,
+          "visible": true,
+          "editable": true,
+          "type": "text",
+          "value": "",
+          "name": "lastSeenEnd",
+          "description": "(Optional) Deletes collector records whose last connection to the console is before this date and time.",
+          "tooltip": "Deletes collector records whose last connection to the console is before the value assigned to this date. Use with care: it sweeps every collector that has been quiet since then, not only one device."
+        }
+      ]
+    },
+    {
+      "operation": "uninstall_collectors",
+      "title": "Uninstall Collectors",
+      "description": "Uninstalls the FortiEDR collector agent from devices and removes their records, addressed by device IDs or device names. Unlike Delete Collectors, this reaches the endpoint and removes the agent: a collector removed this way does not re-register, and the agent only comes back through a fresh install of the installer package. At least one of Device IDs or Device Names is required; an empty request is refused. To only remove a console record, for example a stale entry for a decommissioned machine, use Delete Collectors instead.",
+      "category": "investigation",
+      "annotation": "uninstall_collectors",
+      "endpoint": "/management-rest/inventory/uninstall-collectors",
+      "http_method": "POST",
+      "handler_method": false,
+      "output_schema": {
+        "result": ""
+      },
+      "enabled": true,
+      "parameters": [
+        {
+          "title": "Device IDs",
+          "required": false,
+          "visible": true,
+          "editable": true,
+          "type": "text",
+          "value": "",
+          "name": "devicesIds",
+          "description": "(Optional) Comma-separated collector IDs whose agents you want to uninstall from their devices.",
+          "tooltip": "(Optional) Comma-separated collector IDs whose agents you want to uninstall from their devices.",
+          "placeholder": "e.g. 1406332,1406333"
+        },
+        {
+          "title": "Device Names",
+          "required": false,
+          "visible": true,
+          "editable": true,
+          "type": "text",
+          "value": "",
+          "name": "devices",
+          "description": "(Optional) Comma-separated collector device names whose agents you want to uninstall from their devices.",
+          "tooltip": "(Optional) Comma-separated collector device names whose agents you want to uninstall from their devices.",
+          "placeholder": "e.g. ubuntu,win10"
         }
       ]
     },

@@ -1,5 +1,34 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.14
+
+**Collector lifecycle operations: Delete Collectors and Uninstall Collectors.**
+The connector could isolate, release and move collectors but could not remove
+a collector record, so console housekeeping (a stale entry for a decommissioned
+machine, or a duplicate device name breaking name-addressed isolation) meant
+hand-rolled REST calls. Two operations close that gap, with the contract the
+console actually speaks:
+
+- `delete_collectors` (DELETE `/management-rest/inventory/delete-collectors`):
+  deletes collector RECORDS, filtered by `devicesIds`, `devices` or
+  `lastSeenEnd`. The record row only: a collector that is still installed and
+  running re-registers on its next heartbeat, which is exactly the recovery
+  path if a delete goes further than intended.
+- `uninstall_collectors` (POST `/management-rest/inventory/uninstall-collectors`):
+  uninstalls the agent from the device and removes the record. A collector
+  removed this way does not re-register; bringing it back needs a fresh install.
+
+Both operations refuse an empty request. The console requires the explicit
+`deleteAll=true` confirmation on delete-collectors, and with no filter that
+confirmation deletes EVERY collector record in the organization -- and every
+parameter of these endpoints is a query parameter, because the console binds a
+Spring DTO (`devicesIds` / `devices` / `lastSeenEnd`) from the URL and silently
+ignores a JSON request body (a body carrying an unrecognised key answers HTTP
+200 on delete-collectors and sweeps the inventory; live-established on a
+6.2.0.1350 console). The operations send `deleteAll=true` themselves, take
+their filters as explicit parameters, and raise a ConnectorError instead of
+sending a request that would match everything.
+
 ## 1.1.13
 
 **Re-detection Digest runs on boxes whose Code Snippet connector restricts

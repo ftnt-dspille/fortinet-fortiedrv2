@@ -477,6 +477,98 @@ def move_collectors(config, params):
     return response.json() if response.text else {'result': 'Successfully moved collectors'}
 
 
+def _split_entries(value):
+    """A filter value as its real, non-blank entries.
+
+    The console binds these filters as comma-separated query parameters, and a
+    BLANK list must never be sent: ``''``, ``','``, ``' , '``, ``[]`` and
+    ``[None, '']`` all mean "no ids given" and must not count as a filter.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [e.strip() for e in value.split(',') if e.strip()]
+    if isinstance(value, (list, tuple, set)):
+        return [str(e).strip() for e in value if str(e or '').strip()]
+    return [str(value).strip()]
+
+
+def _collector_lifecycle_filters(payload, keys, what):
+    """The device filters an inventory lifecycle call will actually send.
+
+    Every parameter of these endpoints is a QUERY parameter: the console's
+    Spring DTO binds ``devicesIds`` / ``devices`` / ``lastSeenEnd`` from the
+    URL and silently ignores a JSON request body entirely (a body with an
+    unrecognised key answers 200 on delete-collectors and deletes EVERYTHING
+    -- live-established). So the filters must survive into the query string,
+    cleaned of blank entries, and a call whose lists carry no real entry at
+    all must never be sent: with ``deleteAll=true`` and no filter the console
+    deletes every collector record in the organization.
+    """
+    filters = {}
+    for k in keys:
+        entries = _split_entries(payload.get(k))
+        if entries:
+            filters[k] = ','.join(entries)
+    if not filters:
+        raise ConnectorError(
+            '{0} refused: no device filter was given. At least one of {1} must '
+            'carry a real entry (a blank or empty list does not count), because '
+            'the console requires the explicit deleteAll=true confirmation and '
+            'with no filter that deletes every collector record in the '
+            'organization.'.format(what, ', '.join(keys)))
+    return filters
+
+
+def delete_collectors(config, params):
+    """Delete collector records from the console inventory.
+
+    DELETE /inventory/delete-collectors?deleteAll=true with the targets as
+    query parameters: ``devicesIds`` (collector IDs), ``devices`` (names) or
+    ``lastSeenEnd`` (collectors whose last console connection is before this
+    date). The console requires the explicit ``deleteAll=true`` confirmation,
+    which this operation always sends -- and which means what it says: with
+    no filter it deletes EVERY collector record in the organization, so an
+    empty request is refused here before it is ever sent.
+
+    Deleting a RECORD does not touch the agent: a collector that is still
+    installed and running re-registers on its next heartbeat. To uninstall
+    the agent itself, use ``uninstall_collectors``.
+    """
+    client = FortiEDRClient(config)
+    params = dict(params)
+    query = client.build_payload(params, 'delete_collectors')
+    filters = _collector_lifecycle_filters(query, ('devicesIds', 'devices', 'lastSeenEnd'),
+                                           'Delete Collectors')
+    filters['deleteAll'] = 'true'
+    headers, _ = client.build_headers('delete_collectors')
+    response = client.make_rest_api_call('Delete Collectors', 'DELETE',
+                                         MGMT_PREFIX + '/inventory/delete-collectors',
+                                         headers, payload=filters)
+    return response.json() if response.text else {'result': 'Collector records deleted'}
+
+
+def uninstall_collectors(config, params):
+    """Uninstall the collector agent from devices and remove their records.
+
+    POST /inventory/uninstall-collectors with ``devicesIds`` / ``devices``
+    query parameters. Unlike ``delete_collectors`` this reaches the endpoint
+    and removes the agent: a collector removed this way does not re-register,
+    and brings the agent back only through a fresh install. At least one
+    device filter is required; an empty request is refused here.
+    """
+    client = FortiEDRClient(config)
+    params = dict(params)
+    query = client.build_payload(params, 'uninstall_collectors')
+    filters = _collector_lifecycle_filters(query, ('devicesIds', 'devices'),
+                                           'Uninstall Collectors')
+    headers, _ = client.build_headers('uninstall_collectors')
+    response = client.make_rest_api_call('Uninstall Collectors', 'POST',
+                                         MGMT_PREFIX + '/inventory/uninstall-collectors',
+                                         headers, payload=filters)
+    return response.json() if response.text else {'result': 'Uninstall requested'}
+
+
 def search_ioc(config, params):
     client = FortiEDRClient(config)
     params = dict(params)
@@ -982,6 +1074,8 @@ OPERATIONS = {
     'isolate_collector': isolate_collector,
     'unisolate_collector': unisolate_collector,
     'move_collectors': move_collectors,
+    'delete_collectors': delete_collectors,
+    'uninstall_collectors': uninstall_collectors,
     'search_ioc': search_ioc,
     'get_file': get_file,
     'get_event_file': get_event_file,

@@ -1811,3 +1811,64 @@ def test_placeholder_threat_names_do_not_title_the_alert_or_fill_the_card():
     # rules ride the chip row once; the key facts are tiles, not table rows
     assert card.count('Suspicious Application') == 1
     assert '>Destination</span>' in card and '>Device IP</span>' in card
+
+
+# --------------------------------------------------------------------------- collector lifecycle
+
+
+def test_delete_collectors_sends_its_filters_and_the_deleteall_confirmation(edr):
+    """Everything travels as QUERY parameters: the console binds its Spring DTO
+    (devicesIds / devices / lastSeenEnd) from the URL and silently ignores a
+    JSON request body, and deleteAll=true is the required explicit
+    confirmation. With no filter, deleteAll=true deletes every collector
+    record in the organization, so an empty request must never be sent
+    (live-established on a 6.2.0.1350 console)."""
+    edr.delete(MGMT + '/inventory/delete-collectors')
+    assert run('delete_collectors', {'devicesIds': '1406332'}) == \
+        {'result': 'Collector records deleted'}
+    call = calls('DELETE', 'delete-collectors')[0]
+    q = query(call)
+    assert q['deleteAll'] == ['true']
+    assert q['devicesIds'] == ['1406332']
+    assert body(call) is None
+
+
+def test_delete_collectors_accepts_names_and_a_last_seen_cutoff(edr):
+    edr.delete(MGMT + '/inventory/delete-collectors')
+    run('delete_collectors', {'devices': 'ubuntu, win10',
+                              'lastSeenEnd': '2026-06-27 00:00:00'})
+    q = query(calls('DELETE', 'delete-collectors')[0])
+    assert q['devices'] == ['ubuntu,win10']
+    assert q['lastSeenEnd'] == ['2026-06-27 00:00:00']
+    assert q['deleteAll'] == ['true']
+
+
+def test_delete_collectors_keeps_the_real_entries_of_a_list(edr):
+    """A list that carries real ids is honored even with blanks mixed in (the
+    blanks are stripped, the ids survive); an int id is accepted as one."""
+    edr.delete(MGMT + '/inventory/delete-collectors')
+    run('delete_collectors', {'devicesIds': [1406332, '']})
+    assert query(calls('DELETE', 'delete-collectors')[0])['devicesIds'] == ['1406332']
+
+
+def test_delete_collectors_refuses_an_empty_filter():
+    for blank in ({}, {'devicesIds': ''}, {'devicesIds': []}, {'devicesIds': ','},
+                  {'devicesIds': ' , '}, {'devices': [None, '']},
+                  {'devicesIds': '', 'devices': '', 'lastSeenEnd': ''}):
+        with pytest.raises(ConnectorError, match='every collector record'):
+            run('delete_collectors', dict(blank))
+
+
+def test_uninstall_collectors_posts_its_filters(edr):
+    edr.post(MGMT + '/inventory/uninstall-collectors')
+    assert run('uninstall_collectors', {'devicesIds': '1406332'}) == \
+        {'result': 'Uninstall requested'}
+    call = calls('POST', 'uninstall-collectors')[0]
+    assert query(call)['devicesIds'] == ['1406332']
+    assert body(call) is None
+
+
+def test_uninstall_collectors_refuses_an_empty_filter():
+    for blank in ({}, {'devices': []}, {'devicesIds': ','}):
+        with pytest.raises(ConnectorError, match='Uninstall Collectors refused'):
+            run('uninstall_collectors', dict(blank))
