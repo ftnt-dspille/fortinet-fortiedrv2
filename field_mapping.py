@@ -197,6 +197,37 @@ def _rows(pairs, mono=()):
     return out
 
 
+def _is_placeholder(value) -> bool:
+    return str(value or '').strip().lower() in _PLACEHOLDER_THREATS or not str(value or '').strip()
+
+
+
+
+def _tiles(pairs):
+    """A single-row strip of label-over-value tiles; empty values dropped."""
+    cells = []
+    for label, value, mono in pairs:
+        if value in (None, ''):
+            continue
+        cells.append(
+            '<td style="padding:8px 12px;border:1px solid rgba(128,128,128,.22);'
+            'border-radius:6px;background:rgba(128,128,128,.07);vertical-align:top">'
+            '<span style="display:block;font-size:10px;font-weight:700;letter-spacing:.7px;'
+            'text-transform:uppercase;{m}">{l}</span>'
+            '<span style="display:block;margin-top:3px;font-size:13px;font-weight:600;{f};'
+            'word-break:break-word">{v}</span></td>'.format(
+                m=_MUTED, l=_esc(label), f=_MONO if mono else '', v=_esc(value)))
+    if not cells:
+        return ''
+    return ('<table style="width:100%;max-width:760px;border-collapse:separate;'
+            'border-spacing:6px 0;margin:0 0 10px -6px;border:0"><tr>{0}</tr></table>'
+            .format(''.join(cells)))
+
+
+
+
+
+
 def build_description(event: Event, alert: Dict[str, Any]) -> str:
     """Build the rich-text alert description from one FortiEDR event.
 
@@ -222,6 +253,9 @@ def build_description(event: Event, alert: Dict[str, Any]) -> str:
                            _CLASSIFICATION_COLOR.get(str(event.classification).lower(), '#8b8d98')))
     if event.action:
         chips.append(_chip(event.action, _ACTION_COLOR.get(str(event.action).lower(), '#8b8d98')))
+    for rule in event.rules:
+        if rule not in (None, ''):
+            chips.append(_chip(rule, '#7c5cff'))
     if event.handled:
         chips.append(_chip('Handled', '#30a46c'))
     if event.muted:
@@ -229,32 +263,41 @@ def build_description(event: Event, alert: Dict[str, Any]) -> str:
     if chips:
         parts.append('<p style="margin:0 0 10px 0">{0}</p>'.format(''.join(chips)))
 
+    duration = ''
+    if event.firstSeen and event.lastSeen and event.firstSeen != event.lastSeen:
+        duration = '{0} to {1}'.format(event.firstSeen, event.lastSeen)
+    elif event.firstSeen:
+        duration = str(event.firstSeen)
+    parts.append(_tiles([
+        ('Device', device, False),
+        ('Device IP', alert.get('source_ip'), True),
+        ('Destination', alert.get('dest_ips'), True),
+        ('Process', alert.get('process_name'), False),
+        ('Seen', duration, True),
+    ]))
+    if alert.get('process_path'):
+        parts.append('<p style="margin:0 0 10px 0;padding:6px 10px;border-radius:4px;'
+                     'background:rgba(128,128,128,.12);{0};word-break:break-all">{1}</p>'
+                     .format(_MONO, _esc(alert.get('process_path'))))
+
     overview = _rows([
         ('Event ID', alert.get('external_id')),
         ('Organization', event.organization),
-        ('Device', alert.get('source_hostname')),
-        ('Device IP', alert.get('source_ip')),
         ('Logged users', alert.get('user_names')),
         ('Process owner', alert.get('process_owner')),
         ('Process type', alert.get('process_type')),
         ('Analyst comment', alert.get('analyst_comment')),
-        ('Action', event.action),
-        ('Rules', alert.get('rule')),
-        ('Destinations', alert.get('dest_ips')),
-        ('Process', alert.get('process_name')),
-        ('Process path', alert.get('process_path')),
-        ('First seen', event.firstSeen),
-        ('Last seen', event.lastSeen),
-    ], mono=('Event ID', 'Device IP', 'Rules', 'Process path', 'First seen', 'Last seen'))
+    ], mono=('Event ID',))
     if overview:
         parts.append(_table(overview))
 
     threat = event.threatDetails
-    if threat and (threat.threatName or threat.threatFamily or threat.threatType):
+    if threat and not all(_is_placeholder(v) for v in (
+            threat.threatName, threat.threatFamily, threat.threatType)):
         rows = _rows([
-            ('Threat name', threat.threatName),
-            ('Threat family', threat.threatFamily),
-            ('Threat type', threat.threatType),
+            ('Threat name', None if _is_placeholder(threat.threatName) else threat.threatName),
+            ('Threat family', None if _is_placeholder(threat.threatFamily) else threat.threatFamily),
+            ('Threat type', None if _is_placeholder(threat.threatType) else threat.threatType),
         ])
         parts.append(_heading('Threat details'))
         parts.append(_table(rows))
@@ -277,6 +320,8 @@ def map_event_to_alert(event: Event) -> Dict[str, Any]:
     payload = event.model_dump()
     threat = event.threatDetails
     threat_name = (threat.threatName or '') if threat else ''
+    if _is_placeholder(threat_name):
+        threat_name = ''   # the console's "Unknown" is no name: never title an alert with it
     first_rule = str(event.rules[0]) if event.rules else ''
     # The name is what the grid shows: what ran, matched by what, on which
     # device. The eventId stays in sourceId and on the card.

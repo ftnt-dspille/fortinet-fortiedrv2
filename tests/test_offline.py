@@ -1386,7 +1386,8 @@ def test_the_description_is_the_house_rich_text_card():
     assert '>SimulationBlock</span>' in card                     # action
     assert '<table style="width:100%;max-width:760px;' in card
     assert '>Event ID</td>' in card and '>1493703</td>' in card
-    assert '>Last seen</td>' in card and '2026-10-29 13:32:58' in card
+    assert '>Seen</span>' in card and '2026-10-29 13:32:58' in card   # tile, not a repeated row
+    assert '>Last seen</td>' not in card and '>Action</td>' not in card
     # the tooltip line about the preserved raw payload closes the card
     assert card.endswith('</i></p>')
     # ascii-only: FortiSOAR rich text and the repo's latin-1 gate both hold
@@ -1793,3 +1794,20 @@ def test_scripts_carry_no_box_name_or_address():
         text = path.read_text()
         for pattern in forbidden:
             assert re.search(pattern, text) is None, (path.name, pattern)
+
+
+def test_placeholder_threat_names_do_not_title_the_alert_or_fill_the_card():
+    """The console's "Unknown" threat is no signal: the live alert was titled
+    'bash - Unknown on ubuntu' and the card listed three Unknown rows."""
+    row = dict(fixture('events_full_page')[0])
+    row['threatDetails'] = {'threatName': 'Unknown', 'threatFamily': 'Unknown',
+                            'threatType': 'Unknown'}
+    row['rules'] = ['Suspicious Application']
+    alert = map_event_to_alert(Event(**row))
+    assert 'Unknown' not in alert['name'].split(' on ')[0]
+    assert alert['threat_name'] == ''
+    card = alert['card']['description']
+    assert 'Threat details' not in card and '>Threat name</td>' not in card
+    # rules ride the chip row once; the key facts are tiles, not table rows
+    assert card.count('Suspicious Application') == 1
+    assert '>Destination</span>' in card and '>Device IP</span>' in card
