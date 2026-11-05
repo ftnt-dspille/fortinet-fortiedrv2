@@ -12,7 +12,7 @@ records every operation name in a session registry; the final test in
 test_live_ops.py asserts that registry covers every operation the connector
 ships.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -22,11 +22,11 @@ SEVERITIES = ('Critical', 'High', 'Medium', 'Low', 'Minimal')
 
 
 def _now():
-    return datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def _ago(**kwargs):
-    return (datetime.now(timezone.utc) - timedelta(**kwargs)).strftime('%Y-%m-%d %H:%M:%S')
+    return (datetime.now(UTC) - timedelta(**kwargs)).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def test_health(connector, live_config):

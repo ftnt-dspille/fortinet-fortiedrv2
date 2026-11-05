@@ -34,7 +34,7 @@ missing target skips the tests that need it rather than guessing.
 """
 import json
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from connectors.core.connector import ConnectorError
@@ -46,11 +46,11 @@ IPSET = 'zfortiedrv2-selftest'        # created and deleted again by its test
 
 
 def _now():
-    return datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def _ago(**kwargs):
-    return (datetime.now(timezone.utc) - timedelta(**kwargs)).strftime('%Y-%m-%d %H:%M:%S')
+    return (datetime.now(UTC) - timedelta(**kwargs)).strftime('%Y-%m-%d %H:%M:%S')
 
 
 @pytest.fixture()

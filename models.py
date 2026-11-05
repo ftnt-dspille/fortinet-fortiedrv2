@@ -22,8 +22,8 @@ Every model that carries one of those shapes also carries the matching
 field mapping can feed ``/api/3/upsert/alerts`` date fields without re-parsing.
 """
 
-from datetime import datetime, timezone
-from typing import Annotated, Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Annotated, Any, Dict, List
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, model_validator
 
@@ -50,7 +50,7 @@ def _parse_epoch(value, formats):
         return v // 1000 if v > 10 ** 12 else v
     for fmt in formats:
         try:
-            return int(datetime.strptime(text, fmt).replace(tzinfo=timezone.utc).timestamp())
+            return int(datetime.strptime(text, fmt).replace(tzinfo=UTC).timestamp())
         except ValueError:
             continue
     return None
@@ -91,19 +91,19 @@ class EDRModel(BaseModel):
 class CollectorRef(EDRModel):
     """One entry of an event's ``collectors`` array (management-rest events)."""
 
-    id: Optional[Any] = None
+    id: Any | None = None
     device: str = ''
     ip: str = ''
-    collectorGroup: Optional[str] = None
-    operatingSystem: Optional[str] = None
-    lastSeen: Optional[str] = None
+    collectorGroup: str | None = None
+    operatingSystem: str | None = None
+    lastSeen: str | None = None
     macAddresses: TolerantList = []
 
 
 class ThreatDetails(EDRModel):
-    threatName: Optional[str] = None
-    threatFamily: Optional[str] = None
-    threatType: Optional[str] = None
+    threatName: str | None = None
+    threatFamily: str | None = None
+    threatType: str | None = None
 
 
 # Event.collectors keeps its element typing (field_mapping calls
@@ -114,29 +114,29 @@ TolerantCollectorList = Annotated[List[CollectorRef], BeforeValidator(_none_to_l
 class Event(EDRModel):
     """A FortiEDR security event (management-rest ``/events/list-events`` row)."""
 
-    eventId: Optional[int] = None
-    firstSeen: Optional[str] = None
-    lastSeen: Optional[str] = None
+    eventId: int | None = None
+    firstSeen: str | None = None
+    lastSeen: str | None = None
     severity: str = ''
     classification: str = ''
-    action: Optional[str] = None
-    organization: Optional[str] = None
+    action: str | None = None
+    organization: str | None = None
     process: str = ''
-    processPath: Optional[str] = None
-    processOwner: Optional[str] = None
-    processType: Optional[str] = None
+    processPath: str | None = None
+    processOwner: str | None = None
+    processType: str | None = None
     rules: TolerantList = []
     destinations: TolerantList = []
     loggedUsers: TolerantList = []
     collectors: TolerantCollectorList = []
-    threatDetails: Optional[ThreatDetails] = None
-    archived: Optional[bool] = None
-    handled: Optional[bool] = None
-    seen: Optional[bool] = None
-    muted: Optional[bool] = None
-    comment: Optional[str] = None
-    firstSeenEpoch: Optional[int] = None
-    lastSeenEpoch: Optional[int] = None
+    threatDetails: ThreatDetails | None = None
+    archived: bool | None = None
+    handled: bool | None = None
+    seen: bool | None = None
+    muted: bool | None = None
+    comment: str | None = None
+    firstSeenEpoch: int | None = None
+    lastSeenEpoch: int | None = None
 
     @model_validator(mode='after')
     def _epochs(self):
@@ -146,28 +146,28 @@ class Event(EDRModel):
 
 
 class RawDataItem(EDRModel):
-    rawEventId: Optional[int] = None
-    device: Optional[str] = None
-    collectorGroup: Optional[str] = None
-    organizationId: Optional[Any] = None
-    eventTime: Optional[str] = None
+    rawEventId: int | None = None
+    device: str | None = None
+    collectorGroup: str | None = None
+    organizationId: Any | None = None
+    eventTime: str | None = None
 
 
 class Organization(EDRModel):
-    id: Optional[Any] = None
-    name: Optional[str] = None
-    type: Optional[str] = None
-    maxAgents: Optional[Any] = None
+    id: Any | None = None
+    name: str | None = None
+    type: str | None = None
+    maxAgents: Any | None = None
 
 
 class Collector(EDRModel):
-    name: Optional[str] = None
-    ipAddress: Optional[str] = None
-    ip: Optional[str] = None
-    operatingSystem: Optional[str] = None
-    state: Optional[str] = None
-    version: Optional[str] = None
-    id: Optional[Any] = None
+    name: str | None = None
+    ipAddress: str | None = None
+    ip: str | None = None
+    operatingSystem: str | None = None
+    state: str | None = None
+    version: str | None = None
+    id: Any | None = None
 
 
 class IPSet(EDRModel):
@@ -177,9 +177,9 @@ class IPSet(EDRModel):
 
 
 class AgentGroup(EDRModel):
-    name: Optional[str] = None
-    builtIn: Optional[bool] = None
-    defaultGroup: Optional[bool] = None
+    name: str | None = None
+    builtIn: bool | None = None
+    defaultGroup: bool | None = None
 
 
 class ConsoleIncident(EDRModel):
@@ -191,23 +191,23 @@ class ConsoleIncident(EDRModel):
     either.
     """
 
-    id: Optional[int] = None
-    name: Optional[str] = None
-    type: Optional[str] = None
-    eventsNum: Optional[int] = None
-    classification: Optional[str] = None
-    classificationValue: Optional[str] = None
-    organization: Optional[Any] = None
+    id: int | None = None
+    name: str | None = None
+    type: str | None = None
+    eventsNum: int | None = None
+    classification: str | None = None
+    classificationValue: str | None = None
+    organization: Any | None = None
     devices: TolerantList = []
     tags: TolerantList = []
-    action: Optional[Any] = None
-    hostState: Optional[Any] = None
-    isolated: Optional[bool] = None
-    incidentHandlingState: Optional[Any] = None
-    firstSeen: Optional[str] = None
-    lastSeen: Optional[str] = None
-    firstSeenEpoch: Optional[int] = None
-    lastSeenEpoch: Optional[int] = None
+    action: Any | None = None
+    hostState: Any | None = None
+    isolated: bool | None = None
+    incidentHandlingState: Any | None = None
+    firstSeen: str | None = None
+    lastSeen: str | None = None
+    firstSeenEpoch: int | None = None
+    lastSeenEpoch: int | None = None
 
     @model_validator(mode='after')
     def _epochs(self):
@@ -219,18 +219,18 @@ class ConsoleIncident(EDRModel):
 class ConsoleIncidentEvent(EDRModel):
     """One event row under a console incident (``GET /api/incidents/{id}/events``)."""
 
-    id: Optional[int] = None
-    device: Optional[str] = None
-    deviceId: Optional[Any] = None
-    process: Optional[str] = None
-    processPath: Optional[str] = None
-    classification: Optional[str] = None
-    severity: Optional[str] = None
-    firstSeen: Optional[str] = None
-    lastSeen: Optional[str] = None
-    eventCount: Optional[Any] = None
-    firstSeenEpoch: Optional[int] = None
-    lastSeenEpoch: Optional[int] = None
+    id: int | None = None
+    device: str | None = None
+    deviceId: Any | None = None
+    process: str | None = None
+    processPath: str | None = None
+    classification: str | None = None
+    severity: str | None = None
+    firstSeen: str | None = None
+    lastSeen: str | None = None
+    eventCount: Any | None = None
+    firstSeenEpoch: int | None = None
+    lastSeenEpoch: int | None = None
 
     @model_validator(mode='after')
     def _epochs(self):

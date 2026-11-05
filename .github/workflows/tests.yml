@@ -1,8 +1,7 @@
 name: tests
 
-# The connector runtime is the FortiSOAR appliance: Python 3.9 on 7.6.x is the
-# floor, 3.12 stands in for the 8.0 runtime. Anything that fails on 3.9 fails
-# on the appliances customers actually run.
+# The connector runtime is the FortiSOAR 8.0 appliance (Python 3.11); 3.12
+# covers the next interpreter up. Python 3.9 / FortiSOAR 7.6 is not supported.
 on:
   push:
     branches: ['*']
@@ -14,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ['3.9', '3.12']
+        python: ['3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

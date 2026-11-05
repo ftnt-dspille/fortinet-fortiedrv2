@@ -13,9 +13,9 @@ filterwarnings = [
 
 [tool.ruff]
 line-length = 130
-# The connector ships to the FortiSOAR appliance runtime, which is Python 3.9
-# on 7.6.x -- so target the lowest runtime, not the dev machine's interpreter.
-target-version = "py39"
+# The connector ships to the FortiSOAR 8.0 appliance runtime (Python 3.11) --
+# target that, not the dev machine's interpreter.
+target-version = "py311"
 
 [tool.ruff.lint]
 # pyflakes, pycodestyle, isort, pyupgrade, bugbear
@@ -26,9 +26,8 @@ ignore = [
     # in `except` (the runtime logs the original traceback before re-raising).
     "UP030", "UP031", "UP032", "B904",
     # typing.Dict/List annotations instead of dict[...]/list[...]: the
-    # appliance runtime floor is Python 3.9, where PEP 585 generics in
-    # annotations need `from __future__ import annotations` -- pydantic models
-    # evaluate annotations at class creation, so keep the typing forms.
+    # keep the typing forms the codebase already uses (pydantic models evaluate
+    # annotations at class creation).
     "UP006", "UP035",
 ]
 

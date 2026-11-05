@@ -63,7 +63,7 @@ soon as the run succeeds:
 import json
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from .client import MGMT_PREFIX, ConnectorError, FortiEDRClient, logger
 from .field_mapping import map_events
@@ -206,7 +206,7 @@ def _split_query(query: Dict[str, Any], midpoint: datetime) -> List[Dict[str, An
 
 
 def _collect_window(client: FortiEDRClient, query: Dict[str, Any],
-                    depth: int = 0, expect: Optional[int] = None) -> List[dict]:
+                    depth: int = 0, expect: int | None = None) -> List[dict]:
     """Fetch a window, escalating by halves while the server withholds rows.
 
     Each level fetches first and compares against its count (the caller may
@@ -273,8 +273,8 @@ def _filter_value(value: Any) -> Any:
     return value
 
 
-def fetch_window_events(client: FortiEDRClient, from_value, to_value: Optional[str] = None,
-                        filters: Optional[Dict[str, Any]] = None,
+def fetch_window_events(client: FortiEDRClient, from_value, to_value: str | None = None,
+                        filters: Dict[str, Any] | None = None,
                         cap: int = MAX_EVENTS_PER_RUN,
                         time_field: str = DEFAULT_TIME_FIELD) -> List[Event]:
     """Fetch EVERY event matching [from, to] and the optional filters, count-verified.

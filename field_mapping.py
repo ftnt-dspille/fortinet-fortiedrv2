@@ -14,7 +14,7 @@ ingestion playbook failed exactly that way before these clamps existed).
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from .models import Event
 
@@ -61,7 +61,7 @@ _RULE_TYPE_HINTS = (
 )
 
 
-def resolve_severity(severity: Optional[str]) -> str:
+def resolve_severity(severity: str | None) -> str:
     if not severity:
         return DEFAULT_SEVERITY
     return SEVERITY_MAP.get(str(severity).strip(), DEFAULT_SEVERITY)
