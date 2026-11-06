@@ -16,7 +16,10 @@
   silently ingests nothing. The wizard gains "Console Timezone Offset (hours
   from UTC)" (default 0 = the old UTC clock); a console set to UTC-6 enters
   -6 and ingestion works again. The offset applies to both window ends; the
-  stored watermark follows the clock it was written on.
+  stored watermark follows the clock it was written on. Note: a connector
+  upgrade re-imports the sample collection and resets the ingestion
+  configuration to the bundle defaults, so re-enter the wizard values
+  (including this offset) after upgrading.
 - **update_event behaviour documented against the live console API**:
   `handle` applies (read `handlingState` -- and new activity re-opens a
   handled event, so handling is not a fork point), `comment` and
