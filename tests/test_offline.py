@@ -1151,6 +1151,28 @@ def test_ingest_survives_a_collector_list_failure_when_enriching_users(edr):
     assert 'user_source' not in alerts[0]
 
 
+def test_ingest_stays_unattributed_when_the_collector_reports_no_logged_users(edr):
+    """A collector that answers with an empty session list leaves the row
+    unattributed: the enrichment fills from real logins only, and the pull
+    still succeeds."""
+    rows = json.loads(json.dumps(fixture('events_full_page')))
+    ownerless = rows[0]
+    ownerless['processOwner'] = ''
+    ownerless['loggedUsers'] = []
+    _mock_window(edr, 1, [ownerless])
+    edr.add_callback(
+        responses.GET, MGMT + '/inventory/list-collectors',
+        callback=lambda request: (200, {}, json.dumps([
+            {'name': 'lab-endpoint-01', 'loggedUsers': []},
+        ])),
+        content_type='application/json')
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00'})
+    assert len(alerts) == 1
+    assert len(calls('GET', 'list-collectors')) == 1
+    assert alerts[0]['primary_user'] == ''
+    assert 'user_source' not in alerts[0]
+
+
 def test_ingest_maps_rows_to_alert_payloads(edr):
     _mock_window(edr, 2, fixture('events_full_page'))
     alerts = run('ingest_events', {'from': '2026-10-29 13:00:00'})
