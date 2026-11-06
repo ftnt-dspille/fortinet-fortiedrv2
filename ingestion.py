@@ -448,4 +448,47 @@ def ingest_events(config, params) -> List[Dict[str, Any]]:
     # backfill window with the flag on is one sub-call per event.
     if _as_flag(params.get('include_command_timeline')):
         attach_command_timelines(client, rows)
+    return _attribute_users(client, rows)
+
+
+def _attribute_users(client: FortiEDRClient, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Fill empty user attribution from the reporting collector's logged users.
+
+    The Linux collector reports no processOwner and no loggedUsers on the
+    EVENT (live-verified: even a detection raised inside a real PTY login
+    session leaves the event's user fields blank), while the collector
+    inventory DOES carry loggedUsers for the device. An event with no user at
+    all is therefore attributed to the users logged into its collector at
+    pull time -- the same fallback the containment kit's Extract Targets step
+    applies to the event shape. One extra console call per run, and only when
+    a row actually lacks a user; any failure here leaves the rows unenriched
+    rather than failing the pull.
+    """
+    pending = [row for row in rows
+               if not (row.get('primary_user') or '').strip()
+               and (row.get('source_hostname') or '').strip()]
+    if not pending:
+        return rows
+    try:
+        response = client.json_get('Get Collector List',
+                                   MGMT_PREFIX + '/inventory/list-collectors',
+                                   {}, 'get_collector_list')
+    except Exception as exc:  # enrichment must never fail the pull
+        logger.info('ingest_events: collector user attribution skipped ({0})'.format(exc))
+        return rows
+    collectors = response if isinstance(response, list) else (response or {}).get('results', [])
+    logged = {c.get('name'): c.get('loggedUsers') for c in collectors
+              if isinstance(c, dict) and c.get('loggedUsers')}
+    if not logged:
+        return rows
+    for row in pending:
+        users = [str(u) for u in (logged.get(row.get('source_hostname')) or [])
+                 if u not in (None, '')]
+        if not users:
+            continue
+        row['user_names'] = ', '.join(users)
+        row['primary_user'] = users[0]
+        # Provenance rides sourcedata: this user came from the collector's
+        # session list at pull time, not from the event itself.
+        row['user_source'] = 'collector logged users at pull time'
     return rows

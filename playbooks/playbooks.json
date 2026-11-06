@@ -12,7 +12,7 @@
   "data": [
     {
       "@type": "WorkflowCollection",
-      "name": "Sample - Fortinet FortiEDR v2 - 1.1.15",
+      "name": "Sample - Fortinet FortiEDR v2 - 1.1.16",
       "description": "Sample playbooks for the \"Fortinet FortiEDR v2\" connector. If you are planning to use the sample playbooks in your environment, ensure that you clone those playbooks and move them to a different collection, since the sample playbook collection gets deleted during connector upgrade and delete.",
       "visible": true,
       "image": null,
@@ -43,7 +43,7 @@
             "overrideIfNoMatch"
           ],
           "synchronous": false,
-          "lastModifyDate": 1793880721.6417875,
+          "lastModifyDate": 1793931766.000819,
           "collection": "/api/3/workflow_collections/aabb84b3-376d-57b4-bc00-705b59935b8b",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/3d19bc3a-d875-589d-8c37-7a2aae594740",
@@ -264,7 +264,7 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793880721.6417875,
+          "lastModifyDate": 1793931766.000819,
           "collection": "/api/3/workflow_collections/aabb84b3-376d-57b4-bc00-705b59935b8b",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/7e084065-73dc-54c8-a7a5-6a3ca961715b",
@@ -278,7 +278,7 @@
                   "input": {
                     "params": []
                   },
-                  "_configuration_schema": "[{\"title\": \"Initial Backfill Range (minutes)\", \"required\": true, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"fetch_last_minutes\", \"options\": [\"20\", \"60\", \"360\", \"1440\", \"10080\", \"43200\"], \"value\": \"60\", \"tooltip\": \"How many minutes back the first run reads, before a last-pull-time watermark exists. Later runs read from the watermark.\"}, {\"title\": \"Time Field\", \"required\": true, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"time_field\", \"options\": [\"Last Seen (activity)\", \"First Seen (creations only)\"], \"value\": \"Last Seen (activity)\", \"tooltip\": \"Last Seen (activity) fetches every event created or re-triggered in the window. FortiEDR links a re-detection of the same process into the existing event, whose firstSeen never moves -- use First Seen (creations only) only if you want the shipped connector's created-only behavior, which misses re-triggered events.\"}, {\"title\": \"Maximum Events Per Run\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"max_events\", \"value\": \"10\", \"tooltip\": \"Safety cap on one run's window. A window whose event count exceeds it fails the run instead of silently skipping events. The 10 default suits a lab tenant -- raise it to fit real pull volume, or shorten the schedule, rather than let it bind.\"}, {\"title\": \"Classifications (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"classifications\", \"value\": \"\", \"tooltip\": \"Comma-separated event classifications to pull, e.g. Malicious,Suspicious. Leave blank to pull everything. IMPORTANT: the pull watermark advances past events a filter excludes -- set filters before the first pull and keep them stable, or events skipped by earlier pulls are never re-read.\"}, {\"title\": \"Severities (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"severities\", \"value\": \"\", \"tooltip\": \"Comma-separated severities to pull, e.g. Critical,High. Leave blank to pull every severity.\"}, {\"title\": \"Device Name (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"device\", \"value\": \"\", \"tooltip\": \"Pull only events reported by collectors on this device name. Leave blank to pull events from every device.\"}, {\"title\": \"Collector Groups (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"collector_groups\", \"value\": \"\", \"tooltip\": \"Comma-separated collector group names to pull from, e.g. GroupA,GroupB. Leave blank to pull from every group.\"}, {\"title\": \"Include Command Timeline\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"include_command_timeline\", \"options\": [\"false\", \"true\"], \"value\": \"false\", \"tooltip\": \"Enrich every ingested event with the console's command timeline (the process/cmd stacks behind the detection: what triggered what, with command lines). One extra console call per event; the trimmed timeline is stored in the alert's sourcedata. Leave false for very large backfill windows.\"}]"
+                  "_configuration_schema": "[{\"title\": \"Initial Backfill Range (minutes)\", \"required\": true, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"fetch_last_minutes\", \"options\": [\"20\", \"60\", \"360\", \"1440\", \"10080\", \"43200\"], \"value\": \"60\", \"tooltip\": \"How many minutes back the first run reads, before a last-pull-time watermark exists. Later runs read from the watermark.\"}, {\"title\": \"Time Field\", \"required\": true, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"time_field\", \"options\": [\"Last Seen (activity)\", \"First Seen (creations only)\"], \"value\": \"Last Seen (activity)\", \"tooltip\": \"Last Seen (activity) fetches every event created or re-triggered in the window. FortiEDR links a re-detection of the same process into the existing event, whose firstSeen never moves -- use First Seen (creations only) only if you want the shipped connector's created-only behavior, which misses re-triggered events.\"}, {\"title\": \"Console Timezone Offset (hours from UTC)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"console_utc_offset_hours\", \"value\": \"0\", \"tooltip\": \"The FortiEDR management API reads the window dates in the console's LOCAL timezone, not UTC (live-verified: a UTC-computed window sits ahead of the console's clock and finds nothing). Enter the console's offset from UTC in hours -- e.g. -6 for a console set to UTC-6 -- and the pull window is computed on that clock. 0 (default) keeps the UTC clock, right for a console set to UTC.\"}, {\"title\": \"Maximum Events Per Run\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"max_events\", \"value\": \"10\", \"tooltip\": \"Safety cap on one run's window. A window whose event count exceeds it fails the run instead of silently skipping events. The 10 default suits a lab tenant -- raise it to fit real pull volume, or shorten the schedule, rather than let it bind.\"}, {\"title\": \"Classifications (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"classifications\", \"value\": \"\", \"tooltip\": \"Comma-separated event classifications to pull, e.g. Malicious,Suspicious. Leave blank to pull everything. IMPORTANT: the pull watermark advances past events a filter excludes -- set filters before the first pull and keep them stable, or events skipped by earlier pulls are never re-read.\"}, {\"title\": \"Severities (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"severities\", \"value\": \"\", \"tooltip\": \"Comma-separated severities to pull, e.g. Critical,High. Leave blank to pull every severity.\"}, {\"title\": \"Device Name (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"device\", \"value\": \"\", \"tooltip\": \"Pull only events reported by collectors on this device name. Leave blank to pull events from every device.\"}, {\"title\": \"Collector Groups (optional)\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"text\", \"name\": \"collector_groups\", \"value\": \"\", \"tooltip\": \"Comma-separated collector group names to pull from, e.g. GroupA,GroupB. Leave blank to pull from every group.\"}, {\"title\": \"Include Command Timeline\", \"required\": false, \"editable\": true, \"visible\": true, \"type\": \"select\", \"name\": \"include_command_timeline\", \"options\": [\"false\", \"true\"], \"value\": \"false\", \"tooltip\": \"Enrich every ingested event with the console's command timeline (the process/cmd stacks behind the detection: what triggered what, with command lines). One extra console call per event; the trimmed timeline is stored in the alert's sourcedata. Leave false for very large backfill windows.\"}]"
                 }
               },
               "status": null,
@@ -295,6 +295,7 @@
               "arguments": {
                 "fetch_last_minutes": "60",
                 "time_field": "Last Seen (activity)",
+                "console_utc_offset_hours": "0",
                 "max_events": "10",
                 "classifications": "",
                 "severities": "",
@@ -364,9 +365,9 @@
               "name": "Set Time Configuration",
               "description": null,
               "arguments": {
-                "curr_timestamp": "{{ arrow.utcnow().shift(seconds=-60).format('YYYY-MM-DD HH:mm:ss') }}",
+                "curr_timestamp": "{{ arrow.utcnow().shift(hours=(vars.console_utc_offset_hours|int), seconds=-60).format('YYYY-MM-DD HH:mm:ss') }}",
                 "last_pull_time": "{% if vars.request.env_setup or not vars.steps.Get_Macro_Value.data['hydra:member'] or vars.steps.Get_Macro_Value.data['hydra:member'][0].value == '0' %}{% else %}{{ vars.steps.Get_Macro_Value.data['hydra:member'][0].value }}{% endif %}",
-                "window_from": "{% if vars.last_pull_time %}{{ vars.last_pull_time }}{% else %}{{ arrow.utcnow().shift(minutes=-(vars.fetch_last_minutes|int)).format('YYYY-MM-DD HH:mm:ss') }}{% endif %}"
+                "window_from": "{% if vars.last_pull_time %}{{ vars.last_pull_time }}{% else %}{{ arrow.utcnow().shift(hours=(vars.console_utc_offset_hours|int), minutes=-(vars.fetch_last_minutes|int)).format('YYYY-MM-DD HH:mm:ss') }}{% endif %}"
               },
               "status": null,
               "top": "640",
@@ -524,7 +525,7 @@
             {
               "@type": "WorkflowGroup",
               "name": "Note: Set Time Configuration",
-              "description": "`curr_timestamp` is the end of this run's window, 60 seconds behind the\nclock (see the block comment above) and in the management API's native\n`YYYY-MM-DD HH:MM:SS` (UTC) format. It is written back to the macro only\nafter Ingest succeeds, so a failed run reads its window again.\n`last_pull_time` is empty on a cold start (macro missing, or '0'); the\nrun then computes `window_from` as now minus `fetch_last_minutes`.\n",
+              "description": "`curr_timestamp` is the end of this run's window, 60 seconds behind the\nclock (see the block comment above), computed on the console's clock:\nthe management API reads these naive `YYYY-MM-DD HH:MM:SS` dates in the\nCONSOLE's local timezone, not UTC (live-verified: a UTC-computed window\nsits ahead of a UTC-6 console and finds nothing), so the offset the\nwizard entered (`console_utc_offset_hours`) is applied here. It is\nwritten back to the macro only after Ingest succeeds, so a failed run\nreads its window again. `last_pull_time` is empty on a cold start\n(macro missing, or '0'); the run then computes `window_from` as now\nminus `fetch_last_minutes`, on the same offset. Changing the offset\nafter a watermark exists shifts one window once (the stored watermark\nwas computed on the old clock); the run after that is consistent again.\n",
               "type": "note",
               "isCollapsed": false,
               "hasTriggerStep": false,
@@ -533,7 +534,7 @@
               "reusable": false,
               "top": "1008",
               "left": "540",
-              "height": "314",
+              "height": "360",
               "width": "440",
               "uuid": "a853e8aa-986c-5a99-a3dd-03536126debf",
               "recordTags": []
@@ -548,7 +549,7 @@
               "hideInLogs": true,
               "metadata": [],
               "reusable": false,
-              "top": "1342",
+              "top": "1388",
               "left": "540",
               "height": "360",
               "width": "440",
@@ -565,7 +566,7 @@
               "hideInLogs": true,
               "metadata": [],
               "reusable": false,
-              "top": "1722",
+              "top": "1768",
               "left": "540",
               "height": "138",
               "width": "440",
@@ -598,7 +599,7 @@
           "remoteExecutableFlag": 0,
           "parameters": [],
           "synchronous": false,
-          "lastModifyDate": 1793880721.6417875,
+          "lastModifyDate": 1793931766.000819,
           "collection": "/api/3/workflow_collections/aabb84b3-376d-57b4-bc00-705b59935b8b",
           "versions": [],
           "triggerStep": "/api/3/workflow_steps/2960f926-7f34-57b0-9aca-d811fefb8a29",
@@ -748,7 +749,7 @@
                   "description": "{{ vars.item.card.description }}",
                   "sourcedata": "{{ vars.item | toJSON }}",
                   "__replace": "true",
-                  "__fieldsToUpdate": "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'sourceType', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'userName', 'userDetails', 'processName', 'description', 'sourcedata'] }}"
+                  "__fieldsToUpdate": "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'sourceType', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'processName', 'description', 'sourcedata'] }}"
                 },
                 "collection": "/api/3/upsert/alerts",
                 "for_each": {

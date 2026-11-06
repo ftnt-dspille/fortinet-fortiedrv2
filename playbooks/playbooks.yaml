@@ -175,6 +175,14 @@ playbooks:
         - First Seen (creations only)
         value: Last Seen (activity)
         tooltip: Last Seen (activity) fetches every event created or re-triggered in the window. FortiEDR links a re-detection of the same process into the existing event, whose firstSeen never moves -- use First Seen (creations only) only if you want the shipped connector's created-only behavior, which misses re-triggered events.
+      - title: Console Timezone Offset (hours from UTC)
+        required: false
+        editable: true
+        visible: true
+        type: text
+        name: console_utc_offset_hours
+        value: '0'
+        tooltip: 'The FortiEDR management API reads the window dates in the console''s LOCAL timezone, not UTC (live-verified: a UTC-computed window sits ahead of the console''s clock and finds nothing). Enter the console''s offset from UTC in hours -- e.g. -6 for a console set to UTC-6 -- and the pull window is computed on that clock. 0 (default) keeps the UTC clock, right for a console set to UTC.'
       - title: Maximum Events Per Run
         required: false
         editable: true
@@ -247,6 +255,7 @@ playbooks:
       vars:
         fetch_last_minutes: '60'
         time_field: Last Seen (activity)
+        console_utc_offset_hours: '0'
         max_events: '10'
         classifications: ''
         severities: ''
@@ -292,15 +301,21 @@ playbooks:
       type: set_variable
       comment: |
         `curr_timestamp` is the end of this run's window, 60 seconds behind the
-        clock (see the block comment above) and in the management API's native
-        `YYYY-MM-DD HH:MM:SS` (UTC) format. It is written back to the macro only
-        after Ingest succeeds, so a failed run reads its window again.
-        `last_pull_time` is empty on a cold start (macro missing, or '0'); the
-        run then computes `window_from` as now minus `fetch_last_minutes`.
+        clock (see the block comment above), computed on the console's clock:
+        the management API reads these naive `YYYY-MM-DD HH:MM:SS` dates in the
+        CONSOLE's local timezone, not UTC (live-verified: a UTC-computed window
+        sits ahead of a UTC-6 console and finds nothing), so the offset the
+        wizard entered (`console_utc_offset_hours`) is applied here. It is
+        written back to the macro only after Ingest succeeds, so a failed run
+        reads its window again. `last_pull_time` is empty on a cold start
+        (macro missing, or '0'); the run then computes `window_from` as now
+        minus `fetch_last_minutes`, on the same offset. Changing the offset
+        after a watermark exists shifts one window once (the stored watermark
+        was computed on the old clock); the run after that is consistent again.
       vars:
-        curr_timestamp: "{{ arrow.utcnow().shift(seconds=-60).format('YYYY-MM-DD HH:mm:ss') }}"
+        curr_timestamp: "{{ arrow.utcnow().shift(hours=(vars.console_utc_offset_hours|int), seconds=-60).format('YYYY-MM-DD HH:mm:ss') }}"
         last_pull_time: "{% if vars.request.env_setup or not vars.steps.Get_Macro_Value.data['hydra:member'] or vars.steps.Get_Macro_Value.data['hydra:member'][0].value == '0' %}{% else %}{{ vars.steps.Get_Macro_Value.data['hydra:member'][0].value }}{% endif %}"
-        window_from: "{% if vars.last_pull_time %}{{ vars.last_pull_time }}{% else %}{{ arrow.utcnow().shift(minutes=-(vars.fetch_last_minutes|int)).format('YYYY-MM-DD HH:mm:ss') }}{% endif %}"
+        window_from: "{% if vars.last_pull_time %}{{ vars.last_pull_time }}{% else %}{{ arrow.utcnow().shift(hours=(vars.console_utc_offset_hours|int), minutes=-(vars.fetch_last_minutes|int)).format('YYYY-MM-DD HH:mm:ss') }}{% endif %}"
       next: Ingest Events
 
     - name: Ingest Events
@@ -486,13 +501,18 @@ playbooks:
         processName: '{{ vars.item.process_name | default("") }}'
         # Create-only state, deliberately NOT in __fieldsToUpdate: an upsert
         # refresh on a re-detection must never reset an analyst's in-progress
-        # triage back to New/Open.
+        # triage back to New/Open. userName/userDetails are create-only for
+        # the same reason: the user attribution (the event's owner, the
+        # collector's logged users, or an analyst edit) must survive a
+        # re-detection -- a re-pull of the same event must never blank the
+        # alert's user back to empty just because this pull's window saw no
+        # user on the event.
         state: '{{ "AlertState" | picklist("New") }}'
         status: '{{ "AlertStatus" | picklist("Open") }}'
         description: '{{ vars.item.card.description }}'
         sourcedata: '{{ vars.item | toJSON }}'
         __replace: 'true'
-        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'sourceType', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'userName', 'userDetails', 'processName', 'description', 'sourcedata'] }}"
+        __fieldsToUpdate: "{{ ['name', 'source', 'sourceId', 'severity', 'type', 'sourceType', 'alertDetectionDate', 'eventTime', 'sourceIp', 'hostName', 'hostIPAddress', 'destinationIp', 'rule', 'filePath', 'processName', 'description', 'sourcedata'] }}"
       next: Update Last Pull Time
 
     - name: Update Last Pull Time

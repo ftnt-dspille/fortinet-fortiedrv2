@@ -113,7 +113,24 @@ def count_events(config, params):
 # selects deliver the literal strings 'True'/'False'; the API answers 200 to a
 # string body but leaves the flag untouched (live-observed on 7.2.3: a read
 # toggle returned success while the event's seen flag stayed false), so the
-# shipped connector's read/handle/archive toggles were silent no-ops.
+# shipped connector's toggles were silent no-ops.
+#
+# Field behaviour of PUT /management-rest/events on the current cloud console
+# (live-verified with real JSON booleans):
+#   * {'handle': true} APPLIES -- handlingState flips to "Handled". Read the
+#     state from get_event_by_id's `handlingState` (the `handled` field stays
+#     null whatever you do). Caveat for automation: new activity matching the
+#     event RE-OPENS it (handlingState back to "Unhandled"), so handling is
+#     not a fork point -- identical detections keep aggregating into the same
+#     event.
+#   * {'comment': ...} and {'classification': ...} apply (one field per PUT is
+#     the safe shape; a comment is appended as a dated entry).
+#   * {'read': true} and {'archive': true} are accepted and IGNORED -- seen/
+#     archived stay untouched even as real booleans. To remove an event,
+#     DELETE /management-rest/events?eventIds=... works, and the next matching
+#     detection then raises a fresh event instead of aggregating.
+#   * {'handled': ...}, {'seen': ...} and {'handlingState': ...} are rejected
+#     with 400 "No field provided for PUT operation".
 BOOLEAN_EVENT_FLAGS = ('mute', 'handle', 'archive', 'read', 'forceUnmute')
 
 

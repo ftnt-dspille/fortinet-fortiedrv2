@@ -213,12 +213,20 @@ def test_fetch_reads_events_since_the_watermark_on_last_seen():
         == 'Last Seen (activity)'
     schema = json.loads(
         _step('> FortiEDR v2 > Fetch', 'Start')['arguments']['step_variables']['_configuration_schema'])
-    assert [f['name'] for f in schema] == ['fetch_last_minutes', 'time_field', 'max_events',
-                                           'classifications', 'severities', 'device',
+    assert [f['name'] for f in schema] == ['fetch_last_minutes', 'time_field', 'console_utc_offset_hours',
+                                           'max_events', 'classifications', 'severities', 'device',
                                            'collector_groups', 'include_command_timeline']
     assert schema[1]['value'] == 'Last Seen (activity)'
     assert 'Last Seen (activity)' in schema[1]['options']
     assert 'First Seen (creations only)' in schema[1]['options']
+    # the console reads the window dates in ITS local timezone, not UTC: the
+    # offset ships 0 (UTC clock, the old behaviour) and the Configuration
+    # default matches, so the wizard's pair stays in lockstep.
+    offset = schema[2]
+    assert offset['name'] == 'console_utc_offset_hours'
+    assert offset['value'] == '0'
+    assert offset['required'] is False
+    assert _step('> FortiEDR v2 > Fetch', 'Configuration')['arguments']['console_utc_offset_hours'] == '0'
     # the command-timeline flag ships off: it is one extra console call per
     # event, and a big backfill window with it on is a sub-call storm.
     flag = schema[-1]
@@ -1089,6 +1097,58 @@ def test_ingest_bad_time_field_is_named(edr):
 def test_ingest_requires_from(edr):
     with pytest.raises(ConnectorError, match="window start"):
         run('ingest_events', {})
+
+
+def test_ingest_attributes_the_user_from_the_collector_when_the_event_has_none(edr):
+    """The Linux collector reports no user on the event (even for a detection
+    raised inside a real login session) while the collector inventory carries
+    the device's logged users: an ownerless event is attributed to them, with
+    the provenance stamped into the row."""
+    rows = json.loads(json.dumps(fixture('events_full_page')))
+    ownerless = rows[0]
+    ownerless['processOwner'] = ''
+    ownerless['loggedUsers'] = []
+    ownerless['collectors'] = [{'device': 'lab-endpoint-01', 'ip': '203.0.113.5'}]
+    _mock_window(edr, 1, [ownerless])
+    edr.add_callback(
+        responses.GET, MGMT + '/inventory/list-collectors',
+        callback=lambda request: (200, {}, json.dumps([
+            {'name': 'lab-endpoint-01', 'loggedUsers': ['jdoe', 'admin']},
+            {'name': 'other-host', 'loggedUsers': ['nobody']},
+        ])),
+        content_type='application/json')
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00'})
+    assert len(alerts) == 1
+    assert alerts[0]['primary_user'] == 'jdoe'
+    assert alerts[0]['user_names'] == 'jdoe, admin'
+    assert alerts[0]['user_source'] == 'collector logged users at pull time'
+
+
+def test_ingest_leaves_user_attribution_alone_when_the_event_has_one(edr):
+    """An event that carries its own user never triggers the collector call:
+    the enrichment exists only for the ownerless-event gap."""
+    _mock_window(edr, 2, fixture('events_full_page'))
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00'})
+    assert all(a['primary_user'] for a in alerts)
+    assert calls('GET', 'list-collectors') == []
+    assert 'user_source' not in alerts[0]
+
+
+def test_ingest_survives_a_collector_list_failure_when_enriching_users(edr):
+    """The attribution call is best-effort: a failing collector list leaves
+    the row unattributed and the pull succeeds."""
+    rows = json.loads(json.dumps(fixture('events_full_page')))
+    ownerless = rows[0]
+    ownerless['processOwner'] = ''
+    ownerless['loggedUsers'] = []
+    _mock_window(edr, 1, [ownerless])
+    edr.add_callback(responses.GET, MGMT + '/inventory/list-collectors',
+                     callback=lambda request: (500, {}, json.dumps({'error': 'boom'})),
+                     content_type='application/json')
+    alerts = run('ingest_events', {'from': '2026-10-29 13:00:00'})
+    assert len(alerts) == 1
+    assert alerts[0]['primary_user'] == ''
+    assert 'user_source' not in alerts[0]
 
 
 def test_ingest_maps_rows_to_alert_payloads(edr):

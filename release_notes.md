@@ -1,5 +1,33 @@
 # fortinet-fortiedrv2 release notes
 
+## 1.1.16
+
+- **User attribution from the collector.** The Linux collector never reports
+  `processOwner`/`loggedUsers` on the event -- even for a detection raised
+  inside a real login session -- while the collector inventory does carry the
+  device's logged users. An event with no user at all is now attributed to the
+  users logged into its collector at pull time: one extra console call per
+  run, only when a row actually lacks a user, and the provenance lands in the
+  alert's sourcedata as `user_source`. A collector-list failure never fails
+  the pull; the row just stays unattributed.
+- **Console Timezone Offset on the Fetch playbook.** The FortiEDR management
+  API reads the pull window's naive dates in the CONSOLE's local timezone,
+  not UTC -- a UTC-computed window sits ahead of the console's clock and
+  silently ingests nothing. The wizard gains "Console Timezone Offset (hours
+  from UTC)" (default 0 = the old UTC clock); a console set to UTC-6 enters
+  -6 and ingestion works again. The offset applies to both window ends; the
+  stored watermark follows the clock it was written on.
+- **update_event behaviour documented against the live console API**:
+  `handle` applies (read `handlingState` -- and new activity re-opens a
+  handled event, so handling is not a fork point), `comment` and
+  `classification` apply, `read` and `archive` are accepted and ignored even
+  as real booleans, `handled`/`seen`/`handlingState` body fields are
+  rejected with 400. To remove an event, `DELETE /management-rest/events`
+  works and the next matching detection raises a fresh event.
+- The Ingest upsert no longer updates `userName`/`userDetails`: user
+  attribution is create-time enrichment (or an analyst edit) and a
+  re-detection must never blank it.
+
 ## 1.1.15
 
 **The use-case playbooks are no longer bundled with the connector.** The
